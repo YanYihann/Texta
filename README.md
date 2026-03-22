@@ -1,85 +1,87 @@
-﻿# IELTS 单词文章生成网站
+﻿# Texta
 
-输入你今天学的单词，AI 自动生成一篇英文文章，支持高亮词汇、中文释义和一键导出。
+Texta is an IELTS vocabulary learning website. You enter the words you studied today, and Texta generates an English article that includes them, with Chinese support and export features.
 
-## 功能
+Texta 是一个 IELTS 单词学习网站。你输入当天学习的单词后，Texta 会生成包含这些词汇的英文文章，并提供中文辅助与导出功能。
 
-- 输入单词后生成包含全部词汇的 IELTS 风格文章
-- 文章中的输入词自动高亮
-- 自动生成每个词的中文释义
-- 一键导出 PDF / Word
-- 后端会检查文章是否包含全部单词；若缺词会自动重试一次
-- 支持 OpenAI 兼容代理（Responses / Chat Completions）`n- 支持快速省钱模式（短文 + 限制token + 跳过补写重试）
+## Website URLs | 网站地址
 
-## 1) 安装依赖
+- Frontend (GitHub Pages) | 前端网站：
+  - https://yanyihann.github.io/Texta/
+- Backend API (Render) | 后端接口：
+  - https://texta-backend.onrender.com
+
+## Features | 功能简介
+
+- Generate article by level: Beginner / Intermediate / Advanced  
+  按难度生成文章：初级 / 中级 / 高级
+- Paragraph-based Chinese translation under each English paragraph  
+  每段英文下方显示中文翻译
+- Vocabulary highlighting and click-to-jump glossary linkage  
+  词汇高亮，点击可跳转右侧词条
+- Glossary panel includes: POS, numbered senses, collocations, word formation, synonyms/antonyms  
+  词汇栏包含：词性、编号义项、短语搭配、词根词缀、同近义词/反义词
+- Pronunciation buttons: American / British  
+  发音按钮：美音 / 英音
+- Input-time spell suggestions (misspelled words highlighted in red)  
+  输入时拼写建议（疑似拼错自动标红）
+- Export with preview: PDF / Word  
+  导出预览后可下载 PDF / Word
+- Reading mode: hide input panel, focus on article + glossary  
+  阅读模式：隐藏输入栏，仅看文章与词汇栏
+
+## Workflow | 工作流程
+
+1. User enters words and selects level.  
+   用户输入单词并选择难度。
+2. Frontend calls `/api/spellcheck` for live typo hints.  
+   前端调用 `/api/spellcheck` 实时提示拼写问题。
+3. User clicks Generate, frontend sends request to `/api/generate`.  
+   点击生成后，前端请求 `/api/generate`。
+4. Backend generates: lexicon package + marked English article + Chinese paragraph translations.  
+   后端生成：词汇扩展数据 + 带标号英文文章 + 中文分段翻译。
+5. Frontend renders middle article panel and right glossary panel.  
+   前端渲染中间文章栏和右侧词汇栏。
+6. User can click highlighted words to jump glossary, listen pronunciation, and export files.  
+   用户可点击高亮词跳转词条、播放发音、导出文件。
+
+## Tech Stack | 技术栈
+
+- Frontend: HTML/CSS/Vanilla JavaScript  
+  前端：HTML/CSS/原生 JavaScript
+- Backend: Node.js + Express  
+  后端：Node.js + Express
+- AI: OpenAI-compatible API  
+  AI：OpenAI 兼容接口
+- Deployment: GitHub Pages (frontend) + Render (backend)  
+  部署：GitHub Pages（前端）+ Render（后端）
+
+## Project Structure | 项目结构
+
+- `public/`: frontend files (UI, scripts, assets)  
+  `public/`：前端页面、脚本与资源
+- `server.js`: backend API server  
+  `server.js`：后端 API 服务
+- `.github/workflows/deploy-pages.yml`: auto deploy for GitHub Pages  
+  `.github/workflows/deploy-pages.yml`：GitHub Pages 自动发布
+- `render.yaml`: backend deployment config for Render  
+  `render.yaml`：Render 后端部署配置
+
+## Local Run | 本地运行
 
 ```bash
-npm.cmd install
+npm install
+npm start
 ```
 
-## 2) 配置环境变量
+- Local URL | 本地地址：http://localhost:3000
 
-复制 `.env.example` 为 `.env`，并填入你的 Key：
+## Production Config | 线上配置
 
-```bash
-copy .env.example .env
-```
+GitHub Pages serves only static frontend. Backend URL is configured in `public/site-config.js`:
 
-推荐代理配置（按你提供的平台文档）：
-
-```env
-OPENAI_API_KEY=你的Key
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_API_MODE=responses
-OPENAI_BASE_URL=https://api.openai-proxy.org/v1
-OPENAI_TIMEOUT_MS=30000
-OPENAI_RETRY_COUNT=2
-PORT=3000
-```
-
-说明：
-- `OPENAI_BASE_URL` 必须包含 `/v1`。
-- `OPENAI_API_MODE=responses` 使用 `/responses`。
-- `OPENAI_API_MODE=chat` 使用 `/chat/completions`。
-
-## 3) 启动项目
-
-```bash
-npm.cmd start
-```
-
-浏览器打开：
-
-[http://localhost:3000](http://localhost:3000)
-
-## GitHub Pages 发布
-
-- 已配置 `.github/workflows/deploy-pages.yml`，推送到 `main` 会自动发布 `public/`。
-- GitHub Pages 只能托管前端静态页面，后端 API 需要单独部署。
-- 线上时请在 `public/site-config.js` 设置：
-
-```js
-window.TEXTA_API_BASE = "https://your-backend-domain";
-```
-
-## Render 部署后端（推荐）
-
-仓库已包含 `render.yaml`，可直接在 Render 一键导入：
-
-1. 在 Render 新建 `Blueprint`，选择本仓库。  
-2. 在环境变量里填写 `OPENAI_API_KEY`。  
-3. 部署完成后，拿到后端地址（例如 `https://texta-backend.onrender.com`）。  
-4. 把 `public/site-config.js` 改为：
+GitHub Pages 只托管静态前端。后端地址在 `public/site-config.js` 中配置：
 
 ```js
 window.TEXTA_API_BASE = "https://texta-backend.onrender.com";
 ```
-
-5. 提交并推送后，GitHub Pages 前端即可调用线上后端。
-
-## 网络超时排查
-
-- 如果报 `Connect Timeout`：
-  - 增大 `OPENAI_TIMEOUT_MS`（例如 `60000`）
-  - 检查本机是否可访问代理域名 `443`
-  - 检查代理平台 key 和模型名是否可用
