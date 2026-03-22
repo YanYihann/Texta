@@ -36,6 +36,7 @@ let latestWords = [];
 let latestLexicon = [];
 let latestParagraphsEn = [];
 let latestParagraphsZh = [];
+let latestAlignment = [];
 let showChinese = true;
 let pendingExportType = "pdf";
 let readingMode = false;
@@ -211,6 +212,103 @@ function collectChineseTerms(lexicon) {
   return terms;
 }
 
+function buildChineseTermKeyPairs(lexicon) {
+  const termToKeys = new Map();
+
+  const add = (termRaw, key) => {
+    const term = String(termRaw || "").trim();
+    if (!term || term.includes("失败") || term.includes("未返回")) {
+      return;
+    }
+    const keys = termToKeys.get(term) || new Set();
+    keys.add(key);
+    termToKeys.set(term, keys);
+
+    if (term.length > 2 && /[的地得]$/.test(term)) {
+      const stem = term.slice(0, -1).trim();
+      if (stem.length >= 2) {
+        const stemKeys = termToKeys.get(stem) || new Set();
+        stemKeys.add(key);
+        termToKeys.set(stem, stemKeys);
+      }
+    }
+  };
+
+  for (const item of lexicon || []) {
+    const key = keyifyWord(item?.word || "");
+    if (!key) continue;
+    const senses = Array.isArray(item?.senses) ? item.senses : [];
+    for (const sense of senses) {
+      const fullMeaning = String(sense?.meaning || "").trim();
+      add(fullMeaning, key);
+      fullMeaning
+        .split(/[，,；;、/\s()（）]+/)
+        .map((x) => x.trim())
+        .filter((x) => x && x.length >= 2)
+        .forEach((part) => add(part, key));
+    }
+  }
+
+  return Array.from(termToKeys.entries())
+    .map(([term, keySet]) => ({ term, keys: Array.from(keySet) }))
+    .sort((a, b) => b.term.length - a.term.length);
+}
+
+function buildChineseTermKeyPairsFromAlignment(alignment, lexicon) {
+  const rows = Array.isArray(alignment) ? alignment : [];
+  const termToKeys = new Map();
+  const lexMap = new Map((lexicon || []).map((x) => [String(x.word || "").toLowerCase(), x]));
+
+  const add = (termRaw, key) => {
+    const term = String(termRaw || "").trim();
+    if (!term || term.includes("失败") || term.includes("未返回")) {
+      return;
+    }
+    const set = termToKeys.get(term) || new Set();
+    set.add(key);
+    termToKeys.set(term, set);
+    if (term.length > 2 && /[的地得]$/.test(term)) {
+      const stem = term.slice(0, -1).trim();
+      if (stem.length >= 2) {
+        const stemSet = termToKeys.get(stem) || new Set();
+        stemSet.add(key);
+        termToKeys.set(stem, stemSet);
+      }
+    }
+  };
+
+  for (const row of rows) {
+    const word = String(row?.word || "").trim();
+    const key = keyifyWord(word);
+    if (!key) continue;
+    const zhTerms = Array.isArray(row?.zh_terms) ? row.zh_terms : [];
+    for (const term of zhTerms) add(term, key);
+    if (zhTerms.length === 0) {
+      const lex = lexMap.get(word.toLowerCase());
+      const senses = Array.isArray(lex?.senses) ? lex.senses : [];
+      for (const s of senses) add(String(s?.meaning || "").trim(), key);
+    }
+  }
+
+  const out = Array.from(termToKeys.entries())
+    .map(([term, keys]) => ({ term, keys: Array.from(keys) }))
+    .sort((a, b) => b.term.length - a.term.length);
+
+  return out.length > 0 ? out : buildChineseTermKeyPairs(lexicon);
+}
+
+function normalizeZhSenseMarkers(text) {
+  const markerSet = "①②③④⑤⑥⑦⑧⑨⑩";
+  let out = String(text || "");
+
+  // Normalize forms like: ①灾难性 -> 灾难性①
+  out = out.replace(new RegExp(`([${markerSet}])\\s*([\\u4e00-\\u9fa5A-Za-z][\\u4e00-\\u9fa5A-Za-z-]*)`, "g"), "$2$1");
+  // Normalize forms like: ① 灾难性的 -> 灾难性的①
+  out = out.replace(new RegExp(`([${markerSet}])\\s+([\\u4e00-\\u9fa5A-Za-z][^，。；：、,.!?！？\\s]{1,18})`, "g"), "$2$1");
+
+  return out;
+}
+
 function renderSenseSuperscript(html) {
   return String(html || "").replace(/([①②③④⑤⑥⑦⑧⑨⑩])/g, '<sup class="sense-marker">$1</sup>');
 }
@@ -316,6 +414,56 @@ function highlightEnglishWordsWithKeys(text, words) {
     }
   );
 
+  return renderSenseSuperscript(html);
+}
+
+function highlightEnglishWithAlignment(text, words, alignment) {
+  const rows = Array.isArray(alignment) ? alignment : [];
+  if (rows.length === 0) {
+    return highlightEnglishWordsWithKeys(text, words);
+  }
+
+  let html = escapeHtml(text);
+  const formItems = [];
+  for (const row of rows) {
+    const key = keyifyWord(row?.word || "");
+    if (!key) continue;
+    const forms = Array.isArray(row?.english_forms) ? row.english_forms : [];
+    const merged = [String(row?.word || ""), ...forms].map((x) => String(x || "").trim()).filter(Boolean);
+    for (const form of merged) {
+      formItems.push({ key, form });
+    }
+  }
+
+  formItems.sort((a, b) => b.form.length - a.form.length);
+  for (const item of formItems) {
+    const regex = new RegExp(`\\b${escapeRegExp(item.form)}\\b`, "gi");
+    html = html.replace(regex, (m) => `<mark class=\"vocab-en\" data-word-key=\"${item.key}\">${m}</mark>`);
+  }
+
+  html = html.replace(
+    /(^|[\s(>.,;:!?'"-])([A-Za-z][A-Za-z'-]*)([①②③④⑤⑥⑦⑧⑨⑩])/g,
+    (all, pre, token, marker) => {
+      if (String(pre).includes("</mark")) return all;
+      const matchedKey = resolveWordKeyByToken(token, words);
+      const key = matchedKey || keyifyWord(token);
+      return `${pre}<mark class=\"vocab-en\" data-word-key=\"${key}\">${token}</mark>${marker}`;
+    }
+  );
+
+  return renderSenseSuperscript(html);
+}
+
+function highlightChineseWithKeys(text, termKeyPairs) {
+  let html = escapeHtml(normalizeZhSenseMarkers(text));
+  for (const item of termKeyPairs || []) {
+    const term = String(item?.term || "");
+    if (!term) continue;
+    const keys = Array.isArray(item?.keys) ? item.keys.filter(Boolean) : [];
+    const keysAttr = escapeHtml(keys.join(","));
+    const regex = new RegExp(escapeRegExp(term), "g");
+    html = html.replace(regex, (m) => `<mark class=\"vocab-zh\" data-word-keys=\"${keysAttr}\">${m}</mark>`);
+  }
   return renderSenseSuperscript(html);
 }
 
@@ -464,14 +612,14 @@ function speakGlossaryByKeyWithAccent(key, accent) {
   window.speechSynthesis.speak(u);
 }
 
-function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon) {
-  const zhTerms = collectChineseTerms(lexicon);
+function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon, alignment) {
+  const zhTermKeyPairs = buildChineseTermKeyPairsFromAlignment(alignment, lexicon);
 
   articleBlocksEl.innerHTML = paragraphsEn
     .map((en, i) => {
       const zh = paragraphsZh[i] || "(该段翻译生成失败，请重试)";
-      const enHtml = highlightEnglishWordsWithKeys(en, words).replace(/\n/g, "<br>");
-      const zhHtml = highlightText(zh, zhTerms, "vocab-zh", false).replace(/\n/g, "<br>");
+      const enHtml = highlightEnglishWithAlignment(en, words, alignment).replace(/\n/g, "<br>");
+      const zhHtml = highlightChineseWithKeys(zh, zhTermKeyPairs).replace(/\n/g, "<br>");
 
       return `
         <article class=\"para-card\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
@@ -590,6 +738,11 @@ function buildExportBundle(title, includeChinese) {
 }
 
 function makeWordFriendlyHtml(innerHtml, marginPx) {
+  const normalized = String(innerHtml || "")
+    .replace(/<mark class="vocab-en"[^>]*>/g, '<span class="vocab-en-inline">')
+    .replace(/<mark class="vocab-zh"[^>]*>/g, '<span class="vocab-zh-inline">')
+    .replaceAll("</mark>", "</span>");
+
   return `
   <html>
     <head>
@@ -614,10 +767,7 @@ function makeWordFriendlyHtml(innerHtml, marginPx) {
       </style>
     </head>
     <body>
-      ${innerHtml
-        .replaceAll('<mark class="vocab-en">', '<span class="vocab-en-inline">')
-        .replaceAll('<mark class="vocab-zh">', '<span class="vocab-zh-inline">')
-        .replaceAll("</mark>", "</span>")}
+      ${normalized}
     </body>
   </html>`;
 }
@@ -727,13 +877,14 @@ function applyArticleData(data) {
   latestLexicon = Array.isArray(data.lexicon) ? data.lexicon : [];
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
+  latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
   currentFavoriteId = String(data.id || "").trim();
 
   const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
   articleTitleEl.textContent = finalTitle;
   exportTitleInput.value = finalTitle || String(data.defaultTitle || defaultTitleByWords(latestWords));
 
-  renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon);
+  renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon, latestAlignment);
   renderGlossary(latestLexicon);
 
   if (Array.isArray(data.missing) && data.missing.length > 0) {
@@ -783,6 +934,7 @@ function favoriteFromCurrent() {
     lexicon: latestLexicon,
     paragraphsEn: latestParagraphsEn,
     paragraphsZh: latestParagraphsZh,
+    alignment: latestAlignment,
     missing: []
   };
 }
@@ -844,9 +996,21 @@ articleBlocksEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const mark = target.closest("mark.vocab-en[data-word-key]");
-  if (!mark) return;
-  const key = mark.getAttribute("data-word-key");
-  jumpToGlossaryKey(key || "");
+  if (mark) {
+    const key = mark.getAttribute("data-word-key");
+    jumpToGlossaryKey(key || "");
+    return;
+  }
+
+  const zhMark = target.closest("mark.vocab-zh[data-word-keys]");
+  if (!zhMark) return;
+  const keys = String(zhMark.getAttribute("data-word-keys") || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (keys.length > 0) {
+    jumpToGlossaryKey(keys[0]);
+  }
 });
 
 glossaryEl.addEventListener("click", (event) => {

@@ -660,6 +660,97 @@ async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
   });
 }
 
+function normalizeAlignment(words, lexicon, raw) {
+  const allowed = new Set((words || []).map((w) => String(w || "").toLowerCase()));
+  const lexMap = new Map((lexicon || []).map((x) => [String(x.word || "").toLowerCase(), x]));
+  const items = Array.isArray(raw?.items) ? raw.items : Array.isArray(raw) ? raw : [];
+  const output = [];
+  const seen = new Set();
+
+  for (const item of items) {
+    const word = String(item?.word || "").trim();
+    if (!word) continue;
+    const lw = word.toLowerCase();
+    if (!allowed.has(lw) || seen.has(lw)) continue;
+    const lex = lexMap.get(lw);
+    const zhTerms = (Array.isArray(item?.zh_terms) ? item.zh_terms : [])
+      .map((x) => String(x || "").trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    const englishForms = (Array.isArray(item?.english_forms) ? item.english_forms : [])
+      .map((x) => String(x || "").trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    output.push({
+      word: lex?.word || word,
+      marker: String(item?.marker || lex?.senses?.[0]?.marker || "①"),
+      zh_terms: zhTerms,
+      english_forms: englishForms
+    });
+    seen.add(lw);
+  }
+
+  for (const w of words || []) {
+    const lw = String(w || "").toLowerCase();
+    if (seen.has(lw)) continue;
+    const lex = lexMap.get(lw);
+    const fallbackZh = Array.isArray(lex?.senses) ? lex.senses.map((s) => String(s?.meaning || "").trim()).filter(Boolean) : [];
+    output.push({
+      word: String(w || ""),
+      marker: String(lex?.senses?.[0]?.marker || "①"),
+      zh_terms: fallbackZh.slice(0, 6),
+      english_forms: [String(w || "")]
+    });
+  }
+
+  return output;
+}
+
+async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode) {
+  if (!Array.isArray(words) || words.length === 0) {
+    return [];
+  }
+
+  const vocabHints = lexicon
+    .map((item) => {
+      const sensesText = item.senses.map((s) => `${s.marker} ${s.meaning}`).join("; ");
+      return `${item.word}: ${sensesText}`;
+    })
+    .join("\n");
+
+  const prompt = [
+    "You align IELTS target words to bilingual article terms.",
+    "Return ONLY JSON object with key \"items\".",
+    "items[] format:",
+    "{\"word\": string, \"marker\": \"①-⑩\", \"english_forms\": string[], \"zh_terms\": string[]}",
+    "Rules:",
+    "1) word must be one of target words.",
+    "2) english_forms: forms actually appearing in English article, include variants like literacy, drainage, mishaps when aligned.",
+    "3) zh_terms: concise Chinese terms that actually appear in Chinese translation for that word.",
+    "4) marker should match the intended sense marker.",
+    "5) No explanation text.",
+    `Target words: ${words.join(", ")}`,
+    "Vocabulary guide:",
+    vocabHints,
+    "English paragraphs JSON:",
+    JSON.stringify(paragraphsEn || []),
+    "Chinese paragraphs JSON:",
+    JSON.stringify(paragraphsZh || [])
+  ].join("\n");
+
+  try {
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 680 : 1200 });
+    const parsedObj = extractJsonObject(text);
+    if (parsedObj) {
+      return normalizeAlignment(words, lexicon, parsedObj);
+    }
+    const parsedArr = extractJsonArray(text);
+    return normalizeAlignment(words, lexicon, parsedArr);
+  } catch {
+    return normalizeAlignment(words, lexicon, []);
+  }
+}
+
 app.post("/api/auth/register", async (req, res) => {
   try {
     const name = String(req.body.name || "").trim() || "Texta User";
@@ -848,6 +939,7 @@ app.post("/api/generate", async (req, res) => {
 
     const paragraphsEn = splitParagraphs(articlePack.article);
     const paragraphsZh = await generateParagraphTranslations(paragraphsEn, lexicon, quickMode);
+    const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode);
     const defaultTitle = defaultTitleByDate(words.length);
 
     res.json({
@@ -857,7 +949,8 @@ app.post("/api/generate", async (req, res) => {
       missing,
       lexicon,
       paragraphsEn,
-      paragraphsZh
+      paragraphsZh,
+      alignment
     });
   } catch (error) {
     console.error(error);
