@@ -37,8 +37,6 @@ let pendingExportType = "pdf";
 let readingMode = false;
 let spellTimer = null;
 let spellState = [];
-let paragraphObserver = null;
-let paragraphWordMap = [];
 let lastActiveGlossaryKey = "";
 let pronunciationMap = new Map();
 
@@ -286,50 +284,8 @@ function speakGlossaryByKeyWithAccent(key, accent) {
   window.speechSynthesis.speak(u);
 }
 
-function setupParagraphObserver() {
-  if (paragraphObserver) {
-    paragraphObserver.disconnect();
-  }
-
-  const cards = Array.from(articleBlocksEl.querySelectorAll(".para-card"));
-  if (cards.length === 0) {
-    return;
-  }
-
-  paragraphObserver = new IntersectionObserver(
-    (entries) => {
-      const visible = entries
-        .filter((e) => e.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-      if (visible.length === 0) {
-        return;
-      }
-      const idx = Number(visible[0].target.getAttribute("data-idx") || "-1");
-      if (idx < 0) {
-        return;
-      }
-      updateGlossaryFollow(paragraphWordMap[idx] || new Set());
-    },
-    { root: resultSection, threshold: [0.45, 0.7] }
-  );
-
-  cards.forEach((card) => paragraphObserver.observe(card));
-}
-
 function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon) {
   const zhTerms = collectChineseTerms(lexicon);
-
-  paragraphWordMap = paragraphsEn.map((p) => {
-    const lower = String(p || "").toLowerCase();
-    const set = new Set();
-    for (const w of words) {
-      const reg = buildWordRegex(w.toLowerCase());
-      if (reg.test(lower)) {
-        set.add(keyifyWord(w));
-      }
-    }
-    return set;
-  });
 
   articleBlocksEl.innerHTML = paragraphsEn
     .map((en, i) => {
@@ -347,7 +303,6 @@ function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon) {
     .join("");
 
   applyChineseVisibility();
-  setupParagraphObserver();
 }
 
 function renderGlossary(lexicon) {

@@ -31,12 +31,13 @@ body {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
   width: 100%;
   padding: 18px;
   display: grid;
   grid-template-columns: 300px minmax(420px, 1fr) 360px;
   gap: 14px;
+  overflow: hidden;
 }
 
 .panel {
@@ -51,7 +52,37 @@ body {
 .result-panel,
 .glossary-panel {
   padding: 16px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(107, 114, 128, 0.35) transparent;
+}
+
+.input-panel::-webkit-scrollbar,
+.result-panel::-webkit-scrollbar,
+.glossary-panel::-webkit-scrollbar {
+  width: 7px;
+}
+
+.input-panel::-webkit-scrollbar-track,
+.result-panel::-webkit-scrollbar-track,
+.glossary-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.input-panel::-webkit-scrollbar-thumb,
+.result-panel::-webkit-scrollbar-thumb,
+.glossary-panel::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.input-panel::-webkit-scrollbar-thumb:hover,
+.result-panel::-webkit-scrollbar-thumb:hover,
+.glossary-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.5);
 }
 
 .input-panel {
@@ -62,7 +93,7 @@ body {
 
 .result-panel,
 .glossary-panel {
-  min-height: calc(100vh - 36px);
+  height: calc(100vh - 36px);
 }
 
 h1,
@@ -420,7 +451,9 @@ body.reading-mode .app-shell {
 
 @media (max-width: 1200px) {
   .app-shell {
+    height: auto;
     grid-template-columns: 280px 1fr;
+    overflow: visible;
   }
 
   .glossary-panel {
@@ -435,8 +468,10 @@ body.reading-mode .app-shell {
 
 @media (max-width: 860px) {
   .app-shell {
+    height: auto;
     grid-template-columns: 1fr;
     padding: 10px;
+    overflow: visible;
   }
 
   .input-panel {
