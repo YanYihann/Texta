@@ -262,6 +262,23 @@ button:disabled {
   min-width: 0;
 }
 
+.fav-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.fav-rename {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 12px;
+  padding: 3px 8px;
+  flex-shrink: 0;
+}
+
 .fav-delete {
   background: #fff1f2;
   color: #9f1239;

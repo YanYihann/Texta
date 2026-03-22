@@ -41,6 +41,7 @@ let spellTimer = null;
 let spellState = [];
 let lastActiveGlossaryKey = "";
 let pronunciationMap = new Map();
+let currentFavoriteId = "";
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 let favorites = [];
@@ -77,7 +78,10 @@ function renderFavorites() {
           <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
           <div class="fav-meta">${escapeHtml(item.savedAt || "")}</div>
         </div>
-        <button class="fav-delete" type="button" data-fav-delete="${escapeHtml(item.id)}">删除</button>
+        <div class="fav-actions">
+          <button class="fav-rename" type="button" data-fav-rename="${escapeHtml(item.id)}">改标题</button>
+          <button class="fav-delete" type="button" data-fav-delete="${escapeHtml(item.id)}">删除</button>
+        </div>
       </div>
     `
     )
@@ -168,8 +172,55 @@ function renderSenseSuperscript(html) {
 
 function buildWordRegex(word) {
   const escaped = escapeRegExp(word);
-  const suffix = "(?:s|es|ed|ing|age|ages|al|ally|ment|ments|tion|tions|er|ers|ly|ness)?";
-  return new RegExp(`\\b(${escaped}${suffix})\\b`, "gi");
+  const lower = String(word || "").toLowerCase();
+  const forms = new Set();
+  forms.add(escaped);
+
+  const addForm = (v) => {
+    const value = String(v || "").trim();
+    if (!value) return;
+    forms.add(escapeRegExp(value));
+  };
+
+  // Common inflections and derivations
+  addForm(`${lower}s`);
+  addForm(`${lower}es`);
+  addForm(`${lower}ed`);
+  addForm(`${lower}ing`);
+  addForm(`${lower}age`);
+  addForm(`${lower}ages`);
+  addForm(`${lower}al`);
+  addForm(`${lower}ally`);
+  addForm(`${lower}ment`);
+  addForm(`${lower}ments`);
+  addForm(`${lower}tion`);
+  addForm(`${lower}tions`);
+  addForm(`${lower}er`);
+  addForm(`${lower}ers`);
+  addForm(`${lower}ly`);
+  addForm(`${lower}ness`);
+  addForm(`${lower}y`);
+  addForm(`${lower}ies`);
+
+  // Example: literate -> literacy, numerate -> numeracy
+  if (lower.endsWith("ate") && lower.length > 4) {
+    const stem = lower.slice(0, -3);
+    addForm(`${stem}acy`);
+    addForm(`${stem}acies`);
+    addForm(`${stem}ation`);
+    addForm(`${stem}ations`);
+  }
+
+  // Example: create -> creation, active -> activity
+  if (lower.endsWith("e") && lower.length > 3) {
+    const stem = lower.slice(0, -1);
+    addForm(`${stem}ion`);
+    addForm(`${stem}ions`);
+    addForm(`${stem}ive`);
+    addForm(`${stem}ivity`);
+  }
+
+  return new RegExp(`\\b(${Array.from(forms).join("|")})\\b`, "gi");
 }
 
 function highlightText(text, terms, className, withBoundary) {
@@ -591,6 +642,7 @@ function applyArticleData(data) {
   latestLexicon = Array.isArray(data.lexicon) ? data.lexicon : [];
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
+  currentFavoriteId = String(data.id || "").trim();
 
   const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
   articleTitleEl.textContent = finalTitle;
@@ -611,6 +663,29 @@ function applyArticleData(data) {
   glossaryPanelEl.classList.remove("hidden");
   exportPdfBtn.disabled = false;
   exportWordBtn.disabled = false;
+}
+
+function renameFavoriteById(id) {
+  const index = favorites.findIndex((x) => x.id === id);
+  if (index < 0) return;
+  const oldTitle = String(favorites[index].title || "").trim() || "未命名文章";
+  const nextTitleRaw = window.prompt("请输入新的收藏标题：", oldTitle);
+  if (nextTitleRaw === null) return;
+  const nextTitle = String(nextTitleRaw).trim();
+  if (!nextTitle) {
+    statusEl.textContent = "标题不能为空。";
+    return;
+  }
+
+  favorites[index].title = nextTitle;
+  saveFavorites();
+  renderFavorites();
+
+  if (currentFavoriteId && currentFavoriteId === id) {
+    articleTitleEl.textContent = nextTitle;
+    exportTitleInput.value = nextTitle;
+  }
+  statusEl.textContent = "收藏标题已更新。";
 }
 
 function favoriteFromCurrent() {
@@ -722,6 +797,12 @@ favoriteBtn.addEventListener("click", () => {
 favoritesListEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const rename = target.closest(".fav-rename[data-fav-rename]");
+  if (rename) {
+    const renameId = rename.getAttribute("data-fav-rename");
+    renameFavoriteById(renameId || "");
+    return;
+  }
   const del = target.closest(".fav-delete[data-fav-delete]");
   if (del) {
     const delId = del.getAttribute("data-fav-delete");
