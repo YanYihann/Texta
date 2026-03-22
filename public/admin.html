@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Texta VIP 审核中心</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="shortcut icon" href="./favicon.svg" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell admin-shell">
+      <section class="panel result-panel">
+        <div class="top-actions">
+          <h2>VIP 审核中心</h2>
+          <div class="actions">
+            <button id="refreshBtn" type="button">刷新</button>
+            <a class="upgrade-link" href="./app.html">返回主页面</a>
+          </div>
+        </div>
+        <p id="adminStatus" class="subtitle">加载中...</p>
+        <div id="requestList" class="admin-list"></div>
+      </section>
+    </main>
+    <script src="./site-config.js"></script>
+    <script src="./admin.js"></script>
+  </body>
+</html>

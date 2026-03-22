@@ -111,12 +111,13 @@ async function readAuthStore() {
   const users = Array.isArray(parsed.users) ? parsed.users : [];
   const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
   const usageDaily = parsed?.usageDaily && typeof parsed.usageDaily === "object" ? parsed.usageDaily : {};
+  const vipRequests = Array.isArray(parsed.vipRequests) ? parsed.vipRequests : [];
   const now = Date.now();
   const prunedSessions = sessions.filter((x) => Number(x?.expiresAt || 0) > now);
   if (prunedSessions.length !== sessions.length) {
-    await writeAuthStore({ users, sessions: prunedSessions, usageDaily });
+    await writeAuthStore({ users, sessions: prunedSessions, usageDaily, vipRequests });
   }
-  return { users, sessions: prunedSessions, usageDaily };
+  return { users, sessions: prunedSessions, usageDaily, vipRequests };
 }
 
 function publicUser(user) {
@@ -207,6 +208,16 @@ async function requireAuth(req, res) {
   const user = await getUserFromToken(req);
   if (!user) {
     res.status(401).json({ error: "Unauthorized. Please login first." });
+    return null;
+  }
+  return user;
+}
+
+async function requireAdmin(req, res) {
+  const user = await requireAuth(req, res);
+  if (!user) return null;
+  if (String(user.role || "").toLowerCase() !== "admin") {
+    res.status(403).json({ error: "Admin only." });
     return null;
   }
   return user;
@@ -967,29 +978,139 @@ app.get("/api/usage", async (req, res) => {
   }
 });
 
-app.post("/api/upgrade/vip", async (req, res) => {
+app.post("/api/upgrade/request", async (req, res) => {
   try {
     const user = await requireAuth(req, res);
     if (!user) return;
-    if (String(user.role || "").toLowerCase() === "admin") {
-      const store = await readAuthStore();
-      const usage = getUsageSnapshot(store, user);
-      return res.json({ ok: true, upgraded: false, message: "Admin is already unlimited.", usage, user: publicUser(user) });
+    const role = String(user.role || "").toLowerCase();
+    const plan = String(user.plan || "free").toLowerCase();
+    if (role === "admin" || plan === "vip") {
+      return res.json({ ok: true, submitted: false, message: "Already VIP/admin." });
     }
 
     const store = await readAuthStore();
-    const idx = store.users.findIndex((x) => x.id === user.id);
-    if (idx === -1) {
-      return res.status(404).json({ error: "User not found." });
+    if (!Array.isArray(store.vipRequests)) {
+      store.vipRequests = [];
     }
-    store.users[idx].plan = "vip";
+
+    const hasPending = store.vipRequests.some((x) => x.userId === user.id && x.status === "pending");
+    if (hasPending) {
+      return res.status(409).json({ error: "You already have a pending VIP request." });
+    }
+
+    const payerName = String(req.body.payerName || "").trim();
+    const amount = String(req.body.amount || "10").trim();
+    const paidAt = String(req.body.paidAt || "").trim();
+    const proofCode = String(req.body.proofCode || "").trim();
+    const proofImageUrl = String(req.body.proofImageUrl || "").trim();
+    const note = String(req.body.note || "").trim();
+
+    const requestItem = {
+      id: `vipreq_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
+      userId: user.id,
+      userEmail: user.email,
+      payerName: payerName || user.name || user.email,
+      amount: amount || "10",
+      paidAt: paidAt || new Date().toISOString(),
+      proofCode,
+      proofImageUrl,
+      note,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      reviewedAt: "",
+      reviewerId: "",
+      reviewNote: ""
+    };
+    store.vipRequests.unshift(requestItem);
     await writeAuthStore(store);
-    const updatedUser = store.users[idx];
-    const usage = getUsageSnapshot(store, updatedUser);
-    res.json({ ok: true, upgraded: true, user: publicUser(updatedUser), usage });
+    res.json({ ok: true, submitted: true, request: requestItem });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Failed to upgrade VIP.", detail: error.message });
+    res.status(500).json({ error: "Failed to submit VIP request.", detail: error.message });
+  }
+});
+
+app.get("/api/upgrade/request/me", async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const store = await readAuthStore();
+    const items = (store.vipRequests || []).filter((x) => x.userId === user.id).slice(0, 20);
+    res.json({ ok: true, items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get VIP requests.", detail: error.message });
+  }
+});
+
+app.get("/api/admin/vip-requests", async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+    const store = await readAuthStore();
+    const status = String(req.query.status || "pending").trim().toLowerCase();
+    const items = (store.vipRequests || []).filter((x) => (status ? String(x.status || "").toLowerCase() === status : true));
+    res.json({ ok: true, items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get VIP requests.", detail: error.message });
+  }
+});
+
+app.post("/api/admin/vip-requests/:id/approve", async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+    const id = String(req.params.id || "").trim();
+    const store = await readAuthStore();
+    const reqIdx = (store.vipRequests || []).findIndex((x) => x.id === id);
+    if (reqIdx === -1) {
+      return res.status(404).json({ error: "Request not found." });
+    }
+    const reqItem = store.vipRequests[reqIdx];
+    if (reqItem.status !== "pending") {
+      return res.status(409).json({ error: "Request already reviewed." });
+    }
+    reqItem.status = "approved";
+    reqItem.reviewedAt = new Date().toISOString();
+    reqItem.reviewerId = admin.id;
+    reqItem.reviewNote = String(req.body.note || "").trim();
+
+    const userIdx = store.users.findIndex((x) => x.id === reqItem.userId);
+    if (userIdx !== -1) {
+      store.users[userIdx].plan = "vip";
+    }
+    await writeAuthStore(store);
+    res.json({ ok: true, request: reqItem });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to approve request.", detail: error.message });
+  }
+});
+
+app.post("/api/admin/vip-requests/:id/reject", async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+    const id = String(req.params.id || "").trim();
+    const store = await readAuthStore();
+    const reqIdx = (store.vipRequests || []).findIndex((x) => x.id === id);
+    if (reqIdx === -1) {
+      return res.status(404).json({ error: "Request not found." });
+    }
+    const reqItem = store.vipRequests[reqIdx];
+    if (reqItem.status !== "pending") {
+      return res.status(409).json({ error: "Request already reviewed." });
+    }
+    reqItem.status = "rejected";
+    reqItem.reviewedAt = new Date().toISOString();
+    reqItem.reviewerId = admin.id;
+    reqItem.reviewNote = String(req.body.note || "").trim();
+    await writeAuthStore(store);
+    res.json({ ok: true, request: reqItem });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to reject request.", detail: error.message });
   }
 });
 

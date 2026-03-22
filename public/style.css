@@ -276,6 +276,23 @@ h3 {
   font-size: 12px;
 }
 
+.admin-shell {
+  grid-template-columns: minmax(680px, 960px);
+  justify-content: center;
+}
+
+.admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-item {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+}
+
 .logo {
   width: 90px;
   height: 90px;
