@@ -52,6 +52,16 @@ npm.cmd start
 
 [http://localhost:3000](http://localhost:3000)
 
+## GitHub Pages 发布
+
+- 已配置 `.github/workflows/deploy-pages.yml`，推送到 `main` 会自动发布 `public/`。
+- GitHub Pages 只能托管前端静态页面，后端 API 需要单独部署。
+- 线上时请在 `public/site-config.js` 设置：
+
+```js
+window.TEXTA_API_BASE = "https://your-backend-domain";
+```
+
 ## 网络超时排查
 
 - 如果报 `Connect Timeout`：

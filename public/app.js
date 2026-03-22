@@ -39,6 +39,11 @@ let spellTimer = null;
 let spellState = [];
 let lastActiveGlossaryKey = "";
 let pronunciationMap = new Map();
+const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
+
+function apiUrl(path) {
+  return `${API_BASE}${path}`;
+}
 
 function splitWords(rawText) {
   return String(rawText || "")
@@ -218,7 +223,7 @@ async function runSpellcheck() {
   }
 
   try {
-    const response = await fetch("/api/spellcheck", {
+    const response = await fetch(apiUrl("/api/spellcheck"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ words: wordsText })
@@ -562,8 +567,11 @@ generateBtn.addEventListener("click", async () => {
   try {
     latestWords = splitWords(wordsText);
     exportTitleInput.value = defaultTitleByWords(latestWords);
+    if (!API_BASE && location.hostname.includes("github.io")) {
+      throw new Error("GitHub Pages 仅托管前端。请先在 public/site-config.js 配置后端 API 地址（TEXTA_API_BASE）。");
+    }
 
-    const response = await fetch("/api/generate", {
+    const response = await fetch(apiUrl("/api/generate"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ words: wordsText, level, quickMode })
