@@ -462,7 +462,7 @@ function highlightEnglishWithAlignment(text, words, alignment) {
   }
 
   const forms = Array.from(formToKey.keys()).sort((a, b) => b.length - a.length).map((f) => escapeRegExp(f));
-  let normalized = normalizeSenseMarkerSpacing(String(text || ""));
+  let normalized = normalizeSenseMarkerSpacing(String(text || "")).replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
   let html = escapeHtml(normalized);
   if (forms.length > 0) {
     const combined = new RegExp(`\\b(${forms.join("|")})\\b`, "gi");

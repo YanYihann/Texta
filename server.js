@@ -731,6 +731,7 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
   const zhText = (paragraphsZh || []).join("\n");
   const output = [];
   const seen = new Set();
+  const stripMarkers = (x) => String(x || "").replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "").trim();
 
   const appearsInEn = (x) => {
     const v = String(x || "").trim().toLowerCase();
@@ -753,11 +754,11 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
       .filter(appearsInZh)
       .slice(0, 10);
     let englishForms = (Array.isArray(item?.english_forms) ? item.english_forms : [])
-      .map((x) => String(x || "").trim())
+      .map((x) => stripMarkers(x))
       .filter(Boolean)
       .filter(appearsInEn)
       .slice(0, 10);
-    const inferredForms = inferFormsFromArticle(word, paragraphsEn).filter(appearsInEn);
+    const inferredForms = inferFormsFromArticle(word, paragraphsEn).map(stripMarkers).filter(appearsInEn);
     englishForms = Array.from(new Set([...englishForms, ...inferredForms]));
     if (englishForms.length === 0 && appearsInEn(word)) englishForms = [word];
     output.push({
@@ -779,7 +780,7 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
           .filter(Boolean)
           .filter(appearsInZh)
       : [];
-    const inferredForms = inferFormsFromArticle(w, paragraphsEn).filter(appearsInEn);
+    const inferredForms = inferFormsFromArticle(w, paragraphsEn).map(stripMarkers).filter(appearsInEn);
     output.push({
       word: String(w || ""),
       marker: String(lex?.senses?.[0]?.marker || "①"),
@@ -1054,10 +1055,3 @@ bootstrap().catch((error) => {
   console.error("Failed to bootstrap server:", error);
   process.exit(1);
 });
-
-
-
-
-
-
-
