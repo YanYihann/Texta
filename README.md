@@ -62,6 +62,21 @@ npm.cmd start
 window.TEXTA_API_BASE = "https://your-backend-domain";
 ```
 
+## Render 部署后端（推荐）
+
+仓库已包含 `render.yaml`，可直接在 Render 一键导入：
+
+1. 在 Render 新建 `Blueprint`，选择本仓库。  
+2. 在环境变量里填写 `OPENAI_API_KEY`。  
+3. 部署完成后，拿到后端地址（例如 `https://texta-backend.onrender.com`）。  
+4. 把 `public/site-config.js` 改为：
+
+```js
+window.TEXTA_API_BASE = "https://texta-backend.onrender.com";
+```
+
+5. 提交并推送后，GitHub Pages 前端即可调用线上后端。
+
 ## 网络超时排查
 
 - 如果报 `Connect Timeout`：

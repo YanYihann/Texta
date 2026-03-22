@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: texta-backend
+    runtime: node
+    plan: free
+    autoDeploy: true
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_API_MODE
+        value: responses
+      - key: OPENAI_BASE_URL
+        value: https://api.openai.com/v1
+      - key: OPENAI_TIMEOUT_MS
+        value: "30000"
+      - key: OPENAI_RETRY_COUNT
+        value: "2"
+      - key: FRONTEND_ORIGIN
+        value: https://yanyihann.github.io

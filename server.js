@@ -36,9 +36,34 @@ function normalizeBaseUrl(raw) {
 const OPENAI_BASE_URL = normalizeBaseUrl(process.env.OPENAI_BASE_URL);
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 30000);
 const OPENAI_RETRY_COUNT = Number(process.env.OPENAI_RETRY_COUNT || 2);
+const FRONTEND_ORIGIN = String(process.env.FRONTEND_ORIGIN || "*").trim();
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use((req, res, next) => {
+  const origin = req.headers.origin || "";
+  const allowAll = FRONTEND_ORIGIN === "*";
+  const allowed =
+    allowAll ||
+    origin === FRONTEND_ORIGIN ||
+    (FRONTEND_ORIGIN.includes(",") &&
+      FRONTEND_ORIGIN
+        .split(",")
+        .map((x) => x.trim())
+        .includes(origin));
+
+  if (allowed) {
+    res.setHeader("Access-Control-Allow-Origin", allowAll ? "*" : origin || FRONTEND_ORIGIN);
+    res.setHeader("Vary", "Origin");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+  next();
+});
 
 function splitWords(rawText) {
   return String(rawText || "")
@@ -534,6 +559,10 @@ app.post("/api/spellcheck", async (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Failed to spellcheck.", detail: error.message });
   }
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, service: "texta-api" });
 });
 
 app.post("/api/generate", async (req, res) => {
