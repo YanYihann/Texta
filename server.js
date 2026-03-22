@@ -1,7 +1,8 @@
 ﻿const express = require("express");
 const path = require("path");
 const dotenv = require("dotenv");
-
+const fs = require("fs");
+const crypto = require("crypto");
 dotenv.config();
 
 const app = express();
@@ -37,7 +38,11 @@ const OPENAI_BASE_URL = normalizeBaseUrl(process.env.OPENAI_BASE_URL);
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 30000);
 const OPENAI_RETRY_COUNT = Number(process.env.OPENAI_RETRY_COUNT || 2);
 const FRONTEND_ORIGIN = String(process.env.FRONTEND_ORIGIN || "*").trim();
-
+const AUTH_STORE_PATH = path.join(__dirname, "data", "auth-store.json");
+const AUTH_TOKEN_TTL_MS = Number(process.env.AUTH_TOKEN_TTL_MS || 1000 * 60 * 60 * 24 * 7);
+const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+const ADMIN_NAME = String(process.env.ADMIN_NAME || "Admin").trim();
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "").trim();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use((req, res, next) => {
@@ -65,6 +70,107 @@ app.use((req, res, next) => {
   next();
 });
 
+async function ensureAuthStore() {
+  const dir = path.dirname(AUTH_STORE_PATH);
+  await fs.promises.mkdir(dir, { recursive: true });
+  if (!fs.existsSync(AUTH_STORE_PATH)) {
+    await fs.promises.writeFile(AUTH_STORE_PATH, JSON.stringify({ users: [], sessions: [] }, null, 2), "utf8");
+  }
+}
+
+function hashPassword(raw, salt) {
+  const safeSalt = salt || crypto.randomBytes(16).toString("hex");
+  const derived = crypto.scryptSync(String(raw || ""), safeSalt, 64).toString("hex");
+  return { hash: `${safeSalt}:${derived}`, salt: safeSalt };
+}
+
+function verifyPassword(raw, passwordHash) {
+  const source = String(passwordHash || "");
+  const [salt, hashed] = source.split(":");
+  if (!salt || !hashed) {
+    return false;
+  }
+  const rehashed = crypto.scryptSync(String(raw || ""), salt, 64).toString("hex");
+  const a = Buffer.from(hashed, "hex");
+  const b = Buffer.from(rehashed, "hex");
+  if (a.length !== b.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(a, b);
+}
+
+async function writeAuthStore(store) {
+  await ensureAuthStore();
+  await fs.promises.writeFile(AUTH_STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+}
+
+async function readAuthStore() {
+  await ensureAuthStore();
+  const raw = await fs.promises.readFile(AUTH_STORE_PATH, "utf8");
+  const parsed = JSON.parse(raw || "{}");
+  const users = Array.isArray(parsed.users) ? parsed.users : [];
+  const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+  const now = Date.now();
+  const prunedSessions = sessions.filter((x) => Number(x?.expiresAt || 0) > now);
+  if (prunedSessions.length !== sessions.length) {
+    await writeAuthStore({ users, sessions: prunedSessions });
+  }
+  return { users, sessions: prunedSessions };
+}
+
+function publicUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role || "user"
+  };
+}
+
+function extractBearerToken(req) {
+  const auth = String(req.headers.authorization || "");
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : "";
+}
+
+async function getUserFromToken(req) {
+  const token = extractBearerToken(req);
+  if (!token) return null;
+  const store = await readAuthStore();
+  const session = store.sessions.find((x) => x.token === token);
+  if (!session) return null;
+  const user = store.users.find((x) => x.id === session.userId);
+  return user || null;
+}
+
+async function ensureAdminSeed() {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return;
+  const store = await readAuthStore();
+  const exists = store.users.some((u) => String(u.email || "").toLowerCase() === ADMIN_EMAIL);
+  if (exists) return;
+
+  const pw = hashPassword(ADMIN_PASSWORD);
+  store.users.push({
+    id: `u_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
+    email: ADMIN_EMAIL,
+    name: ADMIN_NAME,
+    passwordHash: pw.hash,
+    role: "admin",
+    createdAt: new Date().toISOString()
+  });
+  await writeAuthStore(store);
+  console.log(`[auth] Seeded admin user: ${ADMIN_EMAIL}`);
+}
+
+async function requireAuth(req, res) {
+  const user = await getUserFromToken(req);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized. Please login first." });
+    return null;
+  }
+  return user;
+}
 function splitWords(rawText) {
   return String(rawText || "")
     .split(/[\n,;，；\s]+/)
@@ -554,8 +660,101 @@ async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
   });
 }
 
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const name = String(req.body.name || "").trim() || "Texta User";
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
+
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ error: "Please provide a valid email." });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters." });
+    }
+
+    const store = await readAuthStore();
+    const exists = store.users.some((u) => String(u.email || "").toLowerCase() === email);
+    if (exists) {
+      return res.status(409).json({ error: "Email already registered." });
+    }
+
+    const pw = hashPassword(password);
+    const role = ADMIN_EMAIL && email === ADMIN_EMAIL ? "admin" : "user";
+    const user = {
+      id: `u_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
+      email,
+      name,
+      passwordHash: pw.hash,
+      role,
+      createdAt: new Date().toISOString()
+    };
+    store.users.push(user);
+    await writeAuthStore(store);
+
+    res.status(201).json({ ok: true, user: publicUser(user) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to register.", detail: error.message });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
+
+    const store = await readAuthStore();
+    const user = store.users.find((u) => String(u.email || "").toLowerCase() === email);
+    if (!user || !verifyPassword(password, user.passwordHash)) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const token = `tk_${crypto.randomBytes(24).toString("hex")}`;
+    const expiresAt = Date.now() + AUTH_TOKEN_TTL_MS;
+    store.sessions = (store.sessions || []).filter((s) => Number(s?.expiresAt || 0) > Date.now());
+    store.sessions.push({ token, userId: user.id, expiresAt, createdAt: Date.now() });
+    await writeAuthStore(store);
+
+    res.json({ ok: true, token, user: publicUser(user), expiresAt });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to login.", detail: error.message });
+  }
+});
+
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    const user = await getUserFromToken(req);
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized." });
+    }
+    res.json({ ok: true, user: publicUser(user) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get profile.", detail: error.message });
+  }
+});
+
+app.post("/api/auth/logout", async (req, res) => {
+  try {
+    const token = extractBearerToken(req);
+    if (!token) {
+      return res.json({ ok: true });
+    }
+    const store = await readAuthStore();
+    store.sessions = (store.sessions || []).filter((s) => s.token !== token);
+    await writeAuthStore(store);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to logout.", detail: error.message });
+  }
+});
 app.post("/api/spellcheck", async (req, res) => {
   try {
+    const authedUser = await requireAuth(req, res);
+    if (!authedUser) return;
     const words = splitWords(String(req.body.words || ""));
     const targets = words.filter((w) => /^[A-Za-z-]{3,}$/.test(w));
 
@@ -600,6 +799,8 @@ app.get("/api/health", (req, res) => {
 
 app.post("/api/generate", async (req, res) => {
   try {
+    const authedUser = await requireAuth(req, res);
+    if (!authedUser) return;
     if (!OPENAI_API_KEY) {
       return res.status(500).json({ error: "Missing OPENAI_API_KEY in .env" });
     }
@@ -664,6 +865,21 @@ app.post("/api/generate", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+async function bootstrap() {
+  await ensureAdminSeed();
+  app.listen(PORT, () => {
+    console.log(`Server is running at http://localhost:${PORT}`);
+  });
+}
+
+bootstrap().catch((error) => {
+  console.error("Failed to bootstrap server:", error);
+  process.exit(1);
 });
+
+
+
+
+
+
+

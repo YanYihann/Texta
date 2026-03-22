@@ -30,6 +30,66 @@ body {
     var(--bg);
 }
 
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(242, 242, 247, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.auth-card {
+  width: min(92vw, 430px);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.12);
+  padding: 20px;
+}
+
+.auth-brand {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.auth-subtitle {
+  margin: 6px 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.auth-tab {
+  flex: 1;
+  border-radius: 11px;
+  background: #eef2ff;
+  color: #334155;
+}
+
+.auth-tab.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.auth-form {
+  animation: fadeInUp 0.2s ease;
+}
+
+.auth-msg {
+  min-height: 20px;
+  margin: 2px 0 8px;
+  color: #9f1239;
+  font-size: 12px;
+}
+
 .app-shell {
   height: 100vh;
   width: 100%;
@@ -38,6 +98,12 @@ body {
   grid-template-columns: 300px minmax(420px, 1fr) 360px;
   gap: 14px;
   overflow: hidden;
+}
+
+.app-shell.locked {
+  filter: blur(2px) saturate(0.96);
+  pointer-events: none;
+  user-select: none;
 }
 
 .panel {
@@ -112,6 +178,26 @@ h3 {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.user-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #eef2ff;
+  border: 1px solid #dbeafe;
+  color: #1e3a8a;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .logo {
