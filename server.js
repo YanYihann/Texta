@@ -110,12 +110,13 @@ async function readAuthStore() {
   const parsed = JSON.parse(raw || "{}");
   const users = Array.isArray(parsed.users) ? parsed.users : [];
   const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+  const usageDaily = parsed?.usageDaily && typeof parsed.usageDaily === "object" ? parsed.usageDaily : {};
   const now = Date.now();
   const prunedSessions = sessions.filter((x) => Number(x?.expiresAt || 0) > now);
   if (prunedSessions.length !== sessions.length) {
-    await writeAuthStore({ users, sessions: prunedSessions });
+    await writeAuthStore({ users, sessions: prunedSessions, usageDaily });
   }
-  return { users, sessions: prunedSessions };
+  return { users, sessions: prunedSessions, usageDaily };
 }
 
 function publicUser(user) {
@@ -124,8 +125,46 @@ function publicUser(user) {
     id: user.id,
     email: user.email,
     name: user.name,
-    role: user.role || "user"
+    role: user.role || "user",
+    plan: user.plan || "free"
   };
+}
+
+function getShanghaiDateKey(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" }).format(date);
+}
+
+function getDailyLimit(user) {
+  if (String(user?.role || "").toLowerCase() === "admin") {
+    return Number.POSITIVE_INFINITY;
+  }
+  const plan = String(user?.plan || "free").toLowerCase();
+  return plan === "vip" ? 50 : 10;
+}
+
+function getUsageSnapshot(store, user, dateKey = getShanghaiDateKey()) {
+  const usageDaily = store?.usageDaily && typeof store.usageDaily === "object" ? store.usageDaily : {};
+  const userUsage = usageDaily[user.id] && typeof usageDaily[user.id] === "object" ? usageDaily[user.id] : {};
+  const used = Number(userUsage[dateKey] || 0);
+  const limit = getDailyLimit(user);
+  const isUnlimited = !Number.isFinite(limit);
+  return {
+    date: dateKey,
+    used,
+    limit: isUnlimited ? null : limit,
+    remaining: isUnlimited ? null : Math.max(limit - used, 0),
+    isUnlimited
+  };
+}
+
+function bumpUsage(store, user, dateKey = getShanghaiDateKey()) {
+  if (!store.usageDaily || typeof store.usageDaily !== "object") {
+    store.usageDaily = {};
+  }
+  if (!store.usageDaily[user.id] || typeof store.usageDaily[user.id] !== "object") {
+    store.usageDaily[user.id] = {};
+  }
+  store.usageDaily[user.id][dateKey] = Number(store.usageDaily[user.id][dateKey] || 0) + 1;
 }
 
 function extractBearerToken(req) {
@@ -157,6 +196,7 @@ async function ensureAdminSeed() {
     name: ADMIN_NAME,
     passwordHash: pw.hash,
     role: "admin",
+    plan: "vip",
     createdAt: new Date().toISOString()
   });
   await writeAuthStore(store);
@@ -864,6 +904,7 @@ app.post("/api/auth/register", async (req, res) => {
       name,
       passwordHash: pw.hash,
       role,
+      plan: role === "admin" ? "vip" : "free",
       createdAt: new Date().toISOString()
     };
     store.users.push(user);
@@ -910,6 +951,45 @@ app.get("/api/auth/me", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to get profile.", detail: error.message });
+  }
+});
+
+app.get("/api/usage", async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const store = await readAuthStore();
+    const usage = getUsageSnapshot(store, user);
+    res.json({ ok: true, usage, role: user.role || "user", plan: user.plan || "free" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get usage.", detail: error.message });
+  }
+});
+
+app.post("/api/upgrade/vip", async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    if (String(user.role || "").toLowerCase() === "admin") {
+      const store = await readAuthStore();
+      const usage = getUsageSnapshot(store, user);
+      return res.json({ ok: true, upgraded: false, message: "Admin is already unlimited.", usage, user: publicUser(user) });
+    }
+
+    const store = await readAuthStore();
+    const idx = store.users.findIndex((x) => x.id === user.id);
+    if (idx === -1) {
+      return res.status(404).json({ error: "User not found." });
+    }
+    store.users[idx].plan = "vip";
+    await writeAuthStore(store);
+    const updatedUser = store.users[idx];
+    const usage = getUsageSnapshot(store, updatedUser);
+    res.json({ ok: true, upgraded: true, user: publicUser(updatedUser), usage });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to upgrade VIP.", detail: error.message });
   }
 });
 
@@ -978,6 +1058,14 @@ app.post("/api/generate", async (req, res) => {
   try {
     const authedUser = await requireAuth(req, res);
     if (!authedUser) return;
+    const storeBefore = await readAuthStore();
+    const usageBefore = getUsageSnapshot(storeBefore, authedUser);
+    if (!usageBefore.isUnlimited && usageBefore.remaining <= 0) {
+      return res.status(429).json({
+        error: "Daily limit reached. Upgrade to VIP for 50 uses/day.",
+        usage: usageBefore
+      });
+    }
     if (!OPENAI_API_KEY) {
       return res.status(500).json({ error: "Missing OPENAI_API_KEY in .env" });
     }
@@ -1028,6 +1116,11 @@ app.post("/api/generate", async (req, res) => {
     const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode);
     const defaultTitle = defaultTitleByDate(words.length);
 
+    const storeAfter = await readAuthStore();
+    bumpUsage(storeAfter, authedUser);
+    await writeAuthStore(storeAfter);
+    const usage = getUsageSnapshot(storeAfter, authedUser);
+
     res.json({
       title: articlePack.title || defaultTitle,
       defaultTitle,
@@ -1036,7 +1129,8 @@ app.post("/api/generate", async (req, res) => {
       lexicon,
       paragraphsEn,
       paragraphsZh,
-      alignment
+      alignment,
+      usage
     });
   } catch (error) {
     console.error(error);

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420">
+  <rect width="420" height="420" rx="20" fill="#f8fafc" />
+  <rect x="20" y="20" width="380" height="380" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-dasharray="6 6" />
+  <text x="210" y="190" text-anchor="middle" font-size="24" fill="#334155" font-family="Arial, sans-serif">请替换为你的收款码</text>
+  <text x="210" y="226" text-anchor="middle" font-size="16" fill="#64748b" font-family="Arial, sans-serif">public/assets/pay-qr.svg</text>
+</svg>

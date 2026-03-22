@@ -211,6 +211,71 @@ h3 {
   font-weight: 600;
 }
 
+.usage-card {
+  margin-top: 10px;
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.usage-text {
+  font-size: 13px;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.upgrade-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.upgrade-link:hover {
+  text-decoration: underline;
+}
+
+.pay-card {
+  text-align: left;
+}
+
+.pay-box {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.pay-title {
+  font-size: 13px;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+.pay-qr-placeholder {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  background: #f8fafc;
+}
+
+.pay-qr-placeholder img {
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+}
+
+.pay-tip {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
 .logo {
   width: 90px;
   height: 90px;

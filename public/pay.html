@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Texta VIP 支付</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="shortcut icon" href="./favicon.svg" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-page-wrap">
+      <section class="auth-card solo pay-card">
+        <div class="auth-brand">Texta VIP</div>
+        <p class="auth-subtitle">支付 10 元可升级 VIP（每日 50 次）</p>
+
+        <div class="pay-box">
+          <div class="pay-title">收款码</div>
+          <div class="pay-qr-placeholder">
+            <img id="payQrImage" src="./assets/pay-qr.jpg" alt="收款码占位图" />
+          </div>
+          <p class="pay-tip">若图片未显示，请按文末路径上传收款码图片。</p>
+        </div>
+
+        <div id="payMsg" class="auth-msg"></div>
+        <button id="upgradeNowBtn" class="primary-btn" type="button">我已支付，开通VIP</button>
+        <a class="upgrade-link" href="./app.html">返回主页面</a>
+      </section>
+    </main>
+
+    <script src="./site-config.js"></script>
+    <script src="./pay.js"></script>
+  </body>
+</html>

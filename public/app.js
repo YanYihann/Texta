@@ -14,6 +14,8 @@ const wordChipsEl = document.getElementById("wordChips");
 const favoritesListEl = document.getElementById("favoritesList");
 const userBadgeEl = document.getElementById("userBadge");
 const logoutBtnEl = document.getElementById("logoutBtn");
+const usageTextEl = document.getElementById("usageText");
+const upgradeVipBtnEl = document.getElementById("upgradeVipBtn");
 
 const resultSection = document.getElementById("resultSection");
 const glossaryPanelEl = document.getElementById("glossaryPanel");
@@ -37,6 +39,7 @@ let latestLexicon = [];
 let latestParagraphsEn = [];
 let latestParagraphsZh = [];
 let latestAlignment = [];
+let latestUsage = null;
 let showChinese = true;
 let pendingExportType = "pdf";
 let readingMode = false;
@@ -72,6 +75,41 @@ function setAuthToken(token) {
   }
 }
 
+function renderUsage(usage, user = currentUser) {
+  latestUsage = usage || null;
+  if (!usageTextEl) return;
+  const isAdmin = String(user?.role || "").toLowerCase() === "admin";
+  const isVip = String(user?.plan || "").toLowerCase() === "vip";
+  if (isAdmin || usage?.isUnlimited) {
+    usageTextEl.textContent = "今日剩余次数：无限（管理员）";
+  } else {
+    const remaining = Number(usage?.remaining ?? 0);
+    const limit = Number(usage?.limit ?? (isVip ? 50 : 10));
+    const planLabel = isVip ? "VIP" : "普通";
+    usageTextEl.textContent = `今日剩余次数：${remaining} / ${limit}（${planLabel}）`;
+  }
+
+  if (upgradeVipBtnEl) {
+    if (isAdmin || isVip) {
+      upgradeVipBtnEl.classList.add("hidden");
+    } else {
+      upgradeVipBtnEl.classList.remove("hidden");
+    }
+  }
+}
+
+async function refreshUsage() {
+  if (!authToken) return;
+  try {
+    const response = await apiFetch("/api/usage");
+    if (!response.ok) return;
+    const data = await response.json();
+    renderUsage(data.usage || null);
+  } catch {
+    // Ignore usage refresh errors.
+  }
+}
+
 async function loadMe() {
   if (!authToken) {
     return false;
@@ -86,9 +124,12 @@ async function loadMe() {
     }
     const data = await response.json();
     currentUser = data.user || null;
-    const roleText = currentUser?.role === "admin" ? "管理员" : "用户";
+    const isAdmin = String(currentUser?.role || "").toLowerCase() === "admin";
+    const isVip = String(currentUser?.plan || "").toLowerCase() === "vip";
+    const roleText = isAdmin ? "管理员" : isVip ? "VIP用户" : "普通用户";
     userBadgeEl.textContent = `${currentUser?.name || currentUser?.email || "用户"} · ${roleText}`;
     logoutBtnEl.classList.remove("hidden");
+    await refreshUsage();
     return Boolean(currentUser);
   } catch {
     currentUser = null;
@@ -923,6 +964,9 @@ function applyArticleData(data) {
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
+  if (data && data.usage) {
+    renderUsage(data.usage);
+  }
   currentFavoriteId = String(data.id || "").trim();
 
   const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
@@ -1021,6 +1065,12 @@ generateBtn.addEventListener("click", async () => {
       currentUser = null;
       location.href = "./index.html";
       throw new Error("登录已过期，请重新登录。");
+    }
+    if (response.status === 429) {
+      if (data && data.usage) {
+        renderUsage(data.usage);
+      }
+      throw new Error(data.error || "今日次数已用完");
     }
     if (!response.ok) {
       throw new Error(data.error || "请求失败");
