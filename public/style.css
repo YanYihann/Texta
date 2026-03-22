@@ -40,6 +40,17 @@ body {
   backdrop-filter: blur(10px);
 }
 
+.auth-page-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card.solo {
+  width: min(92vw, 430px);
+}
+
 .auth-card {
   width: min(92vw, 430px);
   border-radius: 22px;

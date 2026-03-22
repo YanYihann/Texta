@@ -12,20 +12,6 @@ const statusEl = document.getElementById("status");
 const spellHintsEl = document.getElementById("spellHints");
 const wordChipsEl = document.getElementById("wordChips");
 const favoritesListEl = document.getElementById("favoritesList");
-const appShellEl = document.querySelector(".app-shell");
-const authGateEl = document.getElementById("authGate");
-const tabLoginEl = document.getElementById("tabLogin");
-const tabRegisterEl = document.getElementById("tabRegister");
-const authMsgEl = document.getElementById("authMsg");
-const loginFormEl = document.getElementById("loginForm");
-const registerFormEl = document.getElementById("registerForm");
-const loginEmailEl = document.getElementById("loginEmail");
-const loginPasswordEl = document.getElementById("loginPassword");
-const loginBtnEl = document.getElementById("loginBtn");
-const registerNameEl = document.getElementById("registerName");
-const registerEmailEl = document.getElementById("registerEmail");
-const registerPasswordEl = document.getElementById("registerPassword");
-const registerBtnEl = document.getElementById("registerBtn");
 const userBadgeEl = document.getElementById("userBadge");
 const logoutBtnEl = document.getElementById("logoutBtn");
 
@@ -85,33 +71,8 @@ function setAuthToken(token) {
   }
 }
 
-function setAuthMode(mode) {
-  const isRegister = mode === "register";
-  tabLoginEl.classList.toggle("active", !isRegister);
-  tabRegisterEl.classList.toggle("active", isRegister);
-  loginFormEl.classList.toggle("hidden", isRegister);
-  registerFormEl.classList.toggle("hidden", !isRegister);
-  authMsgEl.textContent = "";
-}
-
-function renderAuthState() {
-  const loggedIn = Boolean(currentUser && authToken);
-  authGateEl.classList.toggle("hidden", loggedIn);
-  appShellEl.classList.toggle("locked", !loggedIn);
-  if (loggedIn) {
-    const roleText = currentUser.role === "admin" ? "管理员" : "用户";
-    userBadgeEl.textContent = `${currentUser.name || currentUser.email} · ${roleText}`;
-    logoutBtnEl.classList.remove("hidden");
-  } else {
-    userBadgeEl.textContent = "未登录";
-    logoutBtnEl.classList.add("hidden");
-  }
-}
-
 async function loadMe() {
   if (!authToken) {
-    currentUser = null;
-    renderAuthState();
     return false;
   }
 
@@ -120,16 +81,16 @@ async function loadMe() {
     if (!response.ok) {
       setAuthToken("");
       currentUser = null;
-      renderAuthState();
       return false;
     }
     const data = await response.json();
     currentUser = data.user || null;
-    renderAuthState();
+    const roleText = currentUser?.role === "admin" ? "管理员" : "用户";
+    userBadgeEl.textContent = `${currentUser?.name || currentUser?.email || "用户"} · ${roleText}`;
+    logoutBtnEl.classList.remove("hidden");
     return Boolean(currentUser);
   } catch {
     currentUser = null;
-    renderAuthState();
     return false;
   }
 }
@@ -437,7 +398,7 @@ async function runSpellcheck() {
     if (response.status === 401) {
       setAuthToken("");
       currentUser = null;
-      renderAuthState();
+      location.href = "./auth.html";
       spellState = [];
       renderSpelling();
       return;
@@ -861,7 +822,7 @@ generateBtn.addEventListener("click", async () => {
     if (response.status === 401) {
       setAuthToken("");
       currentUser = null;
-      renderAuthState();
+      location.href = "./auth.html";
       throw new Error("登录已过期，请重新登录。");
     }
     if (!response.ok) {
@@ -966,85 +927,6 @@ confirmExportBtn.addEventListener("click", async () => {
   await exportPdfFromPreview();
 });
 
-tabLoginEl.addEventListener("click", () => setAuthMode("login"));
-tabRegisterEl.addEventListener("click", () => setAuthMode("register"));
-
-loginBtnEl.addEventListener("click", async () => {
-  const email = String(loginEmailEl.value || "").trim();
-  const password = String(loginPasswordEl.value || "");
-  if (!email || !password) {
-    authMsgEl.textContent = "请填写邮箱和密码。";
-    return;
-  }
-  loginBtnEl.disabled = true;
-  authMsgEl.textContent = "登录中...";
-  try {
-    const response = await fetch(apiUrl("/api/auth/login"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "登录失败");
-    }
-    setAuthToken(data.token || "");
-    currentUser = data.user || null;
-    renderAuthState();
-    authMsgEl.textContent = "";
-    statusEl.textContent = "登录成功。";
-    scheduleSpellcheck();
-  } catch (error) {
-    authMsgEl.textContent = `登录失败：${error.message}`;
-  } finally {
-    loginBtnEl.disabled = false;
-  }
-});
-
-registerBtnEl.addEventListener("click", async () => {
-  const name = String(registerNameEl.value || "").trim();
-  const email = String(registerEmailEl.value || "").trim();
-  const password = String(registerPasswordEl.value || "");
-  if (!email || !password) {
-    authMsgEl.textContent = "请填写邮箱和密码。";
-    return;
-  }
-  registerBtnEl.disabled = true;
-  authMsgEl.textContent = "注册中...";
-  try {
-    const regResp = await fetch(apiUrl("/api/auth/register"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password })
-    });
-    const regData = await regResp.json();
-    if (!regResp.ok) {
-      throw new Error(regData.error || "注册失败");
-    }
-
-    const loginResp = await fetch(apiUrl("/api/auth/login"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-    const loginData = await loginResp.json();
-    if (!loginResp.ok) {
-      throw new Error(loginData.error || "注册后自动登录失败");
-    }
-
-    setAuthToken(loginData.token || "");
-    currentUser = loginData.user || null;
-    renderAuthState();
-    setAuthMode("login");
-    authMsgEl.textContent = "";
-    statusEl.textContent = "注册并登录成功。";
-  } catch (error) {
-    authMsgEl.textContent = `注册失败：${error.message}`;
-  } finally {
-    registerBtnEl.disabled = false;
-  }
-});
-
 logoutBtnEl.addEventListener("click", async () => {
   try {
     await apiFetch("/api/auth/logout", { method: "POST" });
@@ -1053,17 +935,19 @@ logoutBtnEl.addEventListener("click", async () => {
   }
   setAuthToken("");
   currentUser = null;
-  renderAuthState();
-  statusEl.textContent = "已退出登录。";
+  location.href = "./auth.html";
 });
 
 async function init() {
+  const ok = await loadMe();
+  if (!ok) {
+    location.href = "./auth.html";
+    return;
+  }
   loadFavorites();
   renderFavorites();
   renderSpelling();
   applyReadingMode();
-  setAuthMode("login");
-  await loadMe();
 }
 
 init();

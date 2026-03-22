@@ -9,34 +9,6 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <section id="authGate" class="auth-gate">
-      <div class="auth-card">
-        <div class="auth-brand">Texta</div>
-        <p class="auth-subtitle">登录后使用文章生成与生词释义功能</p>
-        <div class="auth-tabs">
-          <button id="tabLogin" class="auth-tab active" type="button">登录</button>
-          <button id="tabRegister" class="auth-tab" type="button">注册</button>
-        </div>
-        <div id="authMsg" class="auth-msg"></div>
-        <div id="loginForm" class="auth-form">
-          <label for="loginEmail">邮箱</label>
-          <input id="loginEmail" type="text" placeholder="you@example.com" />
-          <label for="loginPassword">密码</label>
-          <input id="loginPassword" type="password" placeholder="至少 6 位" />
-          <button id="loginBtn" class="primary-btn" type="button">登录</button>
-        </div>
-        <div id="registerForm" class="auth-form hidden">
-          <label for="registerName">昵称</label>
-          <input id="registerName" type="text" placeholder="你的昵称" />
-          <label for="registerEmail">邮箱</label>
-          <input id="registerEmail" type="text" placeholder="you@example.com" />
-          <label for="registerPassword">密码</label>
-          <input id="registerPassword" type="password" placeholder="至少 6 位" />
-          <button id="registerBtn" class="primary-btn" type="button">注册并登录</button>
-        </div>
-      </div>
-    </section>
-
     <main class="app-shell">
       <section class="panel input-panel">
         <div class="brand">
@@ -45,7 +17,7 @@
         </div>
         <div class="user-row">
           <span id="userBadge" class="user-badge">未登录</span>
-          <button id="logoutBtn" type="button" class="ghost-btn">退出</button>
+          <button id="logoutBtn" type="button" class="ghost-btn hidden">退出</button>
         </div>
         <p class="subtitle">左侧输入单词，中间阅读文章，右侧查看雅思词汇释义扩展。</p>
 
