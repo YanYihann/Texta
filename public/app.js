@@ -1,0 +1,700 @@
+﻿const wordsInput = document.getElementById("words");
+const levelSelect = document.getElementById("level");
+const quickModeInput = document.getElementById("quickMode");
+const generateBtn = document.getElementById("generateBtn");
+const readingModeBtn = document.getElementById("readingModeBtn");
+const toggleZhBtn = document.getElementById("toggleZhBtn");
+const exportPdfBtn = document.getElementById("exportPdfBtn");
+const exportWordBtn = document.getElementById("exportWordBtn");
+const exportTitleInput = document.getElementById("exportTitle");
+const statusEl = document.getElementById("status");
+const spellHintsEl = document.getElementById("spellHints");
+const wordChipsEl = document.getElementById("wordChips");
+
+const resultSection = document.getElementById("resultSection");
+const glossaryPanelEl = document.getElementById("glossaryPanel");
+const missingWordsEl = document.getElementById("missingWords");
+const articleTitleEl = document.getElementById("articleTitle");
+const articleBlocksEl = document.getElementById("articleBlocks");
+const glossaryEl = document.getElementById("glossary");
+const exportAreaEl = document.getElementById("exportArea");
+
+const exportModalEl = document.getElementById("exportModal");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const previewTitleInput = document.getElementById("previewTitle");
+const previewIncludeZhInput = document.getElementById("previewIncludeZh");
+const previewMarginSelect = document.getElementById("previewMargin");
+const previewPaperEl = document.getElementById("previewPaper");
+const confirmExportBtn = document.getElementById("confirmExportBtn");
+
+let latestArticle = "";
+let latestWords = [];
+let latestLexicon = [];
+let latestParagraphsEn = [];
+let latestParagraphsZh = [];
+let showChinese = true;
+let pendingExportType = "pdf";
+let readingMode = false;
+let spellTimer = null;
+let spellState = [];
+let paragraphObserver = null;
+let paragraphWordMap = [];
+let lastActiveGlossaryKey = "";
+let pronunciationMap = new Map();
+
+function splitWords(rawText) {
+  return String(rawText || "")
+    .split(/[\n,;，；\s]+/)
+    .map((w) => w.trim())
+    .filter(Boolean)
+    .filter((value, index, arr) => arr.findIndex((x) => x.toLowerCase() === value.toLowerCase()) === index);
+}
+
+function splitParagraphs(rawText) {
+  return String(rawText || "")
+    .replace(/\r/g, "")
+    .split(/\n\s*\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+function escapeHtml(text) {
+  return String(text || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function escapeRegExp(text) {
+  return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function keyifyWord(word) {
+  return String(word || "").toLowerCase().replace(/[^a-z0-9-]/g, "-");
+}
+
+function todayStamp() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function defaultTitleByWords(words) {
+  return `Vocabulary ${todayStamp()} (${words.length} words)`;
+}
+
+function collectChineseTerms(lexicon) {
+  const terms = [];
+  const addTerm = (raw) => {
+    const term = String(raw || "").trim();
+    if (!term || term.includes("失败") || term.includes("未返回")) {
+      return;
+    }
+    if (!terms.includes(term)) {
+      terms.push(term);
+    }
+    if (term.length > 2 && /[的地得]$/.test(term)) {
+      const stem = term.slice(0, -1).trim();
+      if (stem.length >= 2 && !terms.includes(stem)) {
+        terms.push(stem);
+      }
+    }
+  };
+
+  for (const item of lexicon || []) {
+    const senses = Array.isArray(item?.senses) ? item.senses : [];
+    for (const sense of senses) {
+      const fullMeaning = String(sense?.meaning || "").trim();
+      addTerm(fullMeaning);
+      fullMeaning
+        .split(/[，,；;、/\s()（）]+/)
+        .map((x) => x.trim())
+        .filter((x) => x && x.length >= 2)
+        .forEach(addTerm);
+    }
+  }
+  return terms;
+}
+
+function renderSenseSuperscript(html) {
+  return String(html || "").replace(/([①②③④⑤⑥⑦⑧⑨⑩])/g, '<sup class="sense-marker">$1</sup>');
+}
+
+function buildWordRegex(word) {
+  const escaped = escapeRegExp(word);
+  const suffix = "(?:s|es|ed|ing|age|ages|al|ally|ment|ments|tion|tions|er|ers|ly|ness)?";
+  return new RegExp(`\\b(${escaped}${suffix})\\b`, "gi");
+}
+
+function highlightText(text, terms, className, withBoundary) {
+  let html = escapeHtml(text);
+  const safeTerms = (terms || []).filter(Boolean).sort((a, b) => b.length - a.length);
+
+  for (const term of safeTerms) {
+    const escaped = escapeRegExp(term);
+    const englishWord = /^[A-Za-z]+$/.test(term);
+    const regex = withBoundary && englishWord ? new RegExp(`\\b${escaped}\\b`, "gi") : new RegExp(escaped, "g");
+    html = html.replace(regex, (m) => `<mark class=\"${className}\">${m}</mark>`);
+  }
+
+  return renderSenseSuperscript(html);
+}
+
+function highlightEnglishWordsWithKeys(text, words) {
+  let html = escapeHtml(text);
+  const sorted = [...(words || [])].filter(Boolean).sort((a, b) => b.length - a.length);
+  for (const w of sorted) {
+    const key = keyifyWord(w);
+    const regex = buildWordRegex(w);
+    html = html.replace(regex, (m) => `<mark class=\"vocab-en\" data-word-key=\"${key}\">${m}</mark>`);
+  }
+  return renderSenseSuperscript(html);
+}
+
+function applyChineseVisibility() {
+  if (showChinese) {
+    exportAreaEl.classList.remove("hide-zh");
+    toggleZhBtn.textContent = "隐藏中文";
+  } else {
+    exportAreaEl.classList.add("hide-zh");
+    toggleZhBtn.textContent = "显示中文";
+  }
+}
+
+function applyReadingMode() {
+  if (readingMode) {
+    document.body.classList.add("reading-mode");
+    readingModeBtn.textContent = "退出阅读模式";
+  } else {
+    document.body.classList.remove("reading-mode");
+    readingModeBtn.textContent = "阅读模式";
+  }
+}
+
+function renderSpelling() {
+  const words = splitWords(wordsInput.value);
+  if (words.length === 0) {
+    spellHintsEl.classList.add("hidden");
+    spellHintsEl.innerHTML = "";
+    wordChipsEl.innerHTML = "";
+    return;
+  }
+
+  const map = new Map(spellState.map((x) => [String(x.word || "").toLowerCase(), x]));
+  wordChipsEl.innerHTML = words
+    .map((w) => {
+      const info = map.get(w.toLowerCase());
+      const bad = info && info.ok === false;
+      const cls = bad ? "chip bad" : "chip";
+      const tip = bad && info.suggestion ? ` title=\"建议: ${escapeHtml(info.suggestion)}\"` : "";
+      return `<span class=\"${cls}\"${tip}>${escapeHtml(w)}</span>`;
+    })
+    .join("");
+
+  const badItems = words
+    .map((w) => map.get(w.toLowerCase()))
+    .filter((x) => x && x.ok === false && x.suggestion);
+
+  if (badItems.length === 0) {
+    spellHintsEl.classList.add("hidden");
+    spellHintsEl.innerHTML = "";
+    return;
+  }
+
+  spellHintsEl.classList.remove("hidden");
+  spellHintsEl.innerHTML = badItems
+    .map((x) => `${escapeHtml(x.word)} -> <strong>${escapeHtml(x.suggestion)}</strong>`)
+    .join("<br>");
+}
+
+async function runSpellcheck() {
+  const wordsText = wordsInput.value.trim();
+  if (!wordsText) {
+    spellState = [];
+    renderSpelling();
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/spellcheck", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ words: wordsText })
+    });
+    const data = await response.json();
+    spellState = Array.isArray(data.items) ? data.items : [];
+  } catch {
+    spellState = [];
+  }
+  renderSpelling();
+}
+
+function scheduleSpellcheck() {
+  if (spellTimer) {
+    clearTimeout(spellTimer);
+  }
+  spellTimer = setTimeout(runSpellcheck, 350);
+}
+
+function updateGlossaryFollow(wordKeys) {
+  const keys = Array.from(wordKeys || []).filter(Boolean);
+  const all = glossaryEl.querySelectorAll(".glossary-item[data-word-key]");
+  all.forEach((el) => el.classList.remove("active"));
+  if (keys.length === 0) {
+    return;
+  }
+
+  let target = null;
+  for (const key of keys) {
+    const item = glossaryEl.querySelector(`.glossary-item[data-word-key=\"${key}\"]`);
+    if (item) {
+      item.classList.add("active");
+      if (!target) target = item;
+    }
+  }
+
+  if (target && lastActiveGlossaryKey !== keys[0]) {
+    lastActiveGlossaryKey = keys[0];
+    target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+function jumpToGlossaryKey(key) {
+  if (!key) return;
+  updateGlossaryFollow([key]);
+}
+
+function speakGlossaryByKey(key) {
+  speakGlossaryByKeyWithAccent(key, "us");
+}
+
+function speakGlossaryByKeyWithAccent(key, accent) {
+  const word = pronunciationMap.get(key);
+  if (!word) return;
+  if (!("speechSynthesis" in window)) {
+    statusEl.textContent = "当前浏览器不支持语音功能。";
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = accent === "uk" ? "en-GB" : "en-US";
+  u.rate = 1;
+  window.speechSynthesis.speak(u);
+}
+
+function setupParagraphObserver() {
+  if (paragraphObserver) {
+    paragraphObserver.disconnect();
+  }
+
+  const cards = Array.from(articleBlocksEl.querySelectorAll(".para-card"));
+  if (cards.length === 0) {
+    return;
+  }
+
+  paragraphObserver = new IntersectionObserver(
+    (entries) => {
+      const visible = entries
+        .filter((e) => e.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      if (visible.length === 0) {
+        return;
+      }
+      const idx = Number(visible[0].target.getAttribute("data-idx") || "-1");
+      if (idx < 0) {
+        return;
+      }
+      updateGlossaryFollow(paragraphWordMap[idx] || new Set());
+    },
+    { root: resultSection, threshold: [0.45, 0.7] }
+  );
+
+  cards.forEach((card) => paragraphObserver.observe(card));
+}
+
+function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon) {
+  const zhTerms = collectChineseTerms(lexicon);
+
+  paragraphWordMap = paragraphsEn.map((p) => {
+    const lower = String(p || "").toLowerCase();
+    const set = new Set();
+    for (const w of words) {
+      const reg = buildWordRegex(w.toLowerCase());
+      if (reg.test(lower)) {
+        set.add(keyifyWord(w));
+      }
+    }
+    return set;
+  });
+
+  articleBlocksEl.innerHTML = paragraphsEn
+    .map((en, i) => {
+      const zh = paragraphsZh[i] || "(该段翻译生成失败，请重试)";
+      const enHtml = highlightEnglishWordsWithKeys(en, words).replace(/\n/g, "<br>");
+      const zhHtml = highlightText(zh, zhTerms, "vocab-zh", false).replace(/\n/g, "<br>");
+
+      return `
+        <article class=\"para-card\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
+          <p class=\"para-en\">${enHtml}</p>
+          <p class=\"para-zh\">${zhHtml}</p>
+        </article>
+      `;
+    })
+    .join("");
+
+  applyChineseVisibility();
+  setupParagraphObserver();
+}
+
+function renderGlossary(lexicon) {
+  if (!Array.isArray(lexicon) || lexicon.length === 0) {
+    glossaryEl.innerHTML = "<p>生成后显示词汇扩展内容。</p>";
+    return;
+  }
+
+  const zhTerms = collectChineseTerms(lexicon);
+  pronunciationMap = new Map();
+
+  glossaryEl.innerHTML = lexicon
+    .map((item) => {
+      const word = escapeHtml(item?.word || "");
+      const key = keyifyWord(item?.word || "");
+      const pos = escapeHtml(item?.pos || "");
+      const senses = Array.isArray(item?.senses) ? item.senses : [];
+      const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
+      const synonyms = Array.isArray(item?.synonyms) ? item.synonyms : [];
+      const antonyms = Array.isArray(item?.antonyms) ? item.antonyms : [];
+      const wordFormation = String(item?.wordFormation || "");
+      pronunciationMap.set(key, String(item?.word || ""));
+
+      const senseHtml = senses
+        .map((s) => {
+          const marker = renderSenseSuperscript(escapeHtml(s?.marker || ""));
+          const meaning = highlightText(s?.meaning || "", zhTerms, "vocab-zh", false);
+          return `<div class=\"sense-line\">${marker} ${meaning}</div>`;
+        })
+        .join("");
+
+      const collocationHtml = collocations.length
+        ? collocations.map((c) => `<div class=\"extra-line\">• ${escapeHtml(c)}</div>`).join("")
+        : "<div class=\"extra-line\">(暂无)</div>";
+
+      const synonymHtml = synonyms.length
+        ? `<div class=\"extra-line\">${escapeHtml(synonyms.join(", "))}</div>`
+        : "<div class=\"extra-line\">(暂无)</div>";
+
+      const antonymHtml = antonyms.length
+        ? `<div class=\"extra-line\">${escapeHtml(antonyms.join(", "))}</div>`
+        : "<div class=\"extra-line\">(暂无)</div>";
+
+      return `
+        <div class=\"glossary-item\" data-word-key=\"${key}\">
+          <div class=\"glossary-head\">
+            <div class=\"head-left\">
+              <span class=\"glossary-word\">${word}</span>
+              <span class=\"glossary-pos\">${pos}</span>
+            </div>
+            <div class=\"head-actions\">
+              <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"us\">美音</button>
+              <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"uk\">英音</button>
+            </div>
+          </div>
+          ${senseHtml}
+          <div class=\"extra-line\"><span class=\"extra-label\">短语搭配:</span></div>
+          ${collocationHtml}
+          <div class=\"extra-line\"><span class=\"extra-label\">词根词缀:</span>${escapeHtml(wordFormation || "(暂无)")}</div>
+          <div class=\"extra-line\"><span class=\"extra-label\">同近义词:</span></div>
+          ${synonymHtml}
+          <div class=\"extra-line\"><span class=\"extra-label\">反义词:</span></div>
+          ${antonymHtml}
+        </div>
+      `;
+    })
+    .join("");
+
+  lastActiveGlossaryKey = "";
+}
+
+function safeFileName(name) {
+  return String(name || "untitled").replace(/[\\/:*?"<>|]/g, "_").slice(0, 80);
+}
+
+function buildExportBundle(title, includeChinese) {
+  const articleClone = exportAreaEl.cloneNode(true);
+  const titleNode = articleClone.querySelector("#articleTitle") || articleClone.querySelector(".article-title");
+  if (titleNode) {
+    titleNode.textContent = title;
+  }
+
+  articleClone.querySelectorAll(".para-card").forEach((el) => {
+    el.style.opacity = "1";
+    el.style.transform = "none";
+    el.style.animation = "none";
+    el.style.background = "#ffffff";
+  });
+
+  if (!includeChinese) {
+    articleClone.querySelectorAll(".para-zh").forEach((el) => el.remove());
+  }
+
+  const glossaryClone = glossaryEl.cloneNode(true);
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = `
+    <h1>${escapeHtml(title)}</h1>
+    <div>${articleClone.innerHTML}</div>
+    <h2 style="margin-top:14px;">生词中文释义</h2>
+    <div class="glossary">${glossaryClone.innerHTML}</div>
+  `;
+
+  return wrapper;
+}
+
+function makeWordFriendlyHtml(innerHtml, marginPx) {
+  return `
+  <html>
+    <head>
+      <meta charset=\"utf-8\" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; color:#111827; padding:${marginPx}px; }
+        h1 { margin:0 0 8px; }
+        h2 { margin:14px 0 8px; }
+        .article-title { font-size:22px; margin:0 0 8px; }
+        .para-card { border:1px solid #e5e7eb; border-radius:14px; background:#fff; padding:12px; margin:0 0 10px; }
+        .para-en,.para-zh { white-space: pre-wrap; line-height: 1.72; margin:0; }
+        .para-zh { margin-top:8px; padding-top:8px; border-top:1px dashed #d1d5db; }
+        .glossary { border:1px solid #e5e7eb; border-radius:14px; padding:8px 10px; }
+        .glossary-item { border-bottom:1px dashed #e5e7eb; padding:8px 0; }
+        .glossary-item:last-child { border-bottom:none; }
+        .glossary-word { font-weight:700; }
+        .glossary-pos { color:#6b7280; font-size:12px; margin-left:6px; }
+        .sense-marker { font-size:0.68em; vertical-align:super; line-height:0; margin-left:1px; }
+        .extra-label { color:#6b7280; font-size:12px; margin-right:4px; }
+        .vocab-en-inline { background:#fff3b0; border-radius:5px; padding:0 2px; }
+        .vocab-zh-inline { background:#d7f8e7; border-radius:5px; padding:0 2px; }
+      </style>
+    </head>
+    <body>
+      ${innerHtml
+        .replaceAll('<mark class="vocab-en">', '<span class="vocab-en-inline">')
+        .replaceAll('<mark class="vocab-zh">', '<span class="vocab-zh-inline">')
+        .replaceAll("</mark>", "</span>")}
+    </body>
+  </html>`;
+}
+
+function renderPreviewPaper() {
+  const title = String(previewTitleInput.value || "").trim();
+  const includeChinese = Boolean(previewIncludeZhInput.checked);
+  const marginPx = Number(previewMarginSelect.value || "12");
+
+  const bundle = buildExportBundle(title, includeChinese);
+  previewPaperEl.innerHTML = `<div style=\"padding:${marginPx}px;\">${bundle.innerHTML}</div>`;
+}
+
+function openExportPreview(type) {
+  if (!latestArticle) {
+    statusEl.textContent = "请先生成文章。";
+    return;
+  }
+
+  pendingExportType = type;
+  const baseTitle = String(exportTitleInput.value || "").trim() || articleTitleEl.textContent.trim() || defaultTitleByWords(latestWords);
+  previewTitleInput.value = baseTitle;
+  previewIncludeZhInput.checked = showChinese;
+  previewMarginSelect.value = "12";
+  renderPreviewPaper();
+
+  exportModalEl.classList.remove("hidden");
+  exportModalEl.setAttribute("aria-hidden", "false");
+  confirmExportBtn.textContent = type === "pdf" ? "确认导出 PDF" : "确认导出 Word";
+}
+
+function closeExportPreview() {
+  exportModalEl.classList.add("hidden");
+  exportModalEl.setAttribute("aria-hidden", "true");
+}
+
+function downloadBlob(filename, content, mimeType) {
+  const file = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function ensurePreviewTitle() {
+  const title = String(previewTitleInput.value || "").trim();
+  if (!title) {
+    statusEl.textContent = "请先填写标题。";
+    previewTitleInput.focus();
+    return "";
+  }
+  return title;
+}
+
+function exportWordFromPreview() {
+  const title = ensurePreviewTitle();
+  if (!title) {
+    return;
+  }
+
+  const marginPx = Number(previewMarginSelect.value || "12");
+  const content = makeWordFriendlyHtml(previewPaperEl.innerHTML, marginPx);
+  downloadBlob(`${safeFileName(title)}.doc`, content, "application/msword;charset=utf-8");
+
+  exportTitleInput.value = title;
+  statusEl.textContent = "Word 已导出。";
+  closeExportPreview();
+}
+
+async function exportPdfFromPreview() {
+  const title = ensurePreviewTitle();
+  if (!title) {
+    return;
+  }
+
+  if (typeof window.html2pdf !== "function") {
+    statusEl.textContent = "PDF 库加载失败，请刷新后重试。";
+    return;
+  }
+
+  const margin = Number(previewMarginSelect.value || "12");
+
+  await window
+    .html2pdf()
+    .set({
+      margin: [margin, margin, margin, margin],
+      filename: `${safeFileName(title)}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+    })
+    .from(previewPaperEl)
+    .save();
+
+  exportTitleInput.value = title;
+  statusEl.textContent = "PDF 已导出。";
+  closeExportPreview();
+}
+
+generateBtn.addEventListener("click", async () => {
+  const wordsText = wordsInput.value.trim();
+  const level = levelSelect.value;
+  const quickMode = Boolean(quickModeInput.checked);
+
+  if (!wordsText) {
+    statusEl.textContent = "请先输入单词。";
+    return;
+  }
+
+  generateBtn.disabled = true;
+  exportPdfBtn.disabled = true;
+  exportWordBtn.disabled = true;
+  resultSection.classList.add("hidden");
+  glossaryPanelEl.classList.add("hidden");
+  missingWordsEl.textContent = "";
+  statusEl.textContent = quickMode ? "快速模式生成中（更省钱）..." : "AI 正在生成双语文章，请稍等...";
+
+  try {
+    latestWords = splitWords(wordsText);
+    exportTitleInput.value = defaultTitleByWords(latestWords);
+
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ words: wordsText, level, quickMode })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "请求失败");
+    }
+
+    latestArticle = String(data.article || "");
+    latestLexicon = Array.isArray(data.lexicon) ? data.lexicon : [];
+    latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
+    latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
+
+    const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
+    articleTitleEl.textContent = finalTitle;
+    exportTitleInput.value = finalTitle || String(data.defaultTitle || defaultTitleByWords(latestWords));
+
+    renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon);
+    renderGlossary(latestLexicon);
+
+    if (Array.isArray(data.missing) && data.missing.length > 0) {
+      missingWordsEl.textContent = `提示：仍有 ${data.missing.length} 个词未命中：${data.missing.join(", ")}`;
+    }
+
+    showChinese = true;
+    applyChineseVisibility();
+    resultSection.classList.remove("hidden");
+    glossaryPanelEl.classList.remove("hidden");
+    exportPdfBtn.disabled = false;
+    exportWordBtn.disabled = false;
+    statusEl.textContent = "生成完成。";
+  } catch (error) {
+    statusEl.textContent = `生成失败：${error.message}`;
+  } finally {
+    generateBtn.disabled = false;
+  }
+});
+
+wordsInput.addEventListener("input", scheduleSpellcheck);
+
+articleBlocksEl.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const mark = target.closest("mark.vocab-en[data-word-key]");
+  if (!mark) return;
+  const key = mark.getAttribute("data-word-key");
+  jumpToGlossaryKey(key || "");
+});
+
+glossaryEl.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const btn = target.closest(".speak-btn[data-word-key]");
+  if (!btn) return;
+  const key = btn.getAttribute("data-word-key");
+  const accent = btn.getAttribute("data-accent") || "us";
+  speakGlossaryByKeyWithAccent(key || "", accent);
+});
+
+readingModeBtn.addEventListener("click", () => {
+  readingMode = !readingMode;
+  applyReadingMode();
+});
+
+toggleZhBtn.addEventListener("click", () => {
+  showChinese = !showChinese;
+  applyChineseVisibility();
+});
+
+exportPdfBtn.addEventListener("click", () => openExportPreview("pdf"));
+exportWordBtn.addEventListener("click", () => openExportPreview("word"));
+closeModalBtn.addEventListener("click", closeExportPreview);
+
+previewTitleInput.addEventListener("input", renderPreviewPaper);
+previewIncludeZhInput.addEventListener("change", renderPreviewPaper);
+previewMarginSelect.addEventListener("change", renderPreviewPaper);
+
+confirmExportBtn.addEventListener("click", async () => {
+  if (pendingExportType === "word") {
+    exportWordFromPreview();
+    return;
+  }
+  await exportPdfFromPreview();
+});
+
+renderSpelling();
+applyReadingMode();
