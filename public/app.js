@@ -171,10 +171,9 @@ function renderSenseSuperscript(html) {
 }
 
 function buildWordRegex(word) {
-  const escaped = escapeRegExp(word);
   const lower = String(word || "").toLowerCase();
   const forms = new Set();
-  forms.add(escaped);
+  forms.add(escapeRegExp(lower));
 
   const addForm = (v) => {
     const value = String(v || "").trim();
@@ -223,6 +222,20 @@ function buildWordRegex(word) {
   return new RegExp(`\\b(${Array.from(forms).join("|")})\\b`, "gi");
 }
 
+function resolveWordKeyByToken(token, words) {
+  const t = String(token || "").toLowerCase();
+  if (!t) return "";
+  for (const w of words || []) {
+    const key = keyifyWord(w);
+    const regex = buildWordRegex(w);
+    const exact = new RegExp(`^(?:${regex.source.replace(/^\\b\(/, "").replace(/\)\\b$/, "")})$`, "i");
+    if (exact.test(t)) {
+      return key;
+    }
+  }
+  return "";
+}
+
 function highlightText(text, terms, className, withBoundary) {
   let html = escapeHtml(text);
   const safeTerms = (terms || []).filter(Boolean).sort((a, b) => b.length - a.length);
@@ -245,6 +258,19 @@ function highlightEnglishWordsWithKeys(text, words) {
     const regex = buildWordRegex(w);
     html = html.replace(regex, (m) => `<mark class=\"vocab-en\" data-word-key=\"${key}\">${m}</mark>`);
   }
+
+  // Fallback: any English token immediately before sense marker should be highlighted.
+  // Example: literacy② / drainage① / mishaps③
+  html = html.replace(
+    /(^|[\s(>.,;:!?'"-])([A-Za-z][A-Za-z'-]*)([①②③④⑤⑥⑦⑧⑨⑩])/g,
+    (all, pre, token, marker) => {
+      if (String(pre).includes("</mark")) return all;
+      const matchedKey = resolveWordKeyByToken(token, words);
+      const key = matchedKey || keyifyWord(token);
+      return `${pre}<mark class=\"vocab-en\" data-word-key=\"${key}\">${token}</mark>${marker}`;
+    }
+  );
+
   return renderSenseSuperscript(html);
 }
 
