@@ -73,8 +73,11 @@ function renderFavorites() {
     .map(
       (item) => `
       <div class="fav-item" data-fav-id="${escapeHtml(item.id)}">
-        <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
-        <div class="fav-meta">${escapeHtml(item.savedAt || "")}</div>
+        <div class="fav-left">
+          <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
+          <div class="fav-meta">${escapeHtml(item.savedAt || "")}</div>
+        </div>
+        <button class="fav-delete" type="button" data-fav-delete="${escapeHtml(item.id)}">删除</button>
       </div>
     `
     )
@@ -719,6 +722,15 @@ favoriteBtn.addEventListener("click", () => {
 favoritesListEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const del = target.closest(".fav-delete[data-fav-delete]");
+  if (del) {
+    const delId = del.getAttribute("data-fav-delete");
+    favorites = favorites.filter((x) => x.id !== delId);
+    saveFavorites();
+    renderFavorites();
+    statusEl.textContent = "已从收藏夹删除。";
+    return;
+  }
   const itemEl = target.closest(".fav-item[data-fav-id]");
   if (!itemEl) return;
   const id = itemEl.getAttribute("data-fav-id");

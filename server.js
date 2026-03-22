@@ -81,6 +81,14 @@ function splitParagraphs(article) {
     .filter(Boolean);
 }
 
+function chunkArray(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) {
+    out.push(arr.slice(i, i + size));
+  }
+  return out;
+}
+
 function findMissingWords(article, words) {
   const text = String(article || "").toLowerCase();
   return words.filter((w) => !text.includes(w.toLowerCase()));
@@ -263,7 +271,7 @@ function normalizeLexicon(words, rawItems) {
   return words.map((word) => {
     const found = itemMap.get(word.toLowerCase());
     const pos = found?.pos || "";
-    const meanings = found?.meanings?.length ? found.meanings : ["(释义生成失败，请重试)"];
+    const meanings = found?.meanings?.length ? found.meanings : ["常考义待完善"];
     const senses = meanings.map((meaning, idx) => ({
       marker: toCircledNumber(idx + 1),
       meaning
@@ -357,87 +365,83 @@ async function callOpenAIText(prompt, options = {}) {
 }
 
 async function generateLexicon(words, quickMode) {
-  const prompt = [
-    "You are an IELTS vocabulary assistant.",
-    "Return ONLY JSON array.",
-    "Each item format:",
-    "{\"word\": string, \"pos\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
-    "Rules:",
-    "1) Keep same order as input words.",
-    "2) pos should be concise (e.g. n., v., adj., adv.).",
-    "3) meanings should be concise Chinese meanings, 1-3 items.",
-    "4) Prefer IELTS high-frequency exam meanings, avoid rare/archaic niche senses.",
-    "5) Prioritize meanings useful for reading/listening/writing tasks.",
-    "6) collocations should be common IELTS-friendly phrase combinations (English phrase + concise Chinese).",
-    "7) word_formation should include root/prefix/suffix notes when useful.",
-    "8) synonyms/antonyms should be common high-frequency exam words.",
-    `Words: ${words.join(", ")}`
-  ].join("\n");
-
-  const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 600 : 1200 });
-  let parsed = extractJsonArray(text);
-
-  if (!Array.isArray(parsed)) {
-    const retryPrompt = [
-      "Return ONLY JSON array, no markdown, no explanation.",
-      "Each item keys must be exactly: word,pos,meanings,collocations,word_formation,synonyms,antonyms.",
-      "Keep same order as input words.",
-      `Words: ${words.join(", ")}`
+  const generateLexiconChunk = async (chunkWords) => {
+    const prompt = [
+      "You are an IELTS vocabulary assistant.",
+      "Return ONLY JSON array.",
+      "Each item format:",
+      "{\"word\": string, \"pos\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
+      "Rules:",
+      "1) Keep same order as input words.",
+      "2) pos should be concise (e.g. n., v., adj., adv.).",
+      "3) meanings should be concise Chinese meanings, 1-3 items.",
+      "4) Prefer IELTS high-frequency exam meanings, avoid rare/archaic niche senses.",
+      "5) Prioritize meanings useful for reading/listening/writing tasks.",
+      "6) collocations should be common IELTS-friendly phrase combinations (English phrase + concise Chinese).",
+      "7) word_formation should include root/prefix/suffix notes when useful.",
+      "8) synonyms/antonyms should be common high-frequency exam words.",
+      `Words: ${chunkWords.join(", ")}`
     ].join("\n");
-    const retryText = await callOpenAIText(retryPrompt, { maxTokens: quickMode ? 600 : 1200 });
-    parsed = extractJsonArray(retryText);
+
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 650 : 1300 });
+    let parsed = extractJsonArray(text);
+
+    if (!Array.isArray(parsed)) {
+      const retryPrompt = [
+        "Return ONLY JSON array, no markdown, no explanation.",
+        "Each item keys must be exactly: word,pos,meanings,collocations,word_formation,synonyms,antonyms.",
+        "Keep same order as input words.",
+        `Words: ${chunkWords.join(", ")}`
+      ].join("\n");
+      const retryText = await callOpenAIText(retryPrompt, { maxTokens: quickMode ? 650 : 1300 });
+      parsed = extractJsonArray(retryText);
+    }
+
+    return normalizeLexicon(chunkWords, parsed);
+  };
+
+  const chunks = chunkArray(words, words.length > 12 ? 8 : words.length);
+  let lexicon = [];
+  for (const chunk of chunks) {
+    const part = await generateLexiconChunk(chunk);
+    lexicon = lexicon.concat(part);
   }
 
-  let lexicon = normalizeLexicon(words, parsed);
-
   const failedWords = lexicon
-    .filter((x) => (x?.senses || []).some((s) => String(s?.meaning || "").includes("释义生成失败")))
+    .filter((x) => (x?.senses || []).some((s) => String(s?.meaning || "").includes("待完善")))
     .map((x) => x.word);
 
   if (failedWords.length > 0) {
-    const fallbackPrompt = [
-      "You are an IELTS vocabulary assistant.",
-      "Return ONLY JSON array.",
-      "For each word provide practical IELTS meanings and basic word data.",
-      "Output format: {\"word\": string, \"pos\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
-      "If a word is misspelled, infer the most likely intended word and still provide useful meanings for the given spelling.",
-      `Words: ${failedWords.join(", ")}`
-    ].join("\n");
-
-    const fallbackText = await callOpenAIText(fallbackPrompt, { maxTokens: quickMode ? 700 : 1400 });
-    const fallbackParsed = extractJsonArray(fallbackText);
-    const recovered = normalizeLexicon(failedWords, fallbackParsed);
-    const recoveredMap = new Map(recovered.map((x) => [x.word.toLowerCase(), x]));
+    const retryChunks = chunkArray(failedWords, 4);
+    let recoveredAll = [];
+    for (const c of retryChunks) {
+      const fallbackPrompt = [
+        "You are an IELTS vocabulary assistant.",
+        "Return ONLY JSON array.",
+        "For each word provide practical IELTS meanings and basic word data.",
+        "Output format: {\"word\": string, \"pos\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
+        "If a word is misspelled, infer the most likely intended word and still provide useful meanings for the given spelling.",
+        `Words: ${c.join(", ")}`
+      ].join("\n");
+      const fallbackText = await callOpenAIText(fallbackPrompt, { maxTokens: quickMode ? 700 : 1400 });
+      const fallbackParsed = extractJsonArray(fallbackText);
+      recoveredAll = recoveredAll.concat(normalizeLexicon(c, fallbackParsed));
+    }
+    const recoveredMap = new Map(recoveredAll.map((x) => [x.word.toLowerCase(), x]));
     lexicon = lexicon.map((item) => recoveredMap.get(item.word.toLowerCase()) || item);
   }
 
   return lexicon;
 }
 
-function defaultTitleByDate(wordCount) {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `Vocabulary ${y}-${m}-${d} (${wordCount} words)`;
-}
-
-function levelToPromptText(level) {
-  if (level === "初级") {
-    return "beginner";
-  }
-  if (level === "高级") {
-    return "advanced";
-  }
-  return "intermediate";
-}
-
 async function generateArticlePackage(words, level, quickMode, lexicon, extraConstraint = "") {
   const promptLevel = levelToPromptText(level);
-  const lengthRule = quickMode ? "Length: 120-180 words." : "Length: 220-320 words.";
+  const lengthRule = quickMode ? "Length: 120-180 words." : words.length > 16 ? "Length: 320-450 words." : "Length: 220-320 words.";
   const paragraphRule = quickMode
     ? "Use 2-3 short paragraphs separated by blank lines."
-    : "Use 3-4 paragraphs separated by blank lines.";
+    : words.length > 16
+      ? "Use 4-5 paragraphs separated by blank lines."
+      : "Use 3-4 paragraphs separated by blank lines.";
 
   const vocabGuide = lexicon
     .map((item) => {
@@ -465,7 +469,8 @@ async function generateArticlePackage(words, level, quickMode, lexicon, extraCon
     .filter(Boolean)
     .join("\n");
 
-  const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 360 : 760 });
+  const maxTokens = quickMode ? 420 : words.length > 16 ? 1200 : 820;
+  const text = await callOpenAIText(prompt, { maxTokens });
   const parsed = extractJsonObject(text);
 
   if (parsed && typeof parsed.title === "string" && typeof parsed.article === "string") {
@@ -483,6 +488,34 @@ async function generateArticlePackage(words, level, quickMode, lexicon, extraCon
     title: guessedTitle.replace(/^title\s*:\s*/i, "").trim() || defaultTitleByDate(words.length),
     article: guessedArticle.trim()
   };
+}
+
+function appendMissingWordsSentence(article, missingWords, lexicon) {
+  if (!missingWords.length) return article;
+  const markerMap = new Map(
+    (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
+  );
+  const phrase = missingWords
+    .map((w) => `${w}${markerMap.get(String(w).toLowerCase()) || "①"}`)
+    .join(", ");
+  return `${article}\n\nVocabulary focus: ${phrase}.`;
+}
+function defaultTitleByDate(wordCount) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `Vocabulary ${y}-${m}-${d} (${wordCount} words)`;
+}
+
+function levelToPromptText(level) {
+  if (level === "初级") {
+    return "beginner";
+  }
+  if (level === "高级") {
+    return "advanced";
+  }
+  return "intermediate";
 }
 
 async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
@@ -589,14 +622,25 @@ app.post("/api/generate", async (req, res) => {
     articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
     let missing = findMissingWords(articlePack.article, words);
 
-    if (!quickMode && missing.length > 0) {
+    const retryCount = quickMode ? 1 : 2;
+    for (let i = 0; i < retryCount && missing.length > 0; i += 1) {
       articlePack = await generateArticlePackage(
         words,
         level,
         quickMode,
         lexicon,
-        `Important fix: ensure these missing words appear: ${missing.join(", ")}.`
+        [
+          `Important fix (round ${i + 1}): ensure ALL missing words appear naturally.`,
+          `Missing words: ${missing.join(", ")}.`,
+          "You can add one concise final paragraph to include any remaining words."
+        ].join(" ")
       );
+      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+      missing = findMissingWords(articlePack.article, words);
+    }
+
+    if (missing.length > 0) {
+      articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       missing = findMissingWords(articlePack.article, words);
     }
