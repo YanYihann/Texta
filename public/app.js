@@ -309,6 +309,13 @@ function normalizeZhSenseMarkers(text) {
   return out;
 }
 
+function normalizeSenseMarkerSpacing(text) {
+  const markerSet = "①②③④⑤⑥⑦⑧⑨⑩";
+  return String(text || "")
+    .replace(new RegExp(`\\s*([${markerSet}])`, "g"), "$1")
+    .replace(new RegExp(`([${markerSet}])\\s+`, "g"), "$1 ");
+}
+
 function renderSenseSuperscript(html) {
   return String(html || "").replace(/([①②③④⑤⑥⑦⑧⑨⑩])/g, '<sup class="sense-marker">$1</sup>');
 }
@@ -394,26 +401,30 @@ function highlightText(text, terms, className, withBoundary) {
 }
 
 function highlightEnglishWordsWithKeys(text, words) {
-  let html = escapeHtml(text);
-  const sorted = [...(words || [])].filter(Boolean).sort((a, b) => b.length - a.length);
-  for (const w of sorted) {
+  const formToKey = new Map();
+  for (const w of words || []) {
     const key = keyifyWord(w);
+    if (!key) continue;
+    formToKey.set(String(w).toLowerCase(), key);
     const regex = buildWordRegex(w);
-    html = html.replace(regex, (m) => `<mark class=\"vocab-en\" data-word-key=\"${key}\">${m}</mark>`);
+    const source = regex.source.replace(/^\\b\(/, "").replace(/\)\\b$/, "");
+    source
+      .split("|")
+      .map((x) => x.replace(/\\/g, ""))
+      .filter(Boolean)
+      .forEach((f) => formToKey.set(f.toLowerCase(), key));
   }
 
-  // Fallback: any English token immediately before sense marker should be highlighted.
-  // Example: literacy② / drainage① / mishaps③
-  html = html.replace(
-    /(^|[\s(>.,;:!?'"-])([A-Za-z][A-Za-z'-]*)([①②③④⑤⑥⑦⑧⑨⑩])/g,
-    (all, pre, token, marker) => {
-      if (String(pre).includes("</mark")) return all;
-      const matchedKey = resolveWordKeyByToken(token, words);
-      const key = matchedKey || keyifyWord(token);
-      return `${pre}<mark class=\"vocab-en\" data-word-key=\"${key}\">${token}</mark>${marker}`;
-    }
-  );
-
+  const forms = Array.from(formToKey.keys()).sort((a, b) => b.length - a.length).map((f) => escapeRegExp(f));
+  let normalized = normalizeSenseMarkerSpacing(String(text || ""));
+  let html = escapeHtml(normalized);
+  if (forms.length > 0) {
+    const combined = new RegExp(`\\b(${forms.join("|")})\\b`, "gi");
+    html = html.replace(combined, (m) => {
+      const key = formToKey.get(String(m).toLowerCase()) || keyifyWord(m);
+      return `<mark class=\"vocab-en\" data-word-key=\"${key}\">${m}</mark>`;
+    });
+  }
   return renderSenseSuperscript(html);
 }
 
@@ -423,39 +434,38 @@ function highlightEnglishWithAlignment(text, words, alignment) {
     return highlightEnglishWordsWithKeys(text, words);
   }
 
-  let html = escapeHtml(text);
-  const formItems = [];
+  const formToKey = new Map();
   for (const row of rows) {
     const key = keyifyWord(row?.word || "");
     if (!key) continue;
     const forms = Array.isArray(row?.english_forms) ? row.english_forms : [];
     const merged = [String(row?.word || ""), ...forms].map((x) => String(x || "").trim()).filter(Boolean);
     for (const form of merged) {
-      formItems.push({ key, form });
+      formToKey.set(form.toLowerCase(), key);
     }
   }
 
-  formItems.sort((a, b) => b.form.length - a.form.length);
-  for (const item of formItems) {
-    const regex = new RegExp(`\\b${escapeRegExp(item.form)}\\b`, "gi");
-    html = html.replace(regex, (m) => `<mark class=\"vocab-en\" data-word-key=\"${item.key}\">${m}</mark>`);
+  for (const w of words || []) {
+    const key = keyifyWord(w);
+    if (!key || formToKey.has(String(w).toLowerCase())) continue;
+    formToKey.set(String(w).toLowerCase(), key);
   }
 
-  html = html.replace(
-    /(^|[\s(>.,;:!?'"-])([A-Za-z][A-Za-z'-]*)([①②③④⑤⑥⑦⑧⑨⑩])/g,
-    (all, pre, token, marker) => {
-      if (String(pre).includes("</mark")) return all;
-      const matchedKey = resolveWordKeyByToken(token, words);
-      const key = matchedKey || keyifyWord(token);
-      return `${pre}<mark class=\"vocab-en\" data-word-key=\"${key}\">${token}</mark>${marker}`;
-    }
-  );
-
+  const forms = Array.from(formToKey.keys()).sort((a, b) => b.length - a.length).map((f) => escapeRegExp(f));
+  let normalized = normalizeSenseMarkerSpacing(String(text || ""));
+  let html = escapeHtml(normalized);
+  if (forms.length > 0) {
+    const combined = new RegExp(`\\b(${forms.join("|")})\\b`, "gi");
+    html = html.replace(combined, (m) => {
+      const key = formToKey.get(String(m).toLowerCase()) || resolveWordKeyByToken(m, words) || keyifyWord(m);
+      return `<mark class=\"vocab-en\" data-word-key=\"${key}\">${m}</mark>`;
+    });
+  }
   return renderSenseSuperscript(html);
 }
 
 function highlightChineseWithKeys(text, termKeyPairs) {
-  let html = escapeHtml(normalizeZhSenseMarkers(text));
+  let html = escapeHtml(normalizeSenseMarkerSpacing(normalizeZhSenseMarkers(text)));
   for (const item of termKeyPairs || []) {
     const term = String(item?.term || "");
     if (!term) continue;
