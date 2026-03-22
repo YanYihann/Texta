@@ -218,6 +218,42 @@ button:disabled {
   color: var(--muted);
 }
 
+.fav-title {
+  margin-top: 14px;
+  font-size: 15px;
+}
+
+.favorites-list {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.fav-item {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.fav-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.fav-main {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fav-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .top-actions {
   display: flex;
   align-items: center;

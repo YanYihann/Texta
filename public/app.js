@@ -6,10 +6,12 @@ const readingModeBtn = document.getElementById("readingModeBtn");
 const toggleZhBtn = document.getElementById("toggleZhBtn");
 const exportPdfBtn = document.getElementById("exportPdfBtn");
 const exportWordBtn = document.getElementById("exportWordBtn");
+const favoriteBtn = document.getElementById("favoriteBtn");
 const exportTitleInput = document.getElementById("exportTitle");
 const statusEl = document.getElementById("status");
 const spellHintsEl = document.getElementById("spellHints");
 const wordChipsEl = document.getElementById("wordChips");
+const favoritesListEl = document.getElementById("favoritesList");
 
 const resultSection = document.getElementById("resultSection");
 const glossaryPanelEl = document.getElementById("glossaryPanel");
@@ -40,9 +42,43 @@ let spellState = [];
 let lastActiveGlossaryKey = "";
 let pronunciationMap = new Map();
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
+const FAVORITES_KEY = "texta_favorites_v1";
+let favorites = [];
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
+}
+
+function loadFavorites() {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    favorites = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    favorites = [];
+  }
+}
+
+function saveFavorites() {
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.slice(0, 50)));
+}
+
+function renderFavorites() {
+  if (!favoritesListEl) return;
+  if (!favorites.length) {
+    favoritesListEl.innerHTML = `<div class="fav-meta">暂无收藏</div>`;
+    return;
+  }
+  favoritesListEl.innerHTML = favorites
+    .map(
+      (item) => `
+      <div class="fav-item" data-fav-id="${escapeHtml(item.id)}">
+        <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
+        <div class="fav-meta">${escapeHtml(item.savedAt || "")}</div>
+      </div>
+    `
+    )
+    .join("");
 }
 
 function splitWords(rawText) {
@@ -546,6 +582,48 @@ async function exportPdfFromPreview() {
   closeExportPreview();
 }
 
+function applyArticleData(data) {
+  latestArticle = String(data.article || "");
+  latestWords = Array.isArray(data.words) ? data.words : latestWords;
+  latestLexicon = Array.isArray(data.lexicon) ? data.lexicon : [];
+  latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
+  latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
+
+  const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
+  articleTitleEl.textContent = finalTitle;
+  exportTitleInput.value = finalTitle || String(data.defaultTitle || defaultTitleByWords(latestWords));
+
+  renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon);
+  renderGlossary(latestLexicon);
+
+  if (Array.isArray(data.missing) && data.missing.length > 0) {
+    missingWordsEl.textContent = `提示：仍有 ${data.missing.length} 个词未命中：${data.missing.join(", ")}`;
+  } else {
+    missingWordsEl.textContent = "";
+  }
+
+  showChinese = true;
+  applyChineseVisibility();
+  resultSection.classList.remove("hidden");
+  glossaryPanelEl.classList.remove("hidden");
+  exportPdfBtn.disabled = false;
+  exportWordBtn.disabled = false;
+}
+
+function favoriteFromCurrent() {
+  return {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    title: articleTitleEl.textContent || defaultTitleByWords(latestWords),
+    savedAt: new Date().toLocaleString(),
+    words: latestWords,
+    article: latestArticle,
+    lexicon: latestLexicon,
+    paragraphsEn: latestParagraphsEn,
+    paragraphsZh: latestParagraphsZh,
+    missing: []
+  };
+}
+
 generateBtn.addEventListener("click", async () => {
   const wordsText = wordsInput.value.trim();
   const level = levelSelect.value;
@@ -582,28 +660,7 @@ generateBtn.addEventListener("click", async () => {
       throw new Error(data.error || "请求失败");
     }
 
-    latestArticle = String(data.article || "");
-    latestLexicon = Array.isArray(data.lexicon) ? data.lexicon : [];
-    latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
-    latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
-
-    const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
-    articleTitleEl.textContent = finalTitle;
-    exportTitleInput.value = finalTitle || String(data.defaultTitle || defaultTitleByWords(latestWords));
-
-    renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon);
-    renderGlossary(latestLexicon);
-
-    if (Array.isArray(data.missing) && data.missing.length > 0) {
-      missingWordsEl.textContent = `提示：仍有 ${data.missing.length} 个词未命中：${data.missing.join(", ")}`;
-    }
-
-    showChinese = true;
-    applyChineseVisibility();
-    resultSection.classList.remove("hidden");
-    glossaryPanelEl.classList.remove("hidden");
-    exportPdfBtn.disabled = false;
-    exportWordBtn.disabled = false;
+    applyArticleData({ ...data, words: latestWords });
     statusEl.textContent = "生成完成。";
   } catch (error) {
     statusEl.textContent = `生成失败：${error.message}`;
@@ -647,6 +704,33 @@ exportPdfBtn.addEventListener("click", () => openExportPreview("pdf"));
 exportWordBtn.addEventListener("click", () => openExportPreview("word"));
 closeModalBtn.addEventListener("click", closeExportPreview);
 
+favoriteBtn.addEventListener("click", () => {
+  if (!latestArticle) {
+    statusEl.textContent = "请先生成文章再收藏。";
+    return;
+  }
+  const item = favoriteFromCurrent();
+  favorites.unshift(item);
+  saveFavorites();
+  renderFavorites();
+  statusEl.textContent = "已加入收藏夹。";
+});
+
+favoritesListEl.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const itemEl = target.closest(".fav-item[data-fav-id]");
+  if (!itemEl) return;
+  const id = itemEl.getAttribute("data-fav-id");
+  const found = favorites.find((x) => x.id === id);
+  if (!found) return;
+
+  latestWords = Array.isArray(found.words) ? found.words : [];
+  wordsInput.value = latestWords.join(", ");
+  applyArticleData(found);
+  statusEl.textContent = "已从收藏夹打开文章。";
+});
+
 previewTitleInput.addEventListener("input", renderPreviewPaper);
 previewIncludeZhInput.addEventListener("change", renderPreviewPaper);
 previewMarginSelect.addEventListener("change", renderPreviewPaper);
@@ -659,5 +743,7 @@ confirmExportBtn.addEventListener("click", async () => {
   await exportPdfFromPreview();
 });
 
+loadFavorites();
+renderFavorites();
 renderSpelling();
 applyReadingMode();
