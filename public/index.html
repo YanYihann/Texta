@@ -1,115 +1,42 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Texta</title>
+    <title>Texta 登录</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
     <link rel="stylesheet" href="./style.css" />
   </head>
-  <body>
-    <main class="app-shell">
-      <section class="panel input-panel">
-        <div class="brand">
-          <img src="./logo.svg" alt="logo" class="logo" />
-          <h1>Texta</h1>
+  <body class="auth-page">
+    <main class="auth-page-wrap">
+      <section class="auth-card solo">
+        <div class="auth-brand">Texta</div>
+        <p class="auth-subtitle">登录后即可进入单词文章生成页面</p>
+        <div class="auth-tabs">
+          <button id="tabLogin" class="auth-tab active" type="button">登录</button>
+          <button id="tabRegister" class="auth-tab" type="button">注册</button>
         </div>
-        <div class="user-row">
-          <span id="userBadge" class="user-badge">未登录</span>
-          <button id="logoutBtn" type="button" class="ghost-btn hidden">退出</button>
+        <div id="authMsg" class="auth-msg"></div>
+        <div id="loginForm" class="auth-form">
+          <label for="loginEmail">邮箱</label>
+          <input id="loginEmail" type="text" placeholder="you@example.com" />
+          <label for="loginPassword">密码</label>
+          <input id="loginPassword" type="password" placeholder="至少 6 位" />
+          <button id="loginBtn" class="primary-btn" type="button">登录并进入</button>
         </div>
-        <p class="subtitle">左侧输入单词，中间阅读文章，右侧查看雅思词汇释义扩展。</p>
-
-        <label for="words">单词列表（空格/换行/逗号分隔）</label>
-        <textarea id="words" placeholder="例如: catastrophic, evaporate, drain, drip"></textarea>
-        <div id="spellHints" class="spell-hints hidden"></div>
-        <div id="wordChips" class="word-chips"></div>
-
-        <label for="level">难度等级</label>
-        <select id="level">
-          <option value="初级">初级</option>
-          <option value="中级" selected>中级</option>
-          <option value="高级">高级</option>
-        </select>
-
-        <label class="quick-row" for="quickMode">
-          <input id="quickMode" type="checkbox" />
-          快速省钱模式（短文 + 更低成本）
-        </label>
-
-        <button id="generateBtn" class="primary-btn">生成文章</button>
-        <p id="status"></p>
-
-        <h3 class="fav-title">收藏夹</h3>
-        <div id="favoritesList" class="favorites-list"></div>
-      </section>
-
-      <section id="resultSection" class="panel result-panel hidden">
-        <div class="top-actions">
-          <h2>文章生成结果</h2>
-          <div class="actions">
-            <button id="readingModeBtn" type="button">阅读模式</button>
-            <button id="toggleZhBtn" type="button">隐藏中文</button>
-            <button id="favoriteBtn" type="button">收藏文章</button>
-            <button id="exportPdfBtn" type="button" disabled>导出 PDF</button>
-            <button id="exportWordBtn" type="button" disabled>导出 Word</button>
-          </div>
+        <div id="registerForm" class="auth-form hidden">
+          <label for="registerName">昵称</label>
+          <input id="registerName" type="text" placeholder="你的昵称" />
+          <label for="registerEmail">邮箱</label>
+          <input id="registerEmail" type="text" placeholder="you@example.com" />
+          <label for="registerPassword">密码</label>
+          <input id="registerPassword" type="password" placeholder="至少 6 位" />
+          <button id="registerBtn" class="primary-btn" type="button">注册并进入</button>
         </div>
-
-        <label for="exportTitle">导出标题（默认自动生成，可修改）</label>
-        <input id="exportTitle" type="text" placeholder="Vocabulary YYYY-MM-DD (N words)" />
-
-        <p id="missingWords" class="warning"></p>
-
-        <section id="exportArea" class="export-area">
-          <h3 id="articleTitle" class="article-title"></h3>
-          <div id="articleBlocks" class="article-blocks"></div>
-        </section>
-      </section>
-
-      <section id="glossaryPanel" class="panel glossary-panel hidden">
-        <h2>生词中文释义</h2>
-        <p class="subtitle">含词性、常考义项、短语搭配、词根词缀、同近义词。</p>
-        <div id="glossary" class="glossary"></div>
       </section>
     </main>
-
-    <section id="exportModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-card">
-        <div class="modal-head">
-          <h3>导出前预览</h3>
-          <button id="closeModalBtn" type="button" class="ghost-btn">关闭</button>
-        </div>
-
-        <label for="previewTitle">标题</label>
-        <input id="previewTitle" type="text" />
-
-        <div class="modal-row">
-          <label class="quick-row" for="previewIncludeZh">
-            <input id="previewIncludeZh" type="checkbox" checked />
-            包含中文翻译
-          </label>
-          <div class="field">
-            <label for="previewMargin">页边距</label>
-            <select id="previewMargin">
-              <option value="8">窄</option>
-              <option value="12" selected>标准</option>
-              <option value="16">宽</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="previewPaper" class="preview-paper"></div>
-
-        <div class="modal-actions">
-          <button id="confirmExportBtn" type="button">确认导出</button>
-        </div>
-      </div>
-    </section>
-
-    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
     <script src="./site-config.js"></script>
-    <script src="./app.js"></script>
+    <script src="./auth.js"></script>
   </body>
 </html>

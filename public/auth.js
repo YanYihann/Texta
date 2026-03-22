@@ -26,21 +26,6 @@ function setAuthMode(mode) {
   authMsgEl.textContent = "";
 }
 
-async function tryAutoLogin() {
-  const token = localStorage.getItem("texta_auth_token") || "";
-  if (!token) return;
-  try {
-    const response = await fetch(apiUrl("/api/auth/me"), {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (response.ok) {
-      location.href = "./index.html";
-    }
-  } catch {
-    // Ignore auto-login failure.
-  }
-}
-
 tabLoginEl.addEventListener("click", () => setAuthMode("login"));
 tabRegisterEl.addEventListener("click", () => setAuthMode("register"));
 
@@ -51,6 +36,7 @@ loginBtnEl.addEventListener("click", async () => {
     authMsgEl.textContent = "请填写邮箱和密码。";
     return;
   }
+
   loginBtnEl.disabled = true;
   authMsgEl.textContent = "登录中...";
   try {
@@ -64,7 +50,7 @@ loginBtnEl.addEventListener("click", async () => {
       throw new Error(data.error || "登录失败");
     }
     localStorage.setItem("texta_auth_token", data.token || "");
-    location.href = "./index.html";
+    location.href = "./app.html";
   } catch (error) {
     authMsgEl.textContent = `登录失败：${error.message}`;
   } finally {
@@ -105,7 +91,7 @@ registerBtnEl.addEventListener("click", async () => {
     }
 
     localStorage.setItem("texta_auth_token", loginData.token || "");
-    location.href = "./index.html";
+    location.href = "./app.html";
   } catch (error) {
     authMsgEl.textContent = `注册失败：${error.message}`;
   } finally {
@@ -114,4 +100,3 @@ registerBtnEl.addEventListener("click", async () => {
 });
 
 setAuthMode("login");
-tryAutoLogin();

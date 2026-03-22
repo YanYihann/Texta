@@ -398,7 +398,7 @@ async function runSpellcheck() {
     if (response.status === 401) {
       setAuthToken("");
       currentUser = null;
-      location.href = "./auth.html";
+      location.href = "./index.html";
       spellState = [];
       renderSpelling();
       return;
@@ -822,7 +822,7 @@ generateBtn.addEventListener("click", async () => {
     if (response.status === 401) {
       setAuthToken("");
       currentUser = null;
-      location.href = "./auth.html";
+      location.href = "./index.html";
       throw new Error("登录已过期，请重新登录。");
     }
     if (!response.ok) {
@@ -935,13 +935,13 @@ logoutBtnEl.addEventListener("click", async () => {
   }
   setAuthToken("");
   currentUser = null;
-  location.href = "./auth.html";
+  location.href = "./index.html";
 });
 
 async function init() {
   const ok = await loadMe();
   if (!ok) {
-    location.href = "./auth.html";
+    location.href = "./index.html";
     return;
   }
   loadFavorites();
@@ -951,3 +951,4 @@ async function init() {
 }
 
 init();
+
