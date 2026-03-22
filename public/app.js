@@ -257,7 +257,6 @@ function buildChineseTermKeyPairs(lexicon) {
 function buildChineseTermKeyPairsFromAlignment(alignment, lexicon) {
   const rows = Array.isArray(alignment) ? alignment : [];
   const termToKeys = new Map();
-  const lexMap = new Map((lexicon || []).map((x) => [String(x.word || "").toLowerCase(), x]));
 
   const add = (termRaw, key) => {
     const term = String(termRaw || "").trim();
@@ -283,18 +282,27 @@ function buildChineseTermKeyPairsFromAlignment(alignment, lexicon) {
     if (!key) continue;
     const zhTerms = Array.isArray(row?.zh_terms) ? row.zh_terms : [];
     for (const term of zhTerms) add(term, key);
-    if (zhTerms.length === 0) {
-      const lex = lexMap.get(word.toLowerCase());
-      const senses = Array.isArray(lex?.senses) ? lex.senses : [];
-      for (const s of senses) add(String(s?.meaning || "").trim(), key);
-    }
   }
 
   const out = Array.from(termToKeys.entries())
     .map(([term, keys]) => ({ term, keys: Array.from(keys) }))
     .sort((a, b) => b.term.length - a.term.length);
 
-  return out.length > 0 ? out : buildChineseTermKeyPairs(lexicon);
+  return out;
+}
+
+function buildAlignmentWordMap(alignment) {
+  const map = new Map();
+  for (const row of Array.isArray(alignment) ? alignment : []) {
+    const key = keyifyWord(row?.word || "");
+    if (!key) continue;
+    map.set(key, {
+      marker: String(row?.marker || "①"),
+      englishForms: Array.isArray(row?.english_forms) ? row.english_forms.map((x) => String(x || "").trim()).filter(Boolean) : [],
+      zhTerms: Array.isArray(row?.zh_terms) ? row.zh_terms.map((x) => String(x || "").trim()).filter(Boolean) : []
+    });
+  }
+  return map;
 }
 
 function normalizeZhSenseMarkers(text) {
@@ -416,7 +424,7 @@ function highlightEnglishWordsWithKeys(text, words) {
   }
 
   const forms = Array.from(formToKey.keys()).sort((a, b) => b.length - a.length).map((f) => escapeRegExp(f));
-  let normalized = normalizeSenseMarkerSpacing(String(text || ""));
+  let normalized = normalizeSenseMarkerSpacing(String(text || "")).replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
   let html = escapeHtml(normalized);
   if (forms.length > 0) {
     const combined = new RegExp(`\\b(${forms.join("|")})\\b`, "gi");
@@ -435,9 +443,11 @@ function highlightEnglishWithAlignment(text, words, alignment) {
   }
 
   const formToKey = new Map();
+  const markerByKey = new Map();
   for (const row of rows) {
     const key = keyifyWord(row?.word || "");
     if (!key) continue;
+    markerByKey.set(key, String(row?.marker || "①"));
     const forms = Array.isArray(row?.english_forms) ? row.english_forms : [];
     const merged = [String(row?.word || ""), ...forms].map((x) => String(x || "").trim()).filter(Boolean);
     for (const form of merged) {
@@ -458,10 +468,11 @@ function highlightEnglishWithAlignment(text, words, alignment) {
     const combined = new RegExp(`\\b(${forms.join("|")})\\b`, "gi");
     html = html.replace(combined, (m) => {
       const key = formToKey.get(String(m).toLowerCase()) || resolveWordKeyByToken(m, words) || keyifyWord(m);
-      return `<mark class=\"vocab-en\" data-word-key=\"${key}\">${m}</mark>`;
+      const marker = escapeHtml(markerByKey.get(key) || "①");
+      return `<mark class=\"vocab-en\" data-word-key=\"${key}\">${m}<sup class=\"sense-marker\">${marker}</sup></mark>`;
     });
   }
-  return renderSenseSuperscript(html);
+  return html;
 }
 
 function highlightChineseWithKeys(text, termKeyPairs) {
@@ -475,6 +486,30 @@ function highlightChineseWithKeys(text, termKeyPairs) {
     html = html.replace(regex, (m) => `<mark class=\"vocab-zh\" data-word-keys=\"${keysAttr}\">${m}</mark>`);
   }
   return renderSenseSuperscript(html);
+}
+
+function highlightChineseWithAlignment(text, termKeyPairs, alignment) {
+  const alignMap = buildAlignmentWordMap(alignment);
+  if (alignMap.size === 0) {
+    return highlightChineseWithKeys(text, termKeyPairs);
+  }
+
+  let html = escapeHtml(normalizeSenseMarkerSpacing(normalizeZhSenseMarkers(text)).replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, ""));
+  for (const item of termKeyPairs || []) {
+    const term = String(item?.term || "");
+    if (!term) continue;
+    const keys = Array.isArray(item?.keys) ? item.keys.filter(Boolean) : [];
+    if (keys.length === 0) continue;
+    const primaryKey = keys[0];
+    const marker = escapeHtml(alignMap.get(primaryKey)?.marker || "①");
+    const keysAttr = escapeHtml(keys.join(","));
+    const regex = new RegExp(escapeRegExp(term), "g");
+    html = html.replace(
+      regex,
+      (m) => `<mark class=\"vocab-zh\" data-word-keys=\"${keysAttr}\">${m}<sup class=\"sense-marker\">${marker}</sup></mark>`
+    );
+  }
+  return html;
 }
 
 function applyChineseVisibility() {
@@ -629,7 +664,7 @@ function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon, align
     .map((en, i) => {
       const zh = paragraphsZh[i] || "(该段翻译生成失败，请重试)";
       const enHtml = highlightEnglishWithAlignment(en, words, alignment).replace(/\n/g, "<br>");
-      const zhHtml = highlightChineseWithKeys(zh, zhTermKeyPairs).replace(/\n/g, "<br>");
+      const zhHtml = highlightChineseWithAlignment(zh, zhTermKeyPairs, alignment).replace(/\n/g, "<br>");
 
       return `
         <article class=\"para-card\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">

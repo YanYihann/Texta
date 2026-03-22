@@ -660,12 +660,86 @@ async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
   });
 }
 
-function normalizeAlignment(words, lexicon, raw) {
+function buildWordFormRegex(word) {
+  const base = String(word || "").toLowerCase();
+  if (!base) return /\b\B/gi;
+
+  const forms = new Set([base]);
+  const add = (x) => {
+    const v = String(x || "").trim().toLowerCase();
+    if (v) forms.add(v);
+  };
+
+  add(`${base}s`);
+  add(`${base}es`);
+  add(`${base}ed`);
+  add(`${base}ing`);
+  add(`${base}age`);
+  add(`${base}ages`);
+  add(`${base}al`);
+  add(`${base}ally`);
+  add(`${base}ment`);
+  add(`${base}ments`);
+  add(`${base}tion`);
+  add(`${base}tions`);
+  add(`${base}er`);
+  add(`${base}ers`);
+  add(`${base}ly`);
+  add(`${base}ness`);
+  add(`${base}y`);
+  add(`${base}ies`);
+
+  if (base.endsWith("ate") && base.length > 4) {
+    const stem = base.slice(0, -3);
+    add(`${stem}acy`);
+    add(`${stem}acies`);
+    add(`${stem}ation`);
+    add(`${stem}ations`);
+  }
+
+  if (base.endsWith("e") && base.length > 3) {
+    const stem = base.slice(0, -1);
+    add(`${stem}ion`);
+    add(`${stem}ions`);
+    add(`${stem}ive`);
+    add(`${stem}ivity`);
+  }
+
+  const escaped = Array.from(forms)
+    .sort((a, b) => b.length - a.length)
+    .map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
+}
+
+function inferFormsFromArticle(word, paragraphsEn) {
+  const text = String((paragraphsEn || []).join("\n") || "");
+  const regex = buildWordFormRegex(word);
+  const found = new Set();
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    const v = String(m[1] || "").trim();
+    if (v) found.add(v);
+  }
+  return Array.from(found);
+}
+
+function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
   const allowed = new Set((words || []).map((w) => String(w || "").toLowerCase()));
   const lexMap = new Map((lexicon || []).map((x) => [String(x.word || "").toLowerCase(), x]));
   const items = Array.isArray(raw?.items) ? raw.items : Array.isArray(raw) ? raw : [];
+  const enText = (paragraphsEn || []).join("\n").toLowerCase();
+  const zhText = (paragraphsZh || []).join("\n");
   const output = [];
   const seen = new Set();
+
+  const appearsInEn = (x) => {
+    const v = String(x || "").trim().toLowerCase();
+    return v ? enText.includes(v) : false;
+  };
+  const appearsInZh = (x) => {
+    const v = String(x || "").trim();
+    return v ? zhText.includes(v) : false;
+  };
 
   for (const item of items) {
     const word = String(item?.word || "").trim();
@@ -673,14 +747,19 @@ function normalizeAlignment(words, lexicon, raw) {
     const lw = word.toLowerCase();
     if (!allowed.has(lw) || seen.has(lw)) continue;
     const lex = lexMap.get(lw);
-    const zhTerms = (Array.isArray(item?.zh_terms) ? item.zh_terms : [])
+    let zhTerms = (Array.isArray(item?.zh_terms) ? item.zh_terms : [])
       .map((x) => String(x || "").trim())
       .filter(Boolean)
-      .slice(0, 8);
-    const englishForms = (Array.isArray(item?.english_forms) ? item.english_forms : [])
+      .filter(appearsInZh)
+      .slice(0, 10);
+    let englishForms = (Array.isArray(item?.english_forms) ? item.english_forms : [])
       .map((x) => String(x || "").trim())
       .filter(Boolean)
-      .slice(0, 8);
+      .filter(appearsInEn)
+      .slice(0, 10);
+    const inferredForms = inferFormsFromArticle(word, paragraphsEn).filter(appearsInEn);
+    englishForms = Array.from(new Set([...englishForms, ...inferredForms]));
+    if (englishForms.length === 0 && appearsInEn(word)) englishForms = [word];
     output.push({
       word: lex?.word || word,
       marker: String(item?.marker || lex?.senses?.[0]?.marker || "①"),
@@ -694,12 +773,18 @@ function normalizeAlignment(words, lexicon, raw) {
     const lw = String(w || "").toLowerCase();
     if (seen.has(lw)) continue;
     const lex = lexMap.get(lw);
-    const fallbackZh = Array.isArray(lex?.senses) ? lex.senses.map((s) => String(s?.meaning || "").trim()).filter(Boolean) : [];
+    const fallbackZh = Array.isArray(lex?.senses)
+      ? lex.senses
+          .map((s) => String(s?.meaning || "").trim())
+          .filter(Boolean)
+          .filter(appearsInZh)
+      : [];
+    const inferredForms = inferFormsFromArticle(w, paragraphsEn).filter(appearsInEn);
     output.push({
       word: String(w || ""),
       marker: String(lex?.senses?.[0]?.marker || "①"),
-      zh_terms: fallbackZh.slice(0, 6),
-      english_forms: [String(w || "")]
+      zh_terms: fallbackZh.slice(0, 10),
+      english_forms: inferredForms.length > 0 ? inferredForms : appearsInEn(String(w || "")) ? [String(w || "")] : []
     });
   }
 
@@ -726,8 +811,8 @@ async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, qui
     "Rules:",
     "1) word must be one of target words.",
     "2) english_forms: forms actually appearing in English article, include variants like literacy, drainage, mishaps when aligned.",
-    "3) zh_terms: concise Chinese terms that actually appear in Chinese translation for that word.",
-    "4) marker should match the intended sense marker.",
+    "3) zh_terms: Chinese terms that MUST appear literally in Chinese translation.",
+    "4) marker should match the closest sense marker in vocabulary guide.",
     "5) No explanation text.",
     `Target words: ${words.join(", ")}`,
     "Vocabulary guide:",
@@ -742,12 +827,12 @@ async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, qui
     const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 680 : 1200 });
     const parsedObj = extractJsonObject(text);
     if (parsedObj) {
-      return normalizeAlignment(words, lexicon, parsedObj);
+      return normalizeAlignment(words, lexicon, parsedObj, paragraphsEn, paragraphsZh);
     }
     const parsedArr = extractJsonArray(text);
-    return normalizeAlignment(words, lexicon, parsedArr);
+    return normalizeAlignment(words, lexicon, parsedArr, paragraphsEn, paragraphsZh);
   } catch {
-    return normalizeAlignment(words, lexicon, []);
+    return normalizeAlignment(words, lexicon, [], paragraphsEn, paragraphsZh);
   }
 }
 
