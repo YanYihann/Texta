@@ -1082,7 +1082,7 @@ generateBtn.addEventListener("click", async () => {
       throw new Error(data.error || "今日次数已用完");
     }
     if (!response.ok) {
-      throw new Error(data.error || "请求失败");
+      throw new Error((data && (data.detail || data.error)) || "请求失败");
     }
 
     applyArticleData({ ...data, words: latestWords });
