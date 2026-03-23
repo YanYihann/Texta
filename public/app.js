@@ -1053,7 +1053,7 @@ generateBtn.addEventListener("click", async () => {
   resultSection.classList.add("hidden");
   glossaryPanelEl.classList.add("hidden");
   missingWordsEl.textContent = "";
-  statusEl.textContent = quickMode ? "快速模式生成中（更省钱）..." : "AI 正在生成双语文章，请稍等...";
+  statusEl.textContent = quickMode ? "快速模式生成中（更省钱）..." : "AI 正在生成双语文章，请稍等（大约10-15秒）...";
 
   try {
     latestWords = splitWords(wordsText);

@@ -3,8 +3,9 @@
 Texta is an IELTS vocabulary writing assistant website.  
 You can input words or phrases, generate an English article with Chinese translation, highlight aligned vocabulary, and export results.
 
-Texta 是一个 IELTS 词汇写作辅助网站。  
-你可以输入单词或短语，生成英文文章与中文翻译，并进行对齐高亮与导出。
+Texta 是一个词文串记的网站。  
+你可以输入单词或短语，生成包含这些单词短语的英文文章与中文翻译，并进行对齐高亮与导出。
+从而来辅助词汇记忆与写作练习。
 
 ## Website URLs | 网站地址
 
