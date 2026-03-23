@@ -5,17 +5,16 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/client": "^7.5.0",
+    "@prisma/client": "^6.13.0",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
-  },
-  "devDependencies": {
+    "express": "^4.19.2",
     "prisma": "^6.13.0"
   }
 }

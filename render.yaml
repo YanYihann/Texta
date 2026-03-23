@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     autoDeploy: true
-    buildCommand: npm install
+    buildCommand: npm install && npx prisma generate && npx prisma db push --skip-generate
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -22,3 +22,5 @@ services:
         value: "2"
       - key: FRONTEND_ORIGIN
         value: https://yanyihann.github.io
+      - key: DATABASE_URL
+        sync: false
