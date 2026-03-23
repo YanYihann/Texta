@@ -332,7 +332,7 @@ async function requireAdmin(req, res) {
 }
 function splitWords(rawText) {
   return String(rawText || "")
-    .split(/[\n,;，；\s]+/)
+    .split(/[\n,，]+/)
     .map((w) => w.trim())
     .filter(Boolean)
     .filter((value, index, arr) => arr.findIndex((x) => x.toLowerCase() === value.toLowerCase()) === index);

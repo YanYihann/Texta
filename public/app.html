@@ -24,9 +24,9 @@
           <a id="upgradeVipBtn" class="upgrade-link hidden" href="./pay.html">升级VIP（10元/日50次）</a>
           <a id="adminReviewLink" class="upgrade-link hidden" href="./admin.html">VIP审核中心</a>
         </div>
-        <p class="subtitle">左侧输入单词，中间阅读文章，右侧查看雅思词汇释义扩展。</p>
+        <p class="subtitle">左侧输入单词，中间阅读文章，右侧查看词汇释义扩展。</p>
 
-        <label for="words">单词列表（空格/换行/逗号分隔）</label>
+        <label for="words">单词/短语列表（换行/逗号分隔，空格会保留在短语内）</label>
         <textarea id="words" placeholder="例如: catastrophic, evaporate, drain, drip"></textarea>
         <div id="spellHints" class="spell-hints hidden"></div>
         <div id="wordChips" class="word-chips"></div>
@@ -40,7 +40,7 @@
 
         <label class="quick-row" for="quickMode">
           <input id="quickMode" type="checkbox" />
-          快速省钱模式（短文 + 更低成本）
+          快速模式（生成更短文章，速度较快）
         </label>
 
         <button id="generateBtn" class="primary-btn">生成文章</button>
