@@ -1,11 +1,12 @@
 ﻿const express = require("express");
 const path = require("path");
 const dotenv = require("dotenv");
-const fs = require("fs");
 const crypto = require("crypto");
+const { PrismaClient } = require("@prisma/client");
 dotenv.config();
 
 const app = express();
+const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -38,7 +39,6 @@ const OPENAI_BASE_URL = normalizeBaseUrl(process.env.OPENAI_BASE_URL);
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 30000);
 const OPENAI_RETRY_COUNT = Number(process.env.OPENAI_RETRY_COUNT || 2);
 const FRONTEND_ORIGIN = String(process.env.FRONTEND_ORIGIN || "*").trim();
-const AUTH_STORE_PATH = path.join(__dirname, "data", "auth-store.json");
 const AUTH_TOKEN_TTL_MS = Number(process.env.AUTH_TOKEN_TTL_MS || 1000 * 60 * 60 * 24 * 7);
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const ADMIN_NAME = String(process.env.ADMIN_NAME || "Admin").trim();
@@ -70,14 +70,6 @@ app.use((req, res, next) => {
   next();
 });
 
-async function ensureAuthStore() {
-  const dir = path.dirname(AUTH_STORE_PATH);
-  await fs.promises.mkdir(dir, { recursive: true });
-  if (!fs.existsSync(AUTH_STORE_PATH)) {
-    await fs.promises.writeFile(AUTH_STORE_PATH, JSON.stringify({ users: [], sessions: [] }, null, 2), "utf8");
-  }
-}
-
 function hashPassword(raw, salt) {
   const safeSalt = salt || crypto.randomBytes(16).toString("hex");
   const derived = crypto.scryptSync(String(raw || ""), safeSalt, 64).toString("hex");
@@ -100,24 +92,140 @@ function verifyPassword(raw, passwordHash) {
 }
 
 async function writeAuthStore(store) {
-  await ensureAuthStore();
-  await fs.promises.writeFile(AUTH_STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+  const users = Array.isArray(store?.users) ? store.users : [];
+  const sessions = Array.isArray(store?.sessions) ? store.sessions : [];
+  const usageDailyObj = store?.usageDaily && typeof store.usageDaily === "object" ? store.usageDaily : {};
+  const vipRequests = Array.isArray(store?.vipRequests) ? store.vipRequests : [];
+
+  const usageRows = [];
+  for (const [userId, dateMap] of Object.entries(usageDailyObj)) {
+    if (!dateMap || typeof dateMap !== "object") continue;
+    for (const [dateKey, used] of Object.entries(dateMap)) {
+      usageRows.push({
+        userId,
+        dateKey,
+        used: Number(used || 0)
+      });
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const user of users) {
+      await tx.user.upsert({
+        where: { id: String(user.id) },
+        create: {
+          id: String(user.id),
+          email: String(user.email || "").toLowerCase(),
+          name: String(user.name || ""),
+          passwordHash: String(user.passwordHash || ""),
+          role: String(user.role || "user"),
+          plan: String(user.plan || "free"),
+          createdAt: String(user.createdAt || new Date().toISOString())
+        },
+        update: {
+          email: String(user.email || "").toLowerCase(),
+          name: String(user.name || ""),
+          passwordHash: String(user.passwordHash || ""),
+          role: String(user.role || "user"),
+          plan: String(user.plan || "free")
+        }
+      });
+    }
+
+    await tx.session.deleteMany({});
+    if (sessions.length > 0) {
+      await tx.session.createMany({
+        data: sessions.map((s) => ({
+          token: String(s.token),
+          userId: String(s.userId),
+          expiresAt: BigInt(Number(s.expiresAt || 0)),
+          createdAt: BigInt(Number(s.createdAt || Date.now()))
+        }))
+      });
+    }
+
+    await tx.usageDaily.deleteMany({});
+    if (usageRows.length > 0) {
+      await tx.usageDaily.createMany({ data: usageRows });
+    }
+
+    await tx.vipRequest.deleteMany({});
+    if (vipRequests.length > 0) {
+      await tx.vipRequest.createMany({
+        data: vipRequests.map((x) => ({
+          id: String(x.id),
+          userId: String(x.userId || ""),
+          userEmail: String(x.userEmail || ""),
+          payerName: String(x.payerName || ""),
+          amount: String(x.amount || ""),
+          paidAt: String(x.paidAt || ""),
+          proofCode: String(x.proofCode || ""),
+          proofImageUrl: String(x.proofImageUrl || ""),
+          note: String(x.note || ""),
+          status: String(x.status || "pending"),
+          createdAt: String(x.createdAt || new Date().toISOString()),
+          reviewedAt: String(x.reviewedAt || ""),
+          reviewerId: String(x.reviewerId || ""),
+          reviewNote: String(x.reviewNote || "")
+        }))
+      });
+    }
+  });
 }
 
 async function readAuthStore() {
-  await ensureAuthStore();
-  const raw = await fs.promises.readFile(AUTH_STORE_PATH, "utf8");
-  const parsed = JSON.parse(raw || "{}");
-  const users = Array.isArray(parsed.users) ? parsed.users : [];
-  const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
-  const usageDaily = parsed?.usageDaily && typeof parsed.usageDaily === "object" ? parsed.usageDaily : {};
-  const vipRequests = Array.isArray(parsed.vipRequests) ? parsed.vipRequests : [];
   const now = Date.now();
-  const prunedSessions = sessions.filter((x) => Number(x?.expiresAt || 0) > now);
-  if (prunedSessions.length !== sessions.length) {
-    await writeAuthStore({ users, sessions: prunedSessions, usageDaily, vipRequests });
+  const [usersRows, sessionsRows, usageRows, vipRows] = await Promise.all([
+    prisma.user.findMany(),
+    prisma.session.findMany({ where: { expiresAt: { gt: BigInt(now) } } }),
+    prisma.usageDaily.findMany(),
+    prisma.vipRequest.findMany({ orderBy: { createdAt: "desc" } })
+  ]);
+
+  const users = usersRows.map((u) => ({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    passwordHash: u.passwordHash,
+    role: u.role || "user",
+    plan: u.plan || "free",
+    createdAt: u.createdAt
+  }));
+
+  const sessions = sessionsRows.map((s) => ({
+    token: s.token,
+    userId: s.userId,
+    expiresAt: Number(s.expiresAt),
+    createdAt: Number(s.createdAt)
+  }));
+
+  const usageDaily = {};
+  for (const row of usageRows) {
+    if (!usageDaily[row.userId]) {
+      usageDaily[row.userId] = {};
+    }
+    usageDaily[row.userId][row.dateKey] = Number(row.used || 0);
   }
-  return { users, sessions: prunedSessions, usageDaily, vipRequests };
+
+  const vipRequests = vipRows.map((x) => ({
+    id: x.id,
+    userId: x.userId,
+    userEmail: x.userEmail,
+    payerName: x.payerName,
+    amount: x.amount,
+    paidAt: x.paidAt,
+    proofCode: x.proofCode,
+    proofImageUrl: x.proofImageUrl,
+    note: x.note,
+    status: x.status,
+    createdAt: x.createdAt,
+    reviewedAt: x.reviewedAt,
+    reviewerId: x.reviewerId,
+    reviewNote: x.reviewNote
+  }));
+
+  await prisma.session.deleteMany({ where: { expiresAt: { lte: BigInt(now) } } });
+  return { users, sessions, usageDaily, vipRequests };
 }
 
 function publicUser(user) {
@@ -1270,3 +1378,6 @@ bootstrap().catch((error) => {
   console.error("Failed to bootstrap server:", error);
   process.exit(1);
 });
+
+
+

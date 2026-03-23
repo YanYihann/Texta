@@ -4,3 +4,5 @@
 Thumbs.db
 npm-debug.log*
 data/
+
+/generated/prisma
