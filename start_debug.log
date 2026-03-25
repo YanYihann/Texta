@@ -1,0 +1,18 @@
+===== Texta Debug Start 2026/03/25 周三 16:34:54.21 ===== 
+Project: D:\wku\雅思\单词 
+Running... Please wait. 
+Prisma client exists, skip generate. 
+Pushing DB schema... 
+
+> ielts-vocab-writer@1.0.0 db:push
+> prisma db push --skip-generate
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "texta", schema "public" at "dpg-d70euu7diees73djrc50-a.oregon-postgres.render.com"
+
+The database is already in sync with the Prisma schema.
+
+Starting backend window... 
+Starting Prisma Studio window... 
+SUCCESS. See log: D:\wku\雅思\单词\start_debug.log 
