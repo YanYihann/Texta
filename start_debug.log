@@ -1,5 +1,5 @@
-===== Texta Debug Start 2026/03/25 周三 16:34:54.21 ===== 
-Project: D:\wku\雅思\单词 
+===== Texta Debug Start 鍛ㄤ笁 2026/03/25 22:20:54.47 ===== 
+Project: D:\wku\闆呮�漒鍗曡瘝 
 Running... Please wait. 
 Prisma client exists, skip generate. 
 Pushing DB schema... 
@@ -7,12 +7,7 @@ Pushing DB schema...
 > ielts-vocab-writer@1.0.0 db:push
 > prisma db push --skip-generate
 
-Environment variables loaded from .env
-Prisma schema loaded from prisma\schema.prisma
-Datasource "db": PostgreSQL database "texta", schema "public" at "dpg-d70euu7diees73djrc50-a.oregon-postgres.render.com"
-
-The database is already in sync with the Prisma schema.
-
+Error: request to https://binaries.prisma.sh/all_commits/361e86d0ea4987e9f53a565309b3eed797a6bcbd/windows/schema-engine.exe.gz.sha256 failed, reason: 
+WARN: db:push failed, likely network or Prisma binary issue. Continue startup. 
 Starting backend window... 
 Starting Prisma Studio window... 
-SUCCESS. See log: D:\wku\雅思\单词\start_debug.log 

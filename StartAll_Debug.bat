@@ -1,10 +1,10 @@
 @echo off
-setlocal
+setlocal EnableExtensions
 chcp 65001 >nul
-title Texta Start Debug (UTF-8)
 cd /d "%~dp0"
+title Texta Start Debug (UTF-8)
 
-set LOGFILE=%~dp0start_debug.log
+set "LOGFILE=%~dp0start_debug.log"
 echo ===== Texta Debug Start %date% %time% ===== > "%LOGFILE%"
 echo Project: %cd% >> "%LOGFILE%"
 
@@ -22,12 +22,16 @@ if exist "node_modules\.prisma\client\query_engine-windows.dll.node" (
 ) else (
   echo Generating Prisma client... >> "%LOGFILE%"
   call npm.cmd run db:generate >> "%LOGFILE%" 2>&1
-  if errorlevel 1 goto :fail
+  if errorlevel 1 (
+    echo WARN: db:generate failed, continue startup. >> "%LOGFILE%"
+  )
 )
 
 echo Pushing DB schema... >> "%LOGFILE%"
 call npm.cmd run db:push -- --skip-generate >> "%LOGFILE%" 2>&1
-if errorlevel 1 goto :fail
+if errorlevel 1 (
+  echo WARN: db:push failed, likely network or Prisma binary issue. Continue startup. >> "%LOGFILE%"
+)
 
 echo Starting backend window... >> "%LOGFILE%"
 start "Texta Backend" cmd /k "chcp 65001 >nul && cd /d %~dp0 && npm.cmd start"
@@ -39,8 +43,8 @@ timeout /t 2 >nul
 start "" "http://localhost:3000/index.html"
 start "" "http://localhost:5555"
 
-echo SUCCESS. See log: %LOGFILE%
-echo SUCCESS. See log: %LOGFILE% >> "%LOGFILE%"
+echo SUCCESS (with possible warnings). See log: %LOGFILE%
+echo SUCCESS (with possible warnings). See log: %LOGFILE% >> "%LOGFILE%"
 pause
 exit /b 0
 
@@ -49,3 +53,4 @@ echo FAILED. Check log: %LOGFILE%
 echo FAILED. Check log: %LOGFILE% >> "%LOGFILE%"
 pause
 exit /b 1
+
