@@ -1,7 +1,8 @@
 @echo off
 setlocal
+chcp 65001 >nul
+title Texta Start Debug (UTF-8)
 cd /d "%~dp0"
-title Texta Start Debug
 
 set LOGFILE=%~dp0start_debug.log
 echo ===== Texta Debug Start %date% %time% ===== > "%LOGFILE%"
@@ -29,10 +30,10 @@ call npm.cmd run db:push -- --skip-generate >> "%LOGFILE%" 2>&1
 if errorlevel 1 goto :fail
 
 echo Starting backend window... >> "%LOGFILE%"
-start "Texta Backend" cmd /k "cd /d %~dp0 && npm.cmd start"
+start "Texta Backend" cmd /k "chcp 65001 >nul && cd /d %~dp0 && npm.cmd start"
 
 echo Starting Prisma Studio window... >> "%LOGFILE%"
-start "Texta Prisma Studio" cmd /k "cd /d %~dp0 && npm.cmd run db:studio"
+start "Texta Prisma Studio" cmd /k "chcp 65001 >nul && cd /d %~dp0 && npm.cmd run db:studio"
 
 timeout /t 2 >nul
 start "" "http://localhost:3000/index.html"
