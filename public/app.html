@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -16,53 +16,53 @@
           <h1>Texta</h1>
         </div>
         <div class="user-row">
-          <span id="userBadge" class="user-badge">鏈櫥褰?/span>
-          <button id="logoutBtn" type="button" class="ghost-btn hidden">閫€鍑?/button>
+          <span id="userBadge" class="user-badge">未登录</span>
+          <button id="logoutBtn" type="button" class="ghost-btn hidden">退出</button>
         </div>
         <div id="usageCard" class="usage-card">
-          <div id="usageText" class="usage-text">浠婃棩鍓╀綑娆℃暟锛?-</div>
-          <a id="upgradeVipBtn" class="upgrade-link hidden" href="./pay.html">鍗囩骇VIP锛?0鍏?鏃?0娆★級</a>
-          <a id="adminReviewLink" class="upgrade-link hidden" href="./admin.html">VIP瀹℃牳涓績</a>
+          <div id="usageText" class="usage-text">今日剩余次数：--</div>
+          <a id="upgradeVipBtn" class="upgrade-link hidden" href="./pay.html">升级VIP（10元/日50次）</a>
+          <a id="adminReviewLink" class="upgrade-link hidden" href="./admin.html">VIP审核中心</a>
         </div>
-        <p class="subtitle">宸︿晶杈撳叆鍗曡瘝锛屼腑闂撮槄璇绘枃绔狅紝鍙充晶鏌ョ湅璇嶆眹閲婁箟鎵╁睍銆?/p>
+        <p class="subtitle">左侧输入单词，中间阅读文章，右侧查看词汇释义扩展。</p>
 
-        <label for="words">鍗曡瘝/鐭鍒楄〃锛堟崲琛?閫楀彿鍒嗛殧锛岀┖鏍间細淇濈暀鍦ㄧ煭璇唴锛?/label>
-        <textarea id="words" placeholder="渚嬪: catastrophic, evaporate, drain, drip"></textarea>
+        <label for="words">单词/短语列表（换行/逗号分隔，空格会保留在短语内）</label>
+        <textarea id="words" placeholder="例如: catastrophic, evaporate, drain, drip"></textarea>
         <div id="spellHints" class="spell-hints hidden"></div>
         <div id="wordChips" class="word-chips"></div>
 
-        <label for="level">闅惧害绛夌骇</label>
+        <label for="level">难度等级</label>
         <select id="level">
-          <option value="鍒濈骇">鍒濈骇</option>
-          <option value="涓骇" selected>涓骇</option>
-          <option value="楂樼骇">楂樼骇</option>
+          <option value="初级">初级</option>
+          <option value="中级" selected>中级</option>
+          <option value="高级">高级</option>
         </select>
 
         <label class="quick-row" for="quickMode">
           <input id="quickMode" type="checkbox" />
-          蹇€熸ā寮忥紙鐢熸垚鏇寸煭鏂囩珷锛岄€熷害杈冨揩锛?
+          快速模式（生成更短文章，速度较快）
         </label>
 
-        <button id="generateBtn" class="primary-btn">鐢熸垚鏂囩珷</button>
+        <button id="generateBtn" class="primary-btn">生成文章</button>
         <p id="status"></p>
 
-        <h3 class="fav-title">鏀惰棌澶?/h3>
+        <h3 class="fav-title">收藏夹</h3>
         <div id="favoritesList" class="favorites-list"></div>
       </section>
 
       <section id="resultSection" class="panel result-panel hidden">
         <div class="top-actions">
-          <h2>鏂囩珷鐢熸垚缁撴灉</h2>
+          <h2>文章生成结果</h2>
           <div class="actions">
-            <button id="readingModeBtn" type="button">闃呰妯″紡</button>
-            <button id="toggleZhBtn" type="button">闅愯棌涓枃</button>
-            <button id="favoriteBtn" type="button">鏀惰棌鏂囩珷</button>
-            <button id="exportPdfBtn" type="button" disabled>瀵煎嚭 PDF</button>
-            <button id="exportWordBtn" type="button" disabled>瀵煎嚭 Word</button>
+            <button id="readingModeBtn" type="button">阅读模式</button>
+            <button id="toggleZhBtn" type="button">隐藏中文</button>
+            <button id="favoriteBtn" type="button">收藏文章</button>
+            <button id="exportPdfBtn" type="button" disabled>导出 PDF</button>
+            <button id="exportWordBtn" type="button" disabled>导出 Word</button>
           </div>
         </div>
 
-        <label for="exportTitle">瀵煎嚭鏍囬锛堥粯璁よ嚜鍔ㄧ敓鎴愶紝鍙慨鏀癸級</label>
+        <label for="exportTitle">导出标题（默认自动生成，可修改）</label>
         <input id="exportTitle" type="text" placeholder="Vocabulary YYYY-MM-DD (N words)" />
 
         <p id="missingWords" class="warning"></p>
@@ -74,8 +74,8 @@
       </section>
 
       <section id="glossaryPanel" class="panel glossary-panel hidden">
-        <h2>鐢熻瘝涓枃閲婁箟</h2>
-        <p class="subtitle">鍚瘝鎬с€佸父鑰冧箟椤广€佺煭璇惌閰嶃€佽瘝鏍硅瘝缂€銆佸悓杩戜箟璇嶃€?/p>
+        <h2>生词中文释义</h2>
+        <p class="subtitle">含词性、常考义项、短语搭配、词根词缀、同近义词。</p>
         <div id="glossary" class="glossary"></div>
       </section>
     </main>
@@ -83,24 +83,24 @@
     <section id="exportModal" class="modal hidden" aria-hidden="true">
       <div class="modal-card">
         <div class="modal-head">
-          <h3>瀵煎嚭鍓嶉瑙?/h3>
-          <button id="closeModalBtn" type="button" class="ghost-btn">鍏抽棴</button>
+          <h3>导出前预览</h3>
+          <button id="closeModalBtn" type="button" class="ghost-btn">关闭</button>
         </div>
 
-        <label for="previewTitle">鏍囬</label>
+        <label for="previewTitle">标题</label>
         <input id="previewTitle" type="text" />
 
         <div class="modal-row">
           <label class="quick-row" for="previewIncludeZh">
             <input id="previewIncludeZh" type="checkbox" checked />
-            鍖呭惈涓枃缈昏瘧
+            包含中文翻译
           </label>
           <div class="field">
-            <label for="previewMargin">椤佃竟璺?/label>
+            <label for="previewMargin">页边距</label>
             <select id="previewMargin">
-              <option value="8">绐?/option>
-              <option value="12" selected>鏍囧噯</option>
-              <option value="16">瀹?/option>
+              <option value="8">窄</option>
+              <option value="12" selected>标准</option>
+              <option value="16">宽</option>
             </select>
           </div>
         </div>
@@ -108,14 +108,13 @@
         <div id="previewPaper" class="preview-paper"></div>
 
         <div class="modal-actions">
-          <button id="confirmExportBtn" type="button">纭瀵煎嚭</button>
+          <button id="confirmExportBtn" type="button">确认导出</button>
         </div>
       </div>
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-    <script src="./site-config.js?v=2026.03.25.1"></script>
-    <script src="./app.js?v=2026.03.25.1"></script>
+    <script src="./site-config.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>
-

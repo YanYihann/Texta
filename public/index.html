@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Texta 鐧诲綍</title>
+    <title>Texta 登录</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
     <link rel="stylesheet" href="./style.css" />
@@ -12,32 +12,31 @@
     <main class="auth-page-wrap">
       <section class="auth-card solo">
         <div class="auth-brand">Texta</div>
-        <p class="auth-subtitle">鐧诲綍鍚庡嵆鍙繘鍏ュ崟璇嶆枃绔犵敓鎴愰〉闈?/p>
+        <p class="auth-subtitle">登录后即可进入单词文章生成页面</p>
         <div class="auth-tabs">
-          <button id="tabLogin" class="auth-tab active" type="button">鐧诲綍</button>
-          <button id="tabRegister" class="auth-tab" type="button">娉ㄥ唽</button>
+          <button id="tabLogin" class="auth-tab active" type="button">登录</button>
+          <button id="tabRegister" class="auth-tab" type="button">注册</button>
         </div>
         <div id="authMsg" class="auth-msg"></div>
         <div id="loginForm" class="auth-form">
-          <label for="loginEmail">閭</label>
+          <label for="loginEmail">邮箱</label>
           <input id="loginEmail" type="text" placeholder="you@example.com" />
-          <label for="loginPassword">瀵嗙爜</label>
-          <input id="loginPassword" type="password" placeholder="鑷冲皯 6 浣? />
-          <button id="loginBtn" class="primary-btn" type="button">鐧诲綍骞惰繘鍏?/button>
+          <label for="loginPassword">密码</label>
+          <input id="loginPassword" type="password" placeholder="至少 6 位" />
+          <button id="loginBtn" class="primary-btn" type="button">登录并进入</button>
         </div>
         <div id="registerForm" class="auth-form hidden">
-          <label for="registerName">鏄电О</label>
-          <input id="registerName" type="text" placeholder="浣犵殑鏄电О" />
-          <label for="registerEmail">閭</label>
+          <label for="registerName">昵称</label>
+          <input id="registerName" type="text" placeholder="你的昵称" />
+          <label for="registerEmail">邮箱</label>
           <input id="registerEmail" type="text" placeholder="you@example.com" />
-          <label for="registerPassword">瀵嗙爜</label>
-          <input id="registerPassword" type="password" placeholder="鑷冲皯 6 浣? />
-          <button id="registerBtn" class="primary-btn" type="button">娉ㄥ唽骞惰繘鍏?/button>
+          <label for="registerPassword">密码</label>
+          <input id="registerPassword" type="password" placeholder="至少 6 位" />
+          <button id="registerBtn" class="primary-btn" type="button">注册并进入</button>
         </div>
       </section>
     </main>
-    <script src="./site-config.js?v=2026.03.25.1"></script>
-    <script src="./auth.js?v=2026.03.25.1"></script>
+    <script src="./site-config.js"></script>
+    <script src="./auth.js"></script>
   </body>
 </html>
-

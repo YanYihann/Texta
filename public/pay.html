@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Texta VIP 鏀粯</title>
+    <title>Texta VIP 支付</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
     <link rel="stylesheet" href="./style.css" />
@@ -12,32 +12,31 @@
     <main class="auth-page-wrap">
       <section class="auth-card solo pay-card">
         <div class="auth-brand">Texta VIP</div>
-        <p class="auth-subtitle">鏀粯 10 鍏冨彲鍗囩骇 VIP锛堟瘡鏃?50 娆★級</p>
+        <p class="auth-subtitle">支付 10 元可升级 VIP（每日 50 次）</p>
 
         <div class="pay-box">
-          <div class="pay-title">鏀舵鐮?/div>
+          <div class="pay-title">收款码</div>
           <div class="pay-qr-placeholder">
-            <img id="payQrImage" src="./assets/pay-qr.jpg" alt="鏀舵鐮佸崰浣嶅浘" />
+            <img id="payQrImage" src="./assets/pay-qr.jpg" alt="收款码占位图" />
           </div>
-          <p class="pay-tip">鑻ュ浘鐗囨湭鏄剧ず锛岃鎸夋枃鏈矾寰勪笂浼犳敹娆剧爜鍥剧墖銆?/p>
+          <p class="pay-tip">若图片未显示，请按文末路径上传收款码图片。</p>
         </div>
 
         <div id="payMsg" class="auth-msg"></div>
-        <label for="payerName">浠樻浜烘樀绉?/label>
-        <input id="payerName" type="text" placeholder="渚嬪锛氬紶涓? />
-        <label for="proofCode">鏀粯鍑瘉鍙凤紙鍙€夛級</label>
-        <input id="proofCode" type="text" placeholder="渚嬪锛氳鍗曞彿/杞处鍗曞彿" />
-        <label for="proofImageUrl">鍑瘉鍥剧墖閾炬帴锛堝彲閫夛級</label>
-        <input id="proofImageUrl" type="text" placeholder="绮樿创鍥剧墖URL锛屾垨鍏堢暀绌? />
-        <label for="proofNote">澶囨敞锛堝彲閫夛級</label>
-        <input id="proofNote" type="text" placeholder="琛ュ厖璇存槑" />
-        <button id="submitVipRequestBtn" class="primary-btn" type="button">鎻愪氦鏀粯鍑瘉</button>
-        <a class="upgrade-link" href="./app.html">杩斿洖涓婚〉闈?/a>
+        <label for="payerName">付款人昵称</label>
+        <input id="payerName" type="text" placeholder="例如：张三" />
+        <label for="proofCode">支付凭证号（可选）</label>
+        <input id="proofCode" type="text" placeholder="例如：订单号/转账单号" />
+        <label for="proofImageUrl">凭证图片链接（可选）</label>
+        <input id="proofImageUrl" type="text" placeholder="粘贴图片URL，或先留空" />
+        <label for="proofNote">备注（可选）</label>
+        <input id="proofNote" type="text" placeholder="补充说明" />
+        <button id="submitVipRequestBtn" class="primary-btn" type="button">提交支付凭证</button>
+        <a class="upgrade-link" href="./app.html">返回主页面</a>
       </section>
     </main>
 
-    <script src="./site-config.js?v=2026.03.25.1"></script>
-    <script src="./pay.js?v=2026.03.25.1"></script>
+    <script src="./site-config.js"></script>
+    <script src="./pay.js"></script>
   </body>
 </html>
-
