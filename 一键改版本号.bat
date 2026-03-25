@@ -4,20 +4,25 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ========================================
-echo Texta cache version bump (UTF-8 safe)
+echo Texta cache version bump UTF-8 safe
 echo ========================================
 
-if "%~1"=="" (
-  echo Using auto version (timestamp)...
-  node scripts\bump-version.js
-) else (
-  echo Using custom version: %~1
-  node scripts\bump-version.js %~1
-)
+set "ARG_VER=%~1"
+if "%ARG_VER%"=="" goto AUTO
 
+echo Using custom version: %ARG_VER%
+node scripts\bump-version.js %ARG_VER%
+goto AFTER
+
+:AUTO
+echo Using auto version timestamp
+node scripts\bump-version.js
+
+:AFTER
 if errorlevel 1 (
   echo Failed to bump version.
-  pause
+  echo Press any key to close...
+  pause >nul
   exit /b 1
 )
 
@@ -26,7 +31,10 @@ git status --short
 
 echo.
 echo Usage:
-echo   ??????.bat                ^(auto^)
-echo   ??????.bat 2026.03.25.2  ^(custom^)
-pause
+echo   run this file directly for auto version
+echo   run with arg, e.g. 2026.03.25.3
+
+echo.
+echo Done. Press any key to close...
+pause >nul
 endlocal
