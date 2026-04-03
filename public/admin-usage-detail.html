@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Texta 用户使用详情</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="shortcut icon" href="./favicon.svg" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell admin-shell usage-detail-shell">
+      <section class="panel result-panel">
+        <div class="top-actions">
+          <h2>用户使用详情</h2>
+          <div class="actions">
+            <button id="detailRefreshBtn" type="button">刷新</button>
+            <a class="upgrade-link" href="./admin-usage.html">返回用户列表</a>
+            <a class="upgrade-link" href="./app.html">返回主页面</a>
+          </div>
+        </div>
+
+        <div id="detailSummaryRow" class="usage-summary-row"></div>
+        <p id="detailStatus" class="subtitle">加载中...</p>
+        <div id="detailContent" class="usage-detail-grid"></div>
+      </section>
+    </main>
+    <script src="./site-config.js?v=2026.04.04.130500"></script>
+    <script src="./admin-usage-detail.js?v=2026.04.04.130500"></script>
+  </body>
+</html>

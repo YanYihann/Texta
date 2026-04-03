@@ -19,11 +19,33 @@
             <a class="upgrade-link" href="./app.html">返回主页面</a>
           </div>
         </div>
+
+        <div class="usage-toolbar">
+          <div>
+            <label for="usageSearchInput">搜索用户</label>
+            <input id="usageSearchInput" type="text" placeholder="输入用户名或邮箱" />
+          </div>
+          <div>
+            <label for="usageRoleFilter">身份筛选</label>
+            <select id="usageRoleFilter">
+              <option value="all">全部身份</option>
+              <option value="admin">管理员</option>
+              <option value="vip">VIP用户</option>
+              <option value="user">普通用户</option>
+            </select>
+          </div>
+          <div>
+            <label for="usageSortHint">排序方式</label>
+            <input id="usageSortHint" type="text" value="按总使用次数降序" readonly />
+          </div>
+        </div>
+
+        <div id="usageSummaryRow" class="usage-summary-row"></div>
         <p id="usageStatus" class="subtitle">加载中...</p>
         <div id="usageUserList" class="admin-list"></div>
       </section>
     </main>
-    <script src="./site-config.js?v=2026.04.04.120000"></script>
-    <script src="./admin-usage.js?v=2026.04.04.120000"></script>
+    <script src="./site-config.js?v=2026.04.04.130500"></script>
+    <script src="./admin-usage.js?v=2026.04.04.130500"></script>
   </body>
 </html>

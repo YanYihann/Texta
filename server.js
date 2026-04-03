@@ -331,6 +331,18 @@ async function logUsageEvent(user, usedAt = new Date()) {
   });
 }
 
+function compareUsageUsers(a, b) {
+  const aAdmin = String(a.role || "").toLowerCase() === "admin" ? 0 : 1;
+  const bAdmin = String(b.role || "").toLowerCase() === "admin" ? 0 : 1;
+  if (aAdmin !== bAdmin) {
+    return aAdmin - bAdmin;
+  }
+  if (Number(b.totalUsage || 0) !== Number(a.totalUsage || 0)) {
+    return Number(b.totalUsage || 0) - Number(a.totalUsage || 0);
+  }
+  return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+}
+
 function extractBearerToken(req) {
   const auth = String(req.headers.authorization || "");
   const m = auth.match(/^Bearer\s+(.+)$/i);
@@ -1282,34 +1294,106 @@ app.get("/api/admin/usage-overview", async (req, res) => {
           totalUsage,
           detailedUsageCount,
           legacyUsageCount,
-          latestUsedAt: detail?.latestUsedAt || "",
-          periods: detail
-            ? Array.from(detail.periods.values())
-                .sort((a, b) => String(b.hourKey || "").localeCompare(String(a.hourKey || "")))
-                .map((period) => ({
-                  periodLabel: period.periodLabel,
-                  count: period.count,
-                  latestUsedAt: period.latestUsedAt
-                }))
-            : []
+          latestUsedAt: detail?.latestUsedAt || ""
         };
       })
-      .sort((a, b) => {
-        const aAdmin = String(a.role || "").toLowerCase() === "admin" ? 0 : 1;
-        const bAdmin = String(b.role || "").toLowerCase() === "admin" ? 0 : 1;
-        if (aAdmin !== bAdmin) {
-          return aAdmin - bAdmin;
-        }
-        if (b.totalUsage !== a.totalUsage) {
-          return b.totalUsage - a.totalUsage;
-        }
-        return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
-      });
+      .sort(compareUsageUsers);
 
     res.json({ ok: true, items });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to get usage overview.", detail: error.message });
+  }
+});
+
+app.get("/api/admin/usage-users/:id/detail", async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const userId = String(req.params.id || "").trim();
+    if (!userId) {
+      return res.status(400).json({ error: "Missing user id." });
+    }
+
+    const [user, usageDailyRows, usageLogRows] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId } }),
+      prisma.usageDaily.findMany({
+        where: { userId },
+        orderBy: { dateKey: "asc" }
+      }),
+      prisma.usageLog.findMany({
+        where: { userId },
+        orderBy: { usedAt: "desc" }
+      })
+    ]);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    const totalUsage = usageDailyRows.reduce((sum, row) => sum + Number(row.used || 0), 0);
+    const detailedUsageCount = usageLogRows.length;
+    const legacyUsageCount = Math.max(totalUsage - detailedUsageCount, 0);
+    const latestUsedAt = usageLogRows[0]?.usedAt || "";
+
+    const dailyUsage = usageDailyRows.map((row) => ({
+      dateKey: String(row.dateKey || ""),
+      count: Number(row.used || 0)
+    }));
+
+    const hourlyMap = new Map();
+    for (let hour = 0; hour < 24; hour += 1) {
+      const hourLabel = `${String(hour).padStart(2, "0")}:00`;
+      hourlyMap.set(hourLabel, { hourLabel, count: 0 });
+    }
+
+    const periodMap = new Map();
+    for (const row of usageLogRows) {
+      const periodLabel = String(row.periodLabel || "未知时段");
+      if (!periodMap.has(periodLabel)) {
+        periodMap.set(periodLabel, {
+          periodLabel,
+          count: 0,
+          latestUsedAt: String(row.usedAt || "")
+        });
+      }
+      const period = periodMap.get(periodLabel);
+      period.count += 1;
+      if (!period.latestUsedAt || String(row.usedAt || "") > period.latestUsedAt) {
+        period.latestUsedAt = String(row.usedAt || "");
+      }
+
+      const hourKey = String(row.hourKey || "");
+      const hourOnly = hourKey.slice(-2);
+      const hourLabel = `${hourOnly}:00`;
+      if (hourlyMap.has(hourLabel)) {
+        hourlyMap.get(hourLabel).count += 1;
+      }
+    }
+
+    const hourlyUsage = Array.from(hourlyMap.values());
+    const recentPeriods = Array.from(periodMap.values())
+      .sort((a, b) => String(b.periodLabel || "").localeCompare(String(a.periodLabel || "")))
+      .slice(0, 30);
+
+    res.json({
+      ok: true,
+      item: {
+        ...publicUser(user),
+        createdAt: user.createdAt,
+        totalUsage,
+        detailedUsageCount,
+        legacyUsageCount,
+        latestUsedAt,
+        dailyUsage,
+        hourlyUsage,
+        recentPeriods
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get usage detail.", detail: error.message });
   }
 });
 
