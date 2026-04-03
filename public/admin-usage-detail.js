@@ -59,53 +59,15 @@ async function fetchJson(path, options = {}, retryCount = 1) {
   throw lastError || new Error("请求失败");
 }
 
-function formatDisplayTime(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "暂无";
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) {
-    return escapeHtml(raw);
-  }
-  return escapeHtml(
-    date.toLocaleString("zh-CN", {
-      hour12: false
-    })
-  );
-}
-
-function formatRolePlan(user) {
-  const role = String(user?.role || "").toLowerCase();
-  const plan = String(user?.plan || "").toLowerCase();
-  if (role === "admin") return "管理员";
-  if (plan === "vip") return "VIP用户";
-  return "普通用户";
-}
-
 function getUserIdFromQuery() {
   const params = new URLSearchParams(location.search);
   return String(params.get("userId") || "").trim();
 }
 
-function getPeakHour(item) {
-  const hours = Array.isArray(item?.hourlyUsage) ? item.hourlyUsage : [];
-  const top = hours.reduce(
-    (best, hour) => (Number(hour.count || 0) > Number(best.count || 0) ? hour : best),
-    { hourLabel: "暂无", count: 0 }
-  );
-  if (Number(top.count || 0) <= 0) {
-    return { label: "暂无", count: 0 };
-  }
-  return { label: String(top.hourLabel || "暂无"), count: Number(top.count || 0) };
-}
-
 function getFilteredDailyUsage(item) {
   const source = Array.isArray(item?.dailyUsage) ? item.dailyUsage : [];
-  if (activeDayRange === "7") {
-    return source.slice(-7);
-  }
-  if (activeDayRange === "30") {
-    return source.slice(-30);
-  }
+  if (activeDayRange === "7") return source.slice(-7);
+  if (activeDayRange === "30") return source.slice(-30);
   return source.slice(-90);
 }
 
@@ -135,27 +97,14 @@ async function ensureAdmin() {
 }
 
 function renderSummary(item) {
-  const peakHour = getPeakHour(item);
   detailSummaryRowEl.innerHTML = `
-    <div class="usage-summary-card usage-summary-card-accent">
-      <div class="usage-summary-title">用户</div>
-      <div class="usage-summary-number usage-summary-name">${escapeHtml(item.name || item.email || "未命名用户")}</div>
-      <div class="usage-summary-meta">${escapeHtml(item.email || "")}</div>
+    <div class="usage-simple-card">
+      <div class="usage-simple-label">用户名</div>
+      <div class="usage-simple-name">${escapeHtml(item.name || item.email || "未命名用户")}</div>
     </div>
-    <div class="usage-summary-card">
-      <div class="usage-summary-title">总使用次数</div>
-      <div class="usage-summary-number">${Number(item.totalUsage || 0)}</div>
-      <div class="usage-summary-meta">账号累计</div>
-    </div>
-    <div class="usage-summary-card">
-      <div class="usage-summary-title">详细记录次数</div>
-      <div class="usage-summary-number">${Number(item.detailedUsageCount || 0)}</div>
-      <div class="usage-summary-meta">用于图表统计</div>
-    </div>
-    <div class="usage-summary-card">
-      <div class="usage-summary-title">高峰小时</div>
-      <div class="usage-summary-number">${escapeHtml(peakHour.label)}</div>
-      <div class="usage-summary-meta">共 ${peakHour.count} 次</div>
+    <div class="usage-simple-card usage-simple-card-accent">
+      <div class="usage-simple-label">总使用次数</div>
+      <div class="usage-simple-count">${Number(item.totalUsage || 0)}</div>
     </div>
   `;
 }
@@ -163,7 +112,7 @@ function renderSummary(item) {
 function renderControls() {
   detailControlsEl.innerHTML = `
     <div class="usage-range-card">
-      <div class="usage-range-title">按天趋势范围</div>
+      <div class="usage-range-title">趋势范围</div>
       <div class="usage-range-switch">
         <button type="button" class="usage-range-btn${activeDayRange === "7" ? " active" : ""}" data-range="7">近7天</button>
         <button type="button" class="usage-range-btn${activeDayRange === "30" ? " active" : ""}" data-range="30">近30天</button>
@@ -239,55 +188,13 @@ function renderHourHeatmap(items) {
   `;
 }
 
-function renderPeriodCards(items) {
-  return items
-    .map(
-      (period) => `
-        <div class="usage-period-item">
-          <div>
-            <div>${escapeHtml(period.periodLabel || "未知时段")}</div>
-            <div class="fav-meta">最近一次：${formatDisplayTime(period.latestUsedAt)}</div>
-          </div>
-          <div class="usage-period-count">${Number(period.count || 0)} 次</div>
-        </div>
-      `
-    )
-    .join("");
-}
-
 function renderDetail(item) {
   const dailyUsage = getFilteredDailyUsage(item);
   const hourlyUsage = Array.isArray(item.hourlyUsage) ? item.hourlyUsage : [];
-  const recentPeriods = Array.isArray(item.recentPeriods) ? item.recentPeriods.slice(0, 20) : [];
-  const legacyNote =
-    Number(item.legacyUsageCount || 0) > 0
-      ? `<div class="usage-mini-note">另有 ${Number(item.legacyUsageCount || 0)} 次历史使用仅保留按天累计，因此小时热度图只统计新功能上线后的详细日志。</div>`
-      : "";
 
   detailContentEl.innerHTML = `
-    <div class="usage-detail-panel usage-detail-hero">
-      <div class="usage-detail-title">用户信息</div>
-      <div class="usage-hero-grid">
-        <div class="usage-hero-card">
-          <div class="usage-hero-label">身份</div>
-          <div class="usage-hero-value">${escapeHtml(formatRolePlan(item))}</div>
-        </div>
-        <div class="usage-hero-card">
-          <div class="usage-hero-label">注册时间</div>
-          <div class="usage-hero-value usage-hero-small">${formatDisplayTime(item.createdAt)}</div>
-        </div>
-        <div class="usage-hero-card">
-          <div class="usage-hero-label">最近使用</div>
-          <div class="usage-hero-value usage-hero-small">${formatDisplayTime(item.latestUsedAt)}</div>
-        </div>
-      </div>
-    </div>
-
     <div class="usage-detail-panel">
-      <div class="usage-detail-head">
-        <div class="usage-detail-title">按天使用趋势</div>
-        <div class="usage-detail-tag">当前范围：近${activeDayRange}天</div>
-      </div>
+      <div class="usage-detail-title">按天使用趋势</div>
       <div class="usage-chart">
         ${
           dailyUsage.length > 0
@@ -295,34 +202,15 @@ function renderDetail(item) {
             : '<div class="usage-empty">暂无按天使用记录</div>'
         }
       </div>
-      <div class="usage-mini-note">柱子越高，代表当天使用次数越多。</div>
     </div>
 
     <div class="usage-detail-panel">
-      <div class="usage-detail-head">
-        <div class="usage-detail-title">按小时使用热度</div>
-        <div class="usage-detail-tag">24小时分布</div>
-      </div>
+      <div class="usage-detail-title">按小时使用热度</div>
       <div class="usage-chart">
         ${
           hourlyUsage.some((hour) => Number(hour.count || 0) > 0)
             ? renderHourHeatmap(hourlyUsage)
             : '<div class="usage-empty">暂无详细小时记录</div>'
-        }
-      </div>
-      ${legacyNote}
-    </div>
-
-    <div class="usage-detail-panel">
-      <div class="usage-detail-head">
-        <div class="usage-detail-title">最近使用时段</div>
-        <div class="usage-detail-tag">最近20条聚合时段</div>
-      </div>
-      <div class="usage-period-list">
-        ${
-          recentPeriods.length > 0
-            ? renderPeriodCards(recentPeriods)
-            : '<div class="usage-empty">暂无详细时段记录</div>'
         }
       </div>
     </div>
@@ -361,7 +249,7 @@ async function loadDetail() {
   renderSummary(item);
   renderControls();
   renderDetail(item);
-  detailStatusEl.textContent = `已加载 ${item.name || item.email || "该用户"} 的使用详情。`;
+  detailStatusEl.textContent = "已加载用户使用详情。";
 }
 
 detailRefreshBtnEl.addEventListener("click", async () => {
