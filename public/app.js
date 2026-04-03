@@ -55,6 +55,7 @@ let pronunciationMap = new Map();
 let currentFavoriteId = "";
 let authToken = localStorage.getItem("texta_auth_token") || "";
 let currentUser = null;
+let currentMobilePage = "home";
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 let favorites = [];
@@ -610,59 +611,66 @@ function updateMobileNavActive(target = "") {
   });
 }
 
-function detectMobileSectionInView() {
-  if (!isMobileLayout()) return "";
-
-  const resultVisible = !resultSection.classList.contains("hidden");
-  const glossaryVisible = !glossaryPanelEl.classList.contains("hidden");
-  const scrollY = window.scrollY;
-  const viewportMid = scrollY + window.innerHeight * 0.35;
-
-  if (glossaryVisible) {
-    const glossaryTop = glossaryPanelEl.getBoundingClientRect().top + scrollY;
-    if (viewportMid >= glossaryTop - 24) return "glossary";
-  }
-
-  if (resultVisible) {
-    const resultTop = resultSection.getBoundingClientRect().top + scrollY;
-    if (viewportMid >= resultTop - 24) return "article";
-  }
-
-  return "home";
+function hasArticlePage() {
+  return !resultSection.classList.contains("hidden");
 }
 
-function refreshMobileNav() {
+function hasGlossaryPage() {
+  return !glossaryPanelEl.classList.contains("hidden");
+}
+
+function applyMobilePageLayout() {
   updateMobileNavVisibility();
-  updateMobileNavActive(detectMobileSectionInView());
+
+  if (!isMobileLayout() || readingMode) {
+    inputPanelEl?.classList.remove("mobile-page-hidden");
+    resultSection?.classList.remove("mobile-page-hidden");
+    glossaryPanelEl?.classList.remove("mobile-page-hidden");
+    updateMobileNavActive("");
+    return;
+  }
+
+  if (currentMobilePage === "article" && !hasArticlePage()) {
+    currentMobilePage = "home";
+  }
+
+  if (currentMobilePage === "glossary" && !hasGlossaryPage()) {
+    currentMobilePage = hasArticlePage() ? "article" : "home";
+  }
+
+  inputPanelEl?.classList.toggle("mobile-page-hidden", currentMobilePage !== "home");
+  resultSection?.classList.toggle("mobile-page-hidden", currentMobilePage !== "article");
+  glossaryPanelEl?.classList.toggle("mobile-page-hidden", currentMobilePage !== "glossary");
+  updateMobileNavActive(currentMobilePage);
 }
 
-function scrollToMobileSection(target) {
-  if (target === "home") {
-    inputPanelEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+function setMobilePage(target) {
+  if (target === "article" && !hasArticlePage()) {
+    statusEl.textContent = "请先生成文章。";
     return;
   }
 
-  if (target === "article") {
-    if (resultSection.classList.contains("hidden")) {
-      statusEl.textContent = "请先生成文章。";
-      return;
-    }
-    resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (target === "glossary" && !hasGlossaryPage()) {
+    statusEl.textContent = "请先生成文章。";
     return;
   }
 
-  if (target === "glossary") {
-    if (glossaryPanelEl.classList.contains("hidden")) {
-      statusEl.textContent = "请先生成文章。";
-      return;
-    }
-    glossaryPanelEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  currentMobilePage = target;
+  applyMobilePageLayout();
+  if (isMobileLayout()) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 }
 
 function focusMobileResultAfterGenerate() {
   if (!isMobileLayout()) return;
-  resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  currentMobilePage = "article";
+  applyMobilePageLayout();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function refreshMobileNav() {
+  applyMobilePageLayout();
 }
 
 function renderSpelling() {
@@ -1242,8 +1250,7 @@ readingModeBtn.addEventListener("click", () => {
 mobileNavBtnEls.forEach((btn) => {
   btn.addEventListener("click", () => {
     const target = String(btn.getAttribute("data-target") || "home");
-    scrollToMobileSection(target);
-    updateMobileNavActive(target);
+    setMobilePage(target);
   });
 });
 
@@ -1337,4 +1344,3 @@ async function init() {
 init();
 
 window.addEventListener("resize", refreshMobileNav);
-window.addEventListener("scroll", refreshMobileNav, { passive: true });

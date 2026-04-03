@@ -1395,20 +1395,19 @@ body.reading-mode .app-shell {
 @media (max-width: 860px) {
   html,
   body {
-    height: auto;
+    height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
   }
 
   body {
-    padding-bottom: 82px;
+    padding-bottom: 96px;
   }
 
   .app-shell {
-    height: auto;
-    min-height: auto;
+    min-height: calc(100vh - 96px);
     grid-template-columns: 1fr;
-    padding: 12px;
+    padding: 14px 18px 0;
     overflow: visible;
   }
 
@@ -1427,20 +1426,54 @@ body.reading-mode .app-shell {
     overflow: visible !important;
     touch-action: pan-y;
     overscroll-behavior: auto;
-    padding: 16px;
+    padding: 15px 14px 16px;
+  }
+
+  .mobile-page-hidden {
+    display: none !important;
   }
 
   .brand h1 {
-    font-size: 30px;
+    font-size: 28px;
   }
 
   .logo {
-    width: 72px;
-    height: 72px;
+    width: 68px;
+    height: 68px;
   }
 
   textarea {
-    min-height: 140px;
+    min-height: 132px;
+    font-size: 14px;
+  }
+
+  select,
+  input[type="text"],
+  input[type="password"] {
+    font-size: 14px;
+  }
+
+  label,
+  .quick-row,
+  #status,
+  .usage-text,
+  .upgrade-link,
+  .subtitle,
+  .field-note-label {
+    font-size: 12px;
+  }
+
+  .field-note-label {
+    line-height: 1.4;
+  }
+
+  .primary-btn,
+  button {
+    font-size: 13px;
+  }
+
+  .usage-card {
+    padding: 9px 10px;
   }
 
   .result-panel,
