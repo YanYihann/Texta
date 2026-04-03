@@ -582,21 +582,19 @@ function highlightChineseWithAlignment(text, termKeyPairs, alignment) {
 function applyChineseVisibility() {
   if (showChinese) {
     exportAreaEl.classList.remove("hide-zh");
-    toggleZhBtn.textContent = "隐藏中文";
   } else {
     exportAreaEl.classList.add("hide-zh");
-    toggleZhBtn.textContent = "显示中文";
   }
+  syncActionButtonLabels();
 }
 
 function applyReadingMode() {
   if (readingMode) {
     document.body.classList.add("reading-mode");
-    readingModeBtn.textContent = "退出阅读模式";
   } else {
     document.body.classList.remove("reading-mode");
-    readingModeBtn.textContent = "阅读模式";
   }
+  syncActionButtonLabels();
 }
 
 function updateMobileNavVisibility() {
@@ -669,7 +667,53 @@ function focusMobileResultAfterGenerate() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function syncActionButtonLabels() {
+  if (isMobileLayout()) {
+    readingModeBtn.textContent = "📖";
+    readingModeBtn.setAttribute("aria-label", readingMode ? "退出阅读模式" : "阅读模式");
+    readingModeBtn.title = readingMode ? "退出阅读模式" : "阅读模式";
+
+    toggleZhBtn.textContent = "ZH";
+    toggleZhBtn.setAttribute("aria-label", showChinese ? "隐藏中文" : "显示中文");
+    toggleZhBtn.title = showChinese ? "隐藏中文" : "显示中文";
+
+    favoriteBtn.textContent = "♡";
+    favoriteBtn.setAttribute("aria-label", "收藏文章");
+    favoriteBtn.title = "收藏文章";
+
+    exportPdfBtn.textContent = "⤴";
+    exportPdfBtn.setAttribute("aria-label", "导出 PDF");
+    exportPdfBtn.title = "导出 PDF";
+
+    exportWordBtn.textContent = "⤴";
+    exportWordBtn.setAttribute("aria-label", "导出 Word");
+    exportWordBtn.title = "导出 Word";
+    return;
+  }
+
+  readingModeBtn.textContent = readingMode ? "退出阅读模式" : "阅读模式";
+  readingModeBtn.setAttribute("aria-label", readingModeBtn.textContent);
+  readingModeBtn.title = readingModeBtn.textContent;
+
+  toggleZhBtn.textContent = showChinese ? "隐藏中文" : "显示中文";
+  toggleZhBtn.setAttribute("aria-label", toggleZhBtn.textContent);
+  toggleZhBtn.title = toggleZhBtn.textContent;
+
+  favoriteBtn.textContent = "收藏文章";
+  favoriteBtn.setAttribute("aria-label", "收藏文章");
+  favoriteBtn.title = "收藏文章";
+
+  exportPdfBtn.textContent = "导出 PDF";
+  exportPdfBtn.setAttribute("aria-label", "导出 PDF");
+  exportPdfBtn.title = "导出 PDF";
+
+  exportWordBtn.textContent = "导出 Word";
+  exportWordBtn.setAttribute("aria-label", "导出 Word");
+  exportWordBtn.title = "导出 Word";
+}
+
 function refreshMobileNav() {
+  syncActionButtonLabels();
   applyMobilePageLayout();
 }
 
@@ -1338,6 +1382,7 @@ async function init() {
   renderFavorites();
   renderSpelling();
   applyReadingMode();
+  applyChineseVisibility();
   refreshMobileNav();
 }
 

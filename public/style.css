@@ -1476,6 +1476,58 @@ body.reading-mode .app-shell {
     padding: 9px 10px;
   }
 
+  .top-actions {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0;
+  }
+
+  .top-actions h2 {
+    display: none;
+  }
+
+  .actions {
+    width: 100%;
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .actions button {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+    border-radius: 12px;
+    font-size: 13px;
+    box-shadow: none;
+  }
+
+  #readingModeBtn,
+  #favoriteBtn,
+  #exportPdfBtn,
+  #exportWordBtn {
+    width: 34px;
+    padding: 0;
+    font-size: 15px;
+  }
+
+  #toggleZhBtn {
+    min-width: 42px;
+    padding: 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  .para-en,
+  .para-zh {
+    line-height: 1.58;
+  }
+
+  .para-zh {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+
   .result-panel,
   .glossary-panel {
     min-height: auto;
