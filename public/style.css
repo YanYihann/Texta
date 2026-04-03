@@ -798,6 +798,10 @@ button:disabled {
   gap: 10px;
 }
 
+.mobile-panel-toggle {
+  display: none;
+}
+
 .actions {
   display: flex;
   gap: 7px;
@@ -1063,5 +1067,34 @@ body.reading-mode .app-shell {
   .result-panel,
   .glossary-panel {
     min-height: auto;
+  }
+
+  .mobile-panel-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 10px;
+    border-radius: 14px;
+    background: #eef6ff;
+    border: 1px solid #dbeafe;
+    color: #1d4ed8;
+    font-weight: 700;
+  }
+
+  .input-panel.mobile-collapsed {
+    padding: 12px;
+  }
+
+  .input-panel.mobile-collapsed > :not(.mobile-panel-toggle) {
+    display: none;
+  }
+
+  .glossary-panel.mobile-collapsed {
+    padding: 12px;
+  }
+
+  .glossary-panel.mobile-collapsed > :not(.mobile-panel-toggle) {
+    display: none;
   }
 }
