@@ -82,6 +82,11 @@ function actionIconSvg(name) {
         <path d="M12 20.25c-4.2-2.92-7-5.43-7-8.72A4.02 4.02 0 0 1 9.06 7.5c1.19 0 2.32.52 2.94 1.5.62-.98 1.75-1.5 2.94-1.5A4.02 4.02 0 0 1 19 11.53c0 3.29-2.8 5.8-7 8.72Z" />
       </svg>
     `,
+    "heart-fill": `
+      <svg class="action-icon action-icon-fill" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 20.25c-4.2-2.92-7-5.43-7-8.72A4.02 4.02 0 0 1 9.06 7.5c1.19 0 2.32.52 2.94 1.5.62-.98 1.75-1.5 2.94-1.5A4.02 4.02 0 0 1 19 11.53c0 3.29-2.8 5.8-7 8.72Z" />
+      </svg>
+    `,
     export: `
       <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M12 15.5V5.75" />
@@ -99,6 +104,17 @@ function setButtonContent(button, html, title) {
   button.innerHTML = html;
   button.setAttribute("aria-label", title);
   button.title = title;
+}
+
+function isCurrentArticleFavorited() {
+  if (!currentFavoriteId) return false;
+  return favorites.some((item) => item.id === currentFavoriteId);
+}
+
+function syncActionButtonStates() {
+  readingModeBtn.classList.toggle("is-active", readingMode);
+  toggleZhBtn.classList.toggle("is-active", !showChinese);
+  favoriteBtn.classList.toggle("is-active", isCurrentArticleFavorited());
 }
 
 async function apiFetch(path, options = {}) {
@@ -704,17 +720,19 @@ function syncActionButtonLabels() {
   if (isMobileLayout()) {
     setButtonContent(readingModeBtn, actionIconSvg("book"), readingMode ? "退出阅读模式" : "阅读模式");
     setButtonContent(toggleZhBtn, '<span class="action-text-icon">ZH</span>', showChinese ? "隐藏中文" : "显示中文");
-    setButtonContent(favoriteBtn, actionIconSvg("heart"), "收藏文章");
+    setButtonContent(favoriteBtn, actionIconSvg(isCurrentArticleFavorited() ? "heart-fill" : "heart"), isCurrentArticleFavorited() ? "取消收藏" : "收藏文章");
     setButtonContent(exportPdfBtn, actionIconSvg("export"), "导出 PDF");
     setButtonContent(exportWordBtn, actionIconSvg("export"), "导出 Word");
+    syncActionButtonStates();
     return;
   }
 
   setButtonContent(readingModeBtn, readingMode ? "退出阅读模式" : "阅读模式", readingMode ? "退出阅读模式" : "阅读模式");
   setButtonContent(toggleZhBtn, showChinese ? "隐藏中文" : "显示中文", showChinese ? "隐藏中文" : "显示中文");
-  setButtonContent(favoriteBtn, "收藏文章", "收藏文章");
+  setButtonContent(favoriteBtn, isCurrentArticleFavorited() ? "取消收藏" : "收藏文章", isCurrentArticleFavorited() ? "取消收藏" : "收藏文章");
   setButtonContent(exportPdfBtn, "导出 PDF", "导出 PDF");
   setButtonContent(exportWordBtn, "导出 Word", "导出 Word");
+  syncActionButtonStates();
 }
 
 function refreshMobileNav() {
@@ -1177,6 +1195,7 @@ function renameFavoriteById(id) {
   favorites[index].title = nextTitle;
   saveFavorites();
   renderFavorites();
+  syncActionButtonLabels();
 
   if (currentFavoriteId && currentFavoriteId === id) {
     articleTitleEl.textContent = nextTitle;
@@ -1317,10 +1336,21 @@ favoriteBtn.addEventListener("click", () => {
     statusEl.textContent = "请先生成文章再收藏。";
     return;
   }
+  if (isCurrentArticleFavorited()) {
+    favorites = favorites.filter((item) => item.id !== currentFavoriteId);
+    saveFavorites();
+    renderFavorites();
+    syncActionButtonLabels();
+    statusEl.textContent = "已取消收藏。";
+    return;
+  }
+
   const item = favoriteFromCurrent();
+  currentFavoriteId = item.id;
   favorites.unshift(item);
   saveFavorites();
   renderFavorites();
+  syncActionButtonLabels();
   statusEl.textContent = "已加入收藏夹。";
 });
 
@@ -1337,8 +1367,12 @@ favoritesListEl.addEventListener("click", (event) => {
   if (del) {
     const delId = del.getAttribute("data-fav-delete");
     favorites = favorites.filter((x) => x.id !== delId);
+    if (currentFavoriteId === delId) {
+      currentFavoriteId = "";
+    }
     saveFavorites();
     renderFavorites();
+    syncActionButtonLabels();
     statusEl.textContent = "已从收藏夹删除。";
     return;
   }
