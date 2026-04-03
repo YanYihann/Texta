@@ -6,37 +6,71 @@
     <title>Texta 登录</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./style.css?v=2026.04.04.161500" />
   </head>
   <body class="auth-page">
-    <main class="auth-page-wrap">
-      <section class="auth-card solo">
-        <div class="auth-brand">Texta</div>
-        <p class="auth-subtitle">登录后即可进入单词文章生成页面</p>
-        <div class="auth-tabs">
-          <button id="tabLogin" class="auth-tab active" type="button">登录</button>
-          <button id="tabRegister" class="auth-tab" type="button">注册</button>
-        </div>
-        <div id="authMsg" class="auth-msg"></div>
-        <div id="loginForm" class="auth-form">
-          <label for="loginEmail">邮箱</label>
-          <input id="loginEmail" type="text" placeholder="you@example.com" />
-          <label for="loginPassword">密码</label>
-          <input id="loginPassword" type="password" placeholder="至少 6 位" />
-          <button id="loginBtn" class="primary-btn" type="button">登录并进入</button>
-        </div>
-        <div id="registerForm" class="auth-form hidden">
-          <label for="registerName">昵称</label>
-          <input id="registerName" type="text" placeholder="你的昵称" />
-          <label for="registerEmail">邮箱</label>
-          <input id="registerEmail" type="text" placeholder="you@example.com" />
-          <label for="registerPassword">密码</label>
-          <input id="registerPassword" type="password" placeholder="至少 6 位" />
-          <button id="registerBtn" class="primary-btn" type="button">注册并进入</button>
-        </div>
+    <div class="auth-page-bg">
+      <div class="auth-blur auth-blur-a"></div>
+      <div class="auth-blur auth-blur-b"></div>
+      <div class="auth-blur auth-blur-c"></div>
+    </div>
+
+    <header class="auth-topbar">
+      <div class="auth-topbar-brand">Texta</div>
+      <button type="button" id="authHelpBtn" class="auth-help-btn" aria-label="帮助">?</button>
+    </header>
+
+    <main class="auth-page-wrap editorial-auth">
+      <section class="auth-hero">
+        <h1 class="auth-hero-title">Texta</h1>
+
+        <section class="auth-card solo editorial-card">
+          <div class="auth-tabs auth-glass-tabs">
+            <button id="tabLogin" class="auth-tab active" type="button">登录</button>
+            <button id="tabRegister" class="auth-tab" type="button">注册</button>
+          </div>
+
+          <div id="authMsg" class="auth-msg"></div>
+
+          <div id="loginForm" class="auth-form">
+            <label for="loginEmail">邮箱</label>
+            <input id="loginEmail" type="text" placeholder="example@texta.com" autocomplete="username" />
+
+            <div class="auth-label-row">
+              <label for="loginPassword">密码</label>
+              <button id="forgotPasswordBtn" type="button" class="auth-inline-link">忘记密码？</button>
+            </div>
+            <input id="loginPassword" type="password" placeholder="请输入密码" autocomplete="current-password" />
+
+            <button id="loginBtn" class="primary-btn auth-submit-btn" type="button">登录并进入</button>
+          </div>
+
+          <div id="registerForm" class="auth-form hidden">
+            <label for="registerName">用户名</label>
+            <input id="registerName" type="text" placeholder="请输入你的用户名" autocomplete="nickname" />
+
+            <label for="registerEmail">邮箱</label>
+            <input id="registerEmail" type="text" placeholder="example@texta.com" autocomplete="username" />
+
+            <label for="registerPassword">密码</label>
+            <input id="registerPassword" type="password" placeholder="至少 6 位密码" autocomplete="new-password" />
+
+            <button id="registerBtn" class="primary-btn auth-submit-btn" type="button">注册并进入</button>
+          </div>
+        </section>
       </section>
     </main>
-    <script src="./site-config.js?v=2026.03.25.181412"></script>
-    <script src="./auth.js?v=2026.03.25.181412"></script>
+
+    <footer class="auth-footer">
+      <div class="auth-footer-copy">© 2026 TEXTA EDITORIAL. ALL RIGHTS RESERVED.</div>
+      <nav class="auth-footer-links" aria-label="页脚导航">
+        <a href="#" class="auth-footer-link">PRIVACY POLICY</a>
+        <a href="#" class="auth-footer-link">TERMS OF SERVICE</a>
+        <a href="#" class="auth-footer-link">CONTACT</a>
+      </nav>
+    </footer>
+
+    <script src="./site-config.js?v=2026.04.04.161500"></script>
+    <script src="./auth.js?v=2026.04.04.161500"></script>
   </body>
 </html>

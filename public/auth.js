@@ -10,11 +10,18 @@ const registerNameEl = document.getElementById("registerName");
 const registerEmailEl = document.getElementById("registerEmail");
 const registerPasswordEl = document.getElementById("registerPassword");
 const registerBtnEl = document.getElementById("registerBtn");
+const forgotPasswordBtnEl = document.getElementById("forgotPasswordBtn");
+const authHelpBtnEl = document.getElementById("authHelpBtn");
 
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
+}
+
+function setAuthMessage(message = "", isError = true) {
+  authMsgEl.textContent = message;
+  authMsgEl.classList.toggle("success", !isError && Boolean(message));
 }
 
 function setAuthMode(mode) {
@@ -23,22 +30,30 @@ function setAuthMode(mode) {
   tabRegisterEl.classList.toggle("active", isRegister);
   loginFormEl.classList.toggle("hidden", isRegister);
   registerFormEl.classList.toggle("hidden", !isRegister);
-  authMsgEl.textContent = "";
+  setAuthMessage("");
 }
 
 tabLoginEl.addEventListener("click", () => setAuthMode("login"));
 tabRegisterEl.addEventListener("click", () => setAuthMode("register"));
 
+forgotPasswordBtnEl?.addEventListener("click", () => {
+  setAuthMessage("暂未开放自助找回密码，请联系管理员处理。", false);
+});
+
+authHelpBtnEl?.addEventListener("click", () => {
+  setAuthMessage("使用邮箱注册或登录，进入后即可生成单词文章。", false);
+});
+
 loginBtnEl.addEventListener("click", async () => {
   const email = String(loginEmailEl.value || "").trim();
   const password = String(loginPasswordEl.value || "");
   if (!email || !password) {
-    authMsgEl.textContent = "请填写邮箱和密码。";
+    setAuthMessage("请填写邮箱和密码。");
     return;
   }
 
   loginBtnEl.disabled = true;
-  authMsgEl.textContent = "登录中...";
+  setAuthMessage("登录中...", false);
   try {
     const response = await fetch(apiUrl("/api/auth/login"), {
       method: "POST",
@@ -49,10 +64,11 @@ loginBtnEl.addEventListener("click", async () => {
     if (!response.ok) {
       throw new Error(data.error || "登录失败");
     }
+
     localStorage.setItem("texta_auth_token", data.token || "");
     location.href = "./app.html";
   } catch (error) {
-    authMsgEl.textContent = `登录失败：${error.message}`;
+    setAuthMessage(`登录失败：${error.message}`);
   } finally {
     loginBtnEl.disabled = false;
   }
@@ -63,12 +79,12 @@ registerBtnEl.addEventListener("click", async () => {
   const email = String(registerEmailEl.value || "").trim();
   const password = String(registerPasswordEl.value || "");
   if (!email || !password) {
-    authMsgEl.textContent = "请填写邮箱和密码。";
+    setAuthMessage("请填写邮箱和密码。");
     return;
   }
 
   registerBtnEl.disabled = true;
-  authMsgEl.textContent = "注册中...";
+  setAuthMessage("注册中...", false);
   try {
     const regResp = await fetch(apiUrl("/api/auth/register"), {
       method: "POST",
@@ -93,7 +109,7 @@ registerBtnEl.addEventListener("click", async () => {
     localStorage.setItem("texta_auth_token", loginData.token || "");
     location.href = "./app.html";
   } catch (error) {
-    authMsgEl.textContent = `注册失败：${error.message}`;
+    setAuthMessage(`注册失败：${error.message}`);
   } finally {
     registerBtnEl.disabled = false;
   }
