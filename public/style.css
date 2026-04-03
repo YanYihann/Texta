@@ -10,6 +10,7 @@
   --highlight-en: #fff3b0;
   --highlight-zh: #d7f8e7;
   --warning: #b45309;
+  --ios-font: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -22,7 +23,7 @@ body {
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--ios-font);
   color: var(--text);
   background:
     radial-gradient(1200px 460px at 8% -12%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
@@ -405,10 +406,10 @@ body.auth-page {
 .app-shell {
   height: 100vh;
   width: 100%;
-  padding: 18px;
+  padding: 20px;
   display: grid;
   grid-template-columns: 300px minmax(420px, 1fr) 360px;
-  gap: 14px;
+  gap: 16px;
   overflow: hidden;
 }
 
@@ -420,16 +421,16 @@ body.auth-page {
 
 .panel {
   border: 1px solid rgba(255, 255, 255, 0.75);
-  background: var(--panel);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
-  border-radius: 20px;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
 }
 
 .input-panel,
 .result-panel,
 .glossary-panel {
-  padding: 16px;
+  padding: 20px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -464,14 +465,14 @@ body.auth-page {
 }
 
 .input-panel {
-  height: calc(100vh - 36px);
+  height: calc(100vh - 40px);
   position: sticky;
-  top: 18px;
+  top: 20px;
 }
 
 .result-panel,
 .glossary-panel {
-  height: calc(100vh - 36px);
+  height: calc(100vh - 40px);
 }
 
 h1,
@@ -489,7 +490,14 @@ h3 {
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.brand h1 {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.05em;
 }
 
 .user-row {
@@ -513,11 +521,11 @@ h3 {
 }
 
 .usage-card {
-  margin-top: 10px;
-  border: 1px solid #dbeafe;
-  background: #f8fbff;
-  border-radius: 12px;
-  padding: 8px 10px;
+  margin-top: 12px;
+  border: 1px solid rgba(191, 219, 254, 0.86);
+  background: linear-gradient(180deg, #f8fbff 0%, #f3f7ff 100%);
+  border-radius: 16px;
+  padding: 10px 12px;
 }
 
 .usage-text {
@@ -918,31 +926,58 @@ h3 {
 }
 
 .logo {
-  width: 90px;
-  height: 90px;
+  width: 84px;
+  height: 84px;
   object-fit: contain;
 }
 
 label {
   display: block;
-  margin: 10px 0 7px;
+  margin: 12px 0 8px;
   font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  color: #1f2937;
+}
+
+.field-note-label {
+  margin-top: 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #8b93a7;
 }
 
 textarea,
 select,
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel-solid);
+  border-radius: 16px;
+  background: #fbfbfd;
   color: var(--text);
-  padding: 10px 11px;
-  font-size: 14px;
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.45;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  font-family: inherit;
+}
+
+textarea:focus,
+select:focus,
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: rgba(0, 122, 255, 0.24);
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.08);
 }
 
 textarea {
-  min-height: 150px;
+  min-height: 164px;
   resize: vertical;
 }
 
@@ -983,8 +1018,10 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: #4b5563;
 }
 
 .primary-btn,
@@ -997,9 +1034,10 @@ button {
   padding: 10px 14px;
   cursor: pointer;
   transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+  font-family: inherit;
 }
 
-.primary-btn { width: 100%; margin-top: 12px; }
+.primary-btn { width: 100%; margin-top: 14px; }
 
 button:hover {
   background: var(--primary-press);
@@ -1017,13 +1055,16 @@ button:disabled {
 }
 
 #status {
-  margin: 10px 2px 0;
+  margin: 12px 2px 0;
   color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .fav-title {
-  margin-top: 14px;
+  margin-top: 18px;
   font-size: 15px;
+  letter-spacing: -0.02em;
 }
 
 .favorites-list {
@@ -1367,7 +1408,7 @@ body.reading-mode .app-shell {
     height: auto;
     min-height: auto;
     grid-template-columns: 1fr;
-    padding: 10px;
+    padding: 12px;
     overflow: visible;
   }
 
@@ -1386,6 +1427,20 @@ body.reading-mode .app-shell {
     overflow: visible !important;
     touch-action: pan-y;
     overscroll-behavior: auto;
+    padding: 16px;
+  }
+
+  .brand h1 {
+    font-size: 30px;
+  }
+
+  .logo {
+    width: 72px;
+    height: 72px;
+  }
+
+  textarea {
+    min-height: 140px;
   }
 
   .result-panel,
