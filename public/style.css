@@ -1156,6 +1156,33 @@ button:disabled {
   font-weight: 600;
 }
 
+.article-tools-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.reading-size-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reading-size-control label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a8497;
+}
+
+.reading-size-control select {
+  width: auto;
+  min-width: 74px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
 .export-area { margin-top: 10px; }
 
 .article-title {
@@ -1191,6 +1218,7 @@ button:disabled {
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.72;
+  font-size: 15px;
 }
 
 .para-zh {
@@ -1210,6 +1238,21 @@ button:disabled {
   margin-top: 0;
   padding-top: 0;
   border-top-color: transparent;
+}
+
+.export-area.font-small .para-en,
+.export-area.font-small .para-zh {
+  font-size: 14px;
+}
+
+.export-area.font-medium .para-en,
+.export-area.font-medium .para-zh {
+  font-size: 15px;
+}
+
+.export-area.font-large .para-en,
+.export-area.font-large .para-zh {
+  font-size: 16.5px;
 }
 
 mark.vocab-en {
@@ -1486,6 +1529,22 @@ body.reading-mode .app-shell {
     display: none;
   }
 
+  .article-tools-row {
+    justify-content: flex-start;
+    margin-top: 6px;
+    margin-bottom: 2px;
+  }
+
+  .reading-size-control label {
+    font-size: 11px;
+  }
+
+  .reading-size-control select {
+    min-width: 66px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
   .actions {
     width: 100%;
     gap: 6px;
@@ -1555,6 +1614,21 @@ body.reading-mode .app-shell {
   .para-en,
   .para-zh {
     line-height: 1.58;
+  }
+
+  .export-area.font-small .para-en,
+  .export-area.font-small .para-zh {
+    font-size: 13px;
+  }
+
+  .export-area.font-medium .para-en,
+  .export-area.font-medium .para-zh {
+    font-size: 14px;
+  }
+
+  .export-area.font-large .para-en,
+  .export-area.font-large .para-zh {
+    font-size: 15px;
   }
 
   .para-zh {

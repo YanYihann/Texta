@@ -8,6 +8,7 @@ const exportPdfBtn = document.getElementById("exportPdfBtn");
 const exportWordBtn = document.getElementById("exportWordBtn");
 const favoriteBtn = document.getElementById("favoriteBtn");
 const exportTitleInput = document.getElementById("exportTitle");
+const fontSizeSelectEl = document.getElementById("fontSizeSelect");
 const statusEl = document.getElementById("status");
 const spellHintsEl = document.getElementById("spellHints");
 const wordChipsEl = document.getElementById("wordChips");
@@ -56,6 +57,7 @@ let currentFavoriteId = "";
 let authToken = localStorage.getItem("texta_auth_token") || "";
 let currentUser = null;
 let currentMobilePage = "home";
+let currentFontSize = localStorage.getItem("texta_font_size") || "small";
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 let favorites = [];
@@ -104,6 +106,17 @@ function setButtonContent(button, html, title) {
   button.innerHTML = html;
   button.setAttribute("aria-label", title);
   button.title = title;
+}
+
+function applyReadingFontSize() {
+  const size = ["small", "medium", "large"].includes(currentFontSize) ? currentFontSize : "small";
+  currentFontSize = size;
+  exportAreaEl.classList.remove("font-small", "font-medium", "font-large");
+  exportAreaEl.classList.add(`font-${size}`);
+  if (fontSizeSelectEl) {
+    fontSizeSelectEl.value = size;
+  }
+  localStorage.setItem("texta_font_size", size);
 }
 
 function isCurrentArticleFavorited() {
@@ -844,6 +857,13 @@ function updateGlossaryFollow(wordKeys) {
 
 function jumpToGlossaryKey(key) {
   if (!key) return;
+  if (isMobileLayout()) {
+    currentMobilePage = "glossary";
+    applyMobilePageLayout();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.requestAnimationFrame(() => updateGlossaryFollow([key]));
+    return;
+  }
   updateGlossaryFollow([key]);
 }
 
@@ -1330,6 +1350,10 @@ toggleZhBtn.addEventListener("click", () => {
 exportPdfBtn.addEventListener("click", () => openExportPreview("pdf"));
 exportWordBtn.addEventListener("click", () => openExportPreview("word"));
 closeModalBtn.addEventListener("click", closeExportPreview);
+fontSizeSelectEl?.addEventListener("change", () => {
+  currentFontSize = String(fontSizeSelectEl.value || "small");
+  applyReadingFontSize();
+});
 
 favoriteBtn.addEventListener("click", () => {
   if (!latestArticle) {
@@ -1420,6 +1444,7 @@ async function init() {
   loadFavorites();
   renderFavorites();
   renderSpelling();
+  applyReadingFontSize();
   applyReadingMode();
   applyChineseVisibility();
   refreshMobileNav();
