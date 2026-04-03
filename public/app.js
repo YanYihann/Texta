@@ -19,8 +19,8 @@ const upgradeVipBtnEl = document.getElementById("upgradeVipBtn");
 const adminReviewLinkEl = document.getElementById("adminReviewLink");
 const adminUsageLinkEl = document.getElementById("adminUsageLink");
 const inputPanelEl = document.querySelector(".input-panel");
-const inputPanelToggleBtnEl = document.getElementById("inputPanelToggleBtn");
-const glossaryPanelToggleBtnEl = document.getElementById("glossaryPanelToggleBtn");
+const mobileBottomNavEl = document.getElementById("mobileBottomNav");
+const mobileNavBtnEls = Array.from(document.querySelectorAll(".mobile-nav-btn"));
 
 const resultSection = document.getElementById("resultSection");
 const glossaryPanelEl = document.getElementById("glossaryPanel");
@@ -55,8 +55,6 @@ let pronunciationMap = new Map();
 let currentFavoriteId = "";
 let authToken = localStorage.getItem("texta_auth_token") || "";
 let currentUser = null;
-let mobileInputCollapsed = false;
-let mobileGlossaryCollapsed = true;
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 let favorites = [];
@@ -600,32 +598,70 @@ function applyReadingMode() {
   }
 }
 
-function applyMobilePanelState() {
-  const mobile = isMobileLayout();
-  const glossaryVisible = !glossaryPanelEl.classList.contains("hidden");
-
-  if (inputPanelToggleBtnEl) {
-    inputPanelToggleBtnEl.classList.toggle("hidden", !mobile);
-    inputPanelToggleBtnEl.textContent = mobileInputCollapsed ? "展开输入区" : "收起输入区";
-  }
-
-  if (glossaryPanelToggleBtnEl) {
-    glossaryPanelToggleBtnEl.classList.toggle("hidden", !mobile || !glossaryVisible);
-    glossaryPanelToggleBtnEl.textContent = mobileGlossaryCollapsed ? "展开词汇释义" : "收起词汇释义";
-  }
-
-  if (inputPanelEl) {
-    inputPanelEl.classList.toggle("mobile-collapsed", mobile && mobileInputCollapsed);
-  }
-
-  glossaryPanelEl.classList.toggle("mobile-collapsed", mobile && glossaryVisible && mobileGlossaryCollapsed);
+function updateMobileNavVisibility() {
+  if (!mobileBottomNavEl) return;
+  mobileBottomNavEl.classList.toggle("hidden", !isMobileLayout() || readingMode);
 }
 
-function collapsePanelsForMobileAfterGenerate() {
+function updateMobileNavActive(target = "") {
+  if (!mobileNavBtnEls.length) return;
+  mobileNavBtnEls.forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-target") === target);
+  });
+}
+
+function detectMobileSectionInView() {
+  if (!isMobileLayout()) return "";
+
+  const resultVisible = !resultSection.classList.contains("hidden");
+  const glossaryVisible = !glossaryPanelEl.classList.contains("hidden");
+  const scrollY = window.scrollY;
+  const viewportMid = scrollY + window.innerHeight * 0.35;
+
+  if (glossaryVisible) {
+    const glossaryTop = glossaryPanelEl.getBoundingClientRect().top + scrollY;
+    if (viewportMid >= glossaryTop - 24) return "glossary";
+  }
+
+  if (resultVisible) {
+    const resultTop = resultSection.getBoundingClientRect().top + scrollY;
+    if (viewportMid >= resultTop - 24) return "article";
+  }
+
+  return "home";
+}
+
+function refreshMobileNav() {
+  updateMobileNavVisibility();
+  updateMobileNavActive(detectMobileSectionInView());
+}
+
+function scrollToMobileSection(target) {
+  if (target === "home") {
+    inputPanelEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (target === "article") {
+    if (resultSection.classList.contains("hidden")) {
+      statusEl.textContent = "请先生成文章。";
+      return;
+    }
+    resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (target === "glossary") {
+    if (glossaryPanelEl.classList.contains("hidden")) {
+      statusEl.textContent = "请先生成文章。";
+      return;
+    }
+    glossaryPanelEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function focusMobileResultAfterGenerate() {
   if (!isMobileLayout()) return;
-  mobileInputCollapsed = true;
-  mobileGlossaryCollapsed = true;
-  applyMobilePanelState();
   resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1065,8 +1101,8 @@ function applyArticleData(data) {
   glossaryPanelEl.classList.remove("hidden");
   exportPdfBtn.disabled = false;
   exportWordBtn.disabled = false;
-  collapsePanelsForMobileAfterGenerate();
-  applyMobilePanelState();
+  focusMobileResultAfterGenerate();
+  refreshMobileNav();
 }
 
 function renameFavoriteById(id) {
@@ -1200,27 +1236,16 @@ glossaryEl.addEventListener("click", (event) => {
 readingModeBtn.addEventListener("click", () => {
   readingMode = !readingMode;
   applyReadingMode();
+  refreshMobileNav();
 });
 
-if (inputPanelToggleBtnEl) {
-  inputPanelToggleBtnEl.addEventListener("click", () => {
-    mobileInputCollapsed = !mobileInputCollapsed;
-    applyMobilePanelState();
-    if (!mobileInputCollapsed) {
-      inputPanelEl.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+mobileNavBtnEls.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = String(btn.getAttribute("data-target") || "home");
+    scrollToMobileSection(target);
+    updateMobileNavActive(target);
   });
-}
-
-if (glossaryPanelToggleBtnEl) {
-  glossaryPanelToggleBtnEl.addEventListener("click", () => {
-    mobileGlossaryCollapsed = !mobileGlossaryCollapsed;
-    applyMobilePanelState();
-    if (!mobileGlossaryCollapsed) {
-      glossaryPanelEl.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  });
-}
+});
 
 toggleZhBtn.addEventListener("click", () => {
   showChinese = !showChinese;
@@ -1306,9 +1331,10 @@ async function init() {
   renderFavorites();
   renderSpelling();
   applyReadingMode();
-  applyMobilePanelState();
+  refreshMobileNav();
 }
 
 init();
 
-window.addEventListener("resize", applyMobilePanelState);
+window.addEventListener("resize", refreshMobileNav);
+window.addEventListener("scroll", refreshMobileNav, { passive: true });
