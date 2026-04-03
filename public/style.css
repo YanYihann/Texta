@@ -404,143 +404,95 @@ h3 {
 
 .usage-detail-grid {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .usage-detail-panel {
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow:
+    0 20px 36px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
 .usage-detail-simple-head {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .usage-simple-card {
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 14px;
-  padding: 12px;
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow:
+    0 20px 36px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .usage-simple-card-accent {
-  background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
-  border-color: #dbeafe;
+  background:
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.22), transparent 34%),
+    rgba(255, 255, 255, 0.84);
+  border-color: rgba(191, 219, 254, 0.9);
 }
 
 .usage-simple-label {
-  color: var(--muted);
+  color: #64748b;
   font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .usage-simple-name {
-  margin-top: 6px;
-  font-size: 24px;
+  margin-top: 10px;
+  font-size: 30px;
   font-weight: 700;
+  line-height: 1.15;
   color: #0f172a;
 }
 
 .usage-simple-count {
-  margin-top: 6px;
-  font-size: 34px;
+  margin-top: 10px;
+  font-size: 44px;
   font-weight: 700;
-  color: #1d4ed8;
-}
-
-.usage-detail-controls {
-  margin-bottom: 12px;
-}
-
-.usage-range-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: #fff;
-}
-
-.usage-range-title {
-  font-weight: 700;
-  color: #1e3a8a;
-}
-
-.usage-range-switch {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.usage-range-btn {
-  border: 1px solid #bfdbfe;
-  background: #ffffff;
-  color: #1e3a8a;
-  border-radius: 999px;
-  padding: 7px 14px;
-}
-
-.usage-range-btn.active {
-  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
-  color: #fff;
+  line-height: 1;
+  color: #2563eb;
 }
 
 .usage-detail-title {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #0f172a;
 }
 
 .usage-chart {
-  margin-top: 12px;
+  margin-top: 14px;
   display: grid;
-  gap: 10px;
-}
-
-.usage-bar-row {
-  display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) 56px;
-  gap: 10px;
-  align-items: center;
-}
-
-.usage-bar-label,
-.usage-bar-value {
-  font-size: 13px;
-}
-
-.usage-bar-track {
-  height: 12px;
-  border-radius: 999px;
-  background: #e5eefb;
-  overflow: hidden;
-}
-
-.usage-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
-}
-
-.usage-mini-note {
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 12px;
+  gap: 12px;
 }
 
 .usage-column-chart {
   min-height: 250px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(58px, 72px));
+  justify-content: start;
+  gap: 12px;
   align-items: end;
+  padding: 12px 10px 6px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.95);
 }
 
 .usage-column-item {
@@ -550,52 +502,62 @@ h3 {
 }
 
 .usage-column-top {
+  min-width: 36px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(191, 219, 254, 0.9);
   font-size: 12px;
   color: #2563eb;
   font-weight: 700;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.08);
 }
 
 .usage-column-track {
   width: 100%;
-  min-height: 170px;
+  min-height: 168px;
   display: flex;
   align-items: end;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
-  padding: 4px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f1f5f9 0%, #dbeafe 100%);
+  padding: 5px;
 }
 
 .usage-column-fill {
   width: 100%;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #93c5fd 0%, #2563eb 100%);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.2);
+  border-radius: 13px;
+  background: linear-gradient(180deg, #7dd3fc 0%, #3b82f6 55%, #2563eb 100%);
+  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.2);
 }
 
 .usage-column-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #475569;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  font-weight: 600;
 }
 
 .usage-heatmap-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(90px, 1fr));
-  gap: 10px;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.95);
 }
 
 .usage-heatmap-cell {
-  border-radius: 14px;
-  padding: 12px 10px;
-  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  padding: 14px 12px;
+  border: 1px solid rgba(219, 234, 254, 0.95);
   background: #f8fbff;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .usage-heatmap-cell:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.1);
 }
 
 .usage-heatmap-cell[data-level="0"] { background: #f8fafc; border-color: #e2e8f0; }
@@ -608,33 +570,13 @@ h3 {
 .usage-heatmap-hour {
   font-size: 12px;
   font-weight: 700;
+  color: inherit;
+  opacity: 0.85;
 }
 
 .usage-heatmap-count {
   margin-top: 8px;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.usage-period-list {
-  margin-top: 12px;
-  display: grid;
-  gap: 8px;
-}
-
-.usage-period-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  border: 1px solid var(--line);
-  background: #f8fbff;
-  border-radius: 12px;
-  padding: 10px 12px;
-}
-
-.usage-period-count {
-  color: #1d4ed8;
+  font-size: 26px;
   font-weight: 700;
 }
 
@@ -656,22 +598,21 @@ h3 {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .usage-bar-row {
-    grid-template-columns: 86px minmax(0, 1fr) 46px;
-  }
-
-  .usage-range-card {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .usage-heatmap-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .usage-column-chart {
-    grid-template-columns: repeat(auto-fit, minmax(26px, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+    gap: 8px;
+  }
+
+  .usage-simple-name {
+    font-size: 24px;
+  }
+
+  .usage-simple-count {
+    font-size: 38px;
   }
 }
 
