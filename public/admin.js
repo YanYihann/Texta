@@ -46,7 +46,8 @@ function escapeHtml(text) {
 
 async function reviewRequest(id, action) {
   const token = getToken();
-  const note = action === "reject" ? window.prompt("请输入驳回原因：", "凭证不清晰，请重新提交") || "" : "";
+  const note =
+    action === "reject" ? window.prompt("请输入驳回原因：", "凭证不清晰，请重新提交") || "" : "";
   const response = await fetch(apiUrl(`/api/admin/vip-requests/${id}/${action}`), {
     method: "POST",
     headers: {
@@ -101,19 +102,19 @@ async function loadRequests() {
 
   requestListEl.innerHTML = items
     .map(
-      (x) => `
-      <div class="admin-item">
-        <div><strong>${escapeHtml(x.userEmail)}</strong>（${escapeHtml(x.payerName || "")}）</div>
-        <div class="fav-meta">金额: ${escapeHtml(x.amount)} 元 | 提交时间: ${escapeHtml(x.createdAt)}</div>
-        <div class="fav-meta">凭证号: ${escapeHtml(x.proofCode || "(未填)")}</div>
-        <div class="fav-meta">凭证图: ${x.proofImageUrl ? `<a href="${escapeHtml(x.proofImageUrl)}" target="_blank">查看</a>` : "(未填)"}</div>
-        <div class="fav-meta">备注: ${escapeHtml(x.note || "(无)")}</div>
-        <div class="actions" style="margin-top:8px;">
-          <button data-id="${escapeHtml(x.id)}" data-action="approve" type="button">通过</button>
-          <button data-id="${escapeHtml(x.id)}" data-action="reject" type="button">驳回</button>
+      (item) => `
+        <div class="admin-item">
+          <div><strong>${escapeHtml(item.userEmail)}</strong>，${escapeHtml(item.payerName || "未填写付款人")}</div>
+          <div class="fav-meta">金额：${escapeHtml(item.amount)} 元 | 提交时间：${escapeHtml(item.createdAt)}</div>
+          <div class="fav-meta">凭证号：${escapeHtml(item.proofCode || "(未填写)")}</div>
+          <div class="fav-meta">凭证图：${item.proofImageUrl ? `<a href="${escapeHtml(item.proofImageUrl)}" target="_blank" rel="noreferrer">查看</a>` : "(未填写)"}</div>
+          <div class="fav-meta">备注：${escapeHtml(item.note || "(无)")}</div>
+          <div class="actions" style="margin-top: 8px;">
+            <button data-id="${escapeHtml(item.id)}" data-action="approve" type="button">通过</button>
+            <button data-id="${escapeHtml(item.id)}" data-action="reject" type="button">驳回</button>
+          </div>
         </div>
-      </div>
-    `
+      `
     )
     .join("");
   adminStatusEl.textContent = `待审核申请：${items.length} 条`;

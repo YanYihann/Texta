@@ -281,6 +281,10 @@ h3 {
   justify-content: center;
 }
 
+.admin-wide-shell {
+  grid-template-columns: minmax(760px, 1120px);
+}
+
 .admin-list {
   display: grid;
   gap: 10px;
@@ -291,6 +295,85 @@ h3 {
   background: #fff;
   border-radius: 12px;
   padding: 10px;
+}
+
+.usage-item {
+  display: grid;
+  gap: 10px;
+}
+
+.usage-user-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.usage-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 11px;
+  background: #eef2ff;
+  border: 1px solid #dbeafe;
+  color: #1e3a8a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.usage-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.usage-stat {
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.usage-stat-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.usage-stat-value {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.usage-periods {
+  display: grid;
+  gap: 8px;
+}
+
+.usage-period-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid var(--line);
+  background: #f8fbff;
+  border-radius: 12px;
+  padding: 9px 10px;
+}
+
+.usage-period-count {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.usage-empty {
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--muted);
 }
 
 .logo {

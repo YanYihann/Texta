@@ -41,6 +41,18 @@ model UsageDaily {
   @@index([dateKey])
 }
 
+model UsageLog {
+  id          String @id @default(cuid())
+  userId      String
+  usedAt      String
+  dateKey     String
+  hourKey     String
+  periodLabel String
+
+  @@index([userId, usedAt])
+  @@index([hourKey])
+}
+
 model VipRequest {
   id            String @id
   userId        String

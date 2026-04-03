@@ -17,6 +17,7 @@ const logoutBtnEl = document.getElementById("logoutBtn");
 const usageTextEl = document.getElementById("usageText");
 const upgradeVipBtnEl = document.getElementById("upgradeVipBtn");
 const adminReviewLinkEl = document.getElementById("adminReviewLink");
+const adminUsageLinkEl = document.getElementById("adminUsageLink");
 
 const resultSection = document.getElementById("resultSection");
 const glossaryPanelEl = document.getElementById("glossaryPanel");
@@ -103,6 +104,14 @@ function renderUsage(usage, user = currentUser) {
       adminReviewLinkEl.classList.remove("hidden");
     } else {
       adminReviewLinkEl.classList.add("hidden");
+    }
+  }
+
+  if (adminUsageLinkEl) {
+    if (isAdmin) {
+      adminUsageLinkEl.classList.remove("hidden");
+    } else {
+      adminUsageLinkEl.classList.add("hidden");
     }
   }
 }
@@ -1219,4 +1228,3 @@ async function init() {
 }
 
 init();
-

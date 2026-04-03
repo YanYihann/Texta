@@ -3,27 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Texta VIP审核中心</title>
+    <title>Texta 用户使用查看</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main class="app-shell admin-shell">
+    <main class="app-shell admin-shell admin-wide-shell">
       <section class="panel result-panel">
         <div class="top-actions">
-          <h2>VIP审核中心</h2>
+          <h2>用户使用查看</h2>
           <div class="actions">
-            <button id="refreshBtn" type="button">刷新</button>
-            <a class="upgrade-link" href="./admin-usage.html">用户使用查看</a>
+            <button id="refreshUsageBtn" type="button">刷新</button>
+            <a class="upgrade-link" href="./admin.html">VIP审核中心</a>
             <a class="upgrade-link" href="./app.html">返回主页面</a>
           </div>
         </div>
-        <p id="adminStatus" class="subtitle">加载中...</p>
-        <div id="requestList" class="admin-list"></div>
+        <p id="usageStatus" class="subtitle">加载中...</p>
+        <div id="usageUserList" class="admin-list"></div>
       </section>
     </main>
     <script src="./site-config.js?v=2026.04.04.120000"></script>
-    <script src="./admin.js?v=2026.04.04.120000"></script>
+    <script src="./admin-usage.js?v=2026.04.04.120000"></script>
   </body>
 </html>

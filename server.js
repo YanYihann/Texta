@@ -239,8 +239,49 @@ function publicUser(user) {
   };
 }
 
+function getShanghaiTimeParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    hourCycle: "h23"
+  })
+    .formatToParts(date)
+    .reduce((acc, item) => {
+      if (item.type !== "literal") {
+        acc[item.type] = item.value;
+      }
+      return acc;
+    }, {});
+
+  return {
+    year: parts.year || "0000",
+    month: parts.month || "00",
+    day: parts.day || "00",
+    hour: parts.hour || "00",
+    minute: parts.minute || "00",
+    second: parts.second || "00"
+  };
+}
+
 function getShanghaiDateKey(date = new Date()) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" }).format(date);
+  const parts = getShanghaiTimeParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getShanghaiHourBucket(date = new Date()) {
+  const parts = getShanghaiTimeParts(date);
+  const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
+  return {
+    dateKey,
+    hourKey: `${dateKey} ${parts.hour}`,
+    periodLabel: `${dateKey} ${parts.hour}:00-${parts.hour}:59`
+  };
 }
 
 function getDailyLimit(user) {
@@ -274,6 +315,20 @@ function bumpUsage(store, user, dateKey = getShanghaiDateKey()) {
     store.usageDaily[user.id] = {};
   }
   store.usageDaily[user.id][dateKey] = Number(store.usageDaily[user.id][dateKey] || 0) + 1;
+}
+
+async function logUsageEvent(user, usedAt = new Date()) {
+  if (!user?.id) return;
+  const bucket = getShanghaiHourBucket(usedAt);
+  await prisma.usageLog.create({
+    data: {
+      userId: String(user.id),
+      usedAt: usedAt.toISOString(),
+      dateKey: bucket.dateKey,
+      hourKey: bucket.hourKey,
+      periodLabel: bucket.periodLabel
+    }
+  });
 }
 
 function extractBearerToken(req) {
@@ -1165,6 +1220,99 @@ app.get("/api/admin/vip-requests", async (req, res) => {
   }
 });
 
+app.get("/api/admin/usage-overview", async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const [users, usageDailyRows, usageLogRows] = await Promise.all([
+      prisma.user.findMany(),
+      prisma.usageDaily.findMany(),
+      prisma.usageLog.findMany({ orderBy: { usedAt: "desc" } })
+    ]);
+
+    const totalUsageMap = new Map();
+    for (const row of usageDailyRows) {
+      totalUsageMap.set(row.userId, Number(totalUsageMap.get(row.userId) || 0) + Number(row.used || 0));
+    }
+
+    const detailedUsageMap = new Map();
+    for (const row of usageLogRows) {
+      if (!detailedUsageMap.has(row.userId)) {
+        detailedUsageMap.set(row.userId, {
+          totalDetailed: 0,
+          latestUsedAt: "",
+          periods: new Map()
+        });
+      }
+
+      const userUsage = detailedUsageMap.get(row.userId);
+      userUsage.totalDetailed += 1;
+      if (!userUsage.latestUsedAt || String(row.usedAt || "") > userUsage.latestUsedAt) {
+        userUsage.latestUsedAt = String(row.usedAt || "");
+      }
+
+      const periodKey = String(row.hourKey || "");
+      if (!userUsage.periods.has(periodKey)) {
+        userUsage.periods.set(periodKey, {
+          hourKey: periodKey,
+          periodLabel: String(row.periodLabel || periodKey || "未知时段"),
+          count: 0,
+          latestUsedAt: String(row.usedAt || "")
+        });
+      }
+
+      const period = userUsage.periods.get(periodKey);
+      period.count += 1;
+      if (!period.latestUsedAt || String(row.usedAt || "") > period.latestUsedAt) {
+        period.latestUsedAt = String(row.usedAt || "");
+      }
+    }
+
+    const items = users
+      .map((user) => {
+        const detail = detailedUsageMap.get(user.id);
+        const totalUsage = Number(totalUsageMap.get(user.id) || 0);
+        const detailedUsageCount = Number(detail?.totalDetailed || 0);
+        const legacyUsageCount = Math.max(totalUsage - detailedUsageCount, 0);
+
+        return {
+          ...publicUser(user),
+          createdAt: user.createdAt,
+          totalUsage,
+          detailedUsageCount,
+          legacyUsageCount,
+          latestUsedAt: detail?.latestUsedAt || "",
+          periods: detail
+            ? Array.from(detail.periods.values())
+                .sort((a, b) => String(b.hourKey || "").localeCompare(String(a.hourKey || "")))
+                .map((period) => ({
+                  periodLabel: period.periodLabel,
+                  count: period.count,
+                  latestUsedAt: period.latestUsedAt
+                }))
+            : []
+        };
+      })
+      .sort((a, b) => {
+        const aAdmin = String(a.role || "").toLowerCase() === "admin" ? 0 : 1;
+        const bAdmin = String(b.role || "").toLowerCase() === "admin" ? 0 : 1;
+        if (aAdmin !== bAdmin) {
+          return aAdmin - bAdmin;
+        }
+        if (b.totalUsage !== a.totalUsage) {
+          return b.totalUsage - a.totalUsage;
+        }
+        return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+      });
+
+    res.json({ ok: true, items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get usage overview.", detail: error.message });
+  }
+});
+
 app.post("/api/admin/vip-requests/:id/approve", async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
@@ -1348,6 +1496,11 @@ app.post("/api/generate", async (req, res) => {
     const storeAfter = await readAuthStore();
     bumpUsage(storeAfter, authedUser);
     await writeAuthStore(storeAfter);
+    try {
+      await logUsageEvent(authedUser);
+    } catch (usageLogError) {
+      console.error("Failed to write usage log:", usageLogError);
+    }
     const usage = getUsageSnapshot(storeAfter, authedUser);
 
     res.json({

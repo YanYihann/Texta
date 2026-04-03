@@ -20,13 +20,14 @@
           <button id="logoutBtn" type="button" class="ghost-btn hidden">退出</button>
         </div>
         <div id="usageCard" class="usage-card">
-          <div id="usageText" class="usage-text">今日剩余次数：--</div>
+          <div id="usageText" class="usage-text">今日剩余次数：-</div>
           <a id="upgradeVipBtn" class="upgrade-link hidden" href="./pay.html">升级VIP（10元/日50次）</a>
           <a id="adminReviewLink" class="upgrade-link hidden" href="./admin.html">VIP审核中心</a>
+          <a id="adminUsageLink" class="upgrade-link hidden" href="./admin-usage.html">用户使用查看</a>
         </div>
         <p class="subtitle">左侧输入单词，中间阅读文章，右侧查看词汇释义扩展。</p>
 
-        <label for="words">单词/短语列表（换行/逗号分隔，空格会保留在短语内）</label>
+        <label for="words">单词/短语列表（换行、逗号分隔，空格会保留在短语内）</label>
         <textarea id="words" placeholder="例如: catastrophic, evaporate, drain, drip"></textarea>
         <div id="spellHints" class="spell-hints hidden"></div>
         <div id="wordChips" class="word-chips"></div>
@@ -75,7 +76,7 @@
 
       <section id="glossaryPanel" class="panel glossary-panel hidden">
         <h2>生词中文释义</h2>
-        <p class="subtitle">含词性、常考义项、短语搭配、词根词缀、同近义词。</p>
+        <p class="subtitle">包含词性、常考义项、短语搭配、词根词缀、同近义词。</p>
         <div id="glossary" class="glossary"></div>
       </section>
     </main>
@@ -114,7 +115,7 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-    <script src="./site-config.js?v=2026.03.25.181412"></script>
-    <script src="./app.js?v=2026.03.25.181412"></script>
+    <script src="./site-config.js?v=2026.04.04.120000"></script>
+    <script src="./app.js?v=2026.04.04.120000"></script>
   </body>
 </html>
