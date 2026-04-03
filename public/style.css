@@ -178,6 +178,10 @@ body.auth-page {
 .auth-help-btn {
   width: 28px;
   height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: 0;
   border-radius: 999px;
   background: rgba(34, 41, 56, 0.82);
@@ -231,7 +235,7 @@ body.auth-page {
 
 .auth-glass-tabs {
   gap: 0;
-  margin: 0 0 16px;
+  margin: 0 0 8px;
   padding: 4px;
   border-radius: 14px;
   background: rgba(241, 241, 247, 0.94);
@@ -259,10 +263,14 @@ body.auth-page {
 
 .auth-form label {
   display: block;
-  margin: 14px 0 8px;
+  margin: 10px 0 6px;
   font-size: 12px;
   font-weight: 700;
   color: #394252;
+}
+
+.auth-form > label:first-child {
+  margin-top: 0;
 }
 
 .auth-form input {
@@ -293,7 +301,7 @@ body.auth-page {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .auth-label-row label {
@@ -308,10 +316,22 @@ body.auth-page {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: none;
+  transition: transform 0.16s ease, color 0.16s ease;
 }
 
 .auth-inline-link:hover {
   color: #0058bc;
+  background: transparent;
+  box-shadow: none;
+  transform: scale(1.04);
+}
+
+.auth-inline-link:focus,
+.auth-inline-link:active {
+  background: transparent;
+  box-shadow: none;
+  transform: scale(1.04);
 }
 
 .auth-submit-btn {
@@ -337,6 +357,15 @@ body.auth-page {
 .auth-submit-btn:disabled {
   opacity: 0.82;
   cursor: wait;
+}
+
+.auth-msg {
+  min-height: 0;
+  margin: 0 0 8px;
+}
+
+.auth-msg:empty {
+  display: none;
 }
 
 .auth-footer {
@@ -1323,14 +1352,26 @@ body.reading-mode .app-shell {
 }
 
 @media (max-width: 860px) {
+  html,
+  body {
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
   body {
     padding-bottom: 82px;
   }
 
   .app-shell {
     height: auto;
+    min-height: auto;
     grid-template-columns: 1fr;
     padding: 10px;
+    overflow: visible;
+  }
+
+  .panel {
     overflow: visible;
   }
 
@@ -1339,13 +1380,30 @@ body.reading-mode .app-shell {
   .glossary-panel {
     position: relative;
     top: 0;
-    height: auto;
-    overflow: visible;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto;
+    overflow: visible !important;
+    touch-action: pan-y;
+    overscroll-behavior: auto;
   }
 
   .result-panel,
   .glossary-panel {
     min-height: auto;
+  }
+
+  .article-blocks,
+  .glossary,
+  .favorites-list {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #resultSection,
+  #glossaryPanel {
+    scroll-margin-top: 10px;
+    scroll-margin-bottom: 92px;
   }
 
   .mobile-bottom-nav {
