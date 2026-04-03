@@ -1,12 +1,8 @@
-const detailStatusEl = document.getElementById("detailStatus");
 const detailContentEl = document.getElementById("detailContent");
 const detailSummaryRowEl = document.getElementById("detailSummaryRow");
-const detailControlsEl = document.getElementById("detailControls");
 const detailRefreshBtnEl = document.getElementById("detailRefreshBtn");
 
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
-let currentDetailItem = null;
-let activeDayRange = "30";
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
@@ -66,9 +62,7 @@ function getUserIdFromQuery() {
 
 function getFilteredDailyUsage(item) {
   const source = Array.isArray(item?.dailyUsage) ? item.dailyUsage : [];
-  if (activeDayRange === "7") return source.slice(-7);
-  if (activeDayRange === "30") return source.slice(-30);
-  return source.slice(-90);
+  return source.slice(-30);
 }
 
 async function ensureAdmin() {
@@ -107,31 +101,6 @@ function renderSummary(item) {
       <div class="usage-simple-count">${Number(item.totalUsage || 0)}</div>
     </div>
   `;
-}
-
-function renderControls() {
-  detailControlsEl.innerHTML = `
-    <div class="usage-range-card">
-      <div class="usage-range-title">趋势范围</div>
-      <div class="usage-range-switch">
-        <button type="button" class="usage-range-btn${activeDayRange === "7" ? " active" : ""}" data-range="7">近7天</button>
-        <button type="button" class="usage-range-btn${activeDayRange === "30" ? " active" : ""}" data-range="30">近30天</button>
-        <button type="button" class="usage-range-btn${activeDayRange === "90" ? " active" : ""}" data-range="90">近90天</button>
-      </div>
-    </div>
-  `;
-
-  detailControlsEl.querySelectorAll("[data-range]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const nextRange = String(btn.getAttribute("data-range") || "30");
-      if (nextRange === activeDayRange) return;
-      activeDayRange = nextRange;
-      if (currentDetailItem) {
-        renderControls();
-        renderDetail(currentDetailItem);
-      }
-    });
-  });
 }
 
 function renderDailyColumns(items) {
@@ -220,14 +189,11 @@ function renderDetail(item) {
 async function loadDetail() {
   const userId = getUserIdFromQuery();
   if (!userId) {
-    detailStatusEl.textContent = "缺少用户参数。";
     detailSummaryRowEl.innerHTML = "";
-    detailControlsEl.innerHTML = "";
     detailContentEl.innerHTML = '<div class="usage-empty">请从用户列表进入详情页。</div>';
     return;
   }
 
-  detailStatusEl.textContent = "正在加载用户详情...";
   const { response, data } = await fetchJson(`/api/admin/usage-users/${encodeURIComponent(userId)}/detail`, {
     headers: { Authorization: `Bearer ${getToken()}` }
   });
@@ -239,32 +205,19 @@ async function loadDetail() {
   const item = data.item || null;
   if (!item) {
     detailSummaryRowEl.innerHTML = "";
-    detailControlsEl.innerHTML = "";
     detailContentEl.innerHTML = '<div class="usage-empty">没有找到该用户。</div>';
-    detailStatusEl.textContent = "没有找到对应的用户数据。";
     return;
   }
 
-  currentDetailItem = item;
   renderSummary(item);
-  renderControls();
   renderDetail(item);
-  detailStatusEl.textContent = "已加载用户使用详情。";
 }
 
 detailRefreshBtnEl.addEventListener("click", async () => {
-  try {
-    await loadDetail();
-  } catch (error) {
-    detailStatusEl.textContent = `刷新失败：${error.message}`;
-  }
+  await loadDetail();
 });
 
-ensureAdmin()
-  .then(async (user) => {
-    if (!user) return;
-    await loadDetail();
-  })
-  .catch((error) => {
-    detailStatusEl.textContent = `初始化失败：${error.message}`;
-  });
+ensureAdmin().then(async (user) => {
+  if (!user) return;
+  await loadDetail();
+});
