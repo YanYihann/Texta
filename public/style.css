@@ -1493,14 +1493,33 @@ body.reading-mode .app-shell {
     justify-content: flex-start;
   }
 
-  .actions button {
-    min-width: 34px;
-    height: 34px;
-    padding: 0 8px;
-    border-radius: 12px;
-    font-size: 13px;
-    box-shadow: none;
-  }
+.actions button {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 12px;
+  font-size: 13px;
+  box-shadow: none;
+}
+
+.action-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  margin: 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.action-text-icon {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
 
   #readingModeBtn,
   #favoriteBtn,
@@ -1508,7 +1527,7 @@ body.reading-mode .app-shell {
   #exportWordBtn {
     width: 34px;
     padding: 0;
-    font-size: 15px;
+    font-size: 14px;
   }
 
   #toggleZhBtn {

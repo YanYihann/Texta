@@ -68,6 +68,39 @@ function isMobileLayout() {
   return window.matchMedia("(max-width: 860px)").matches;
 }
 
+function actionIconSvg(name) {
+  const icons = {
+    book: `
+      <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6.5 5.5h9.25a2.75 2.75 0 0 1 2.75 2.75V18.5H9.25A2.75 2.75 0 0 0 6.5 21.25V5.5Z" />
+        <path d="M6.5 5.5h-.25A2.25 2.25 0 0 0 4 7.75v9.5a2.25 2.25 0 0 0 2.25 2.25h.25" />
+        <path d="M9.5 8.5h6" />
+      </svg>
+    `,
+    heart: `
+      <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 20.25c-4.2-2.92-7-5.43-7-8.72A4.02 4.02 0 0 1 9.06 7.5c1.19 0 2.32.52 2.94 1.5.62-.98 1.75-1.5 2.94-1.5A4.02 4.02 0 0 1 19 11.53c0 3.29-2.8 5.8-7 8.72Z" />
+      </svg>
+    `,
+    export: `
+      <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 15.5V5.75" />
+        <path d="m8.75 9 3.25-3.25L15.25 9" />
+        <path d="M6 13.75v3a1.75 1.75 0 0 0 1.75 1.75h8.5A1.75 1.75 0 0 0 18 16.75v-3" />
+      </svg>
+    `
+  };
+
+  return icons[name] || "";
+}
+
+function setButtonContent(button, html, title) {
+  if (!button) return;
+  button.innerHTML = html;
+  button.setAttribute("aria-label", title);
+  button.title = title;
+}
+
 async function apiFetch(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (authToken) {
@@ -669,47 +702,19 @@ function focusMobileResultAfterGenerate() {
 
 function syncActionButtonLabels() {
   if (isMobileLayout()) {
-    readingModeBtn.textContent = "📖";
-    readingModeBtn.setAttribute("aria-label", readingMode ? "退出阅读模式" : "阅读模式");
-    readingModeBtn.title = readingMode ? "退出阅读模式" : "阅读模式";
-
-    toggleZhBtn.textContent = "ZH";
-    toggleZhBtn.setAttribute("aria-label", showChinese ? "隐藏中文" : "显示中文");
-    toggleZhBtn.title = showChinese ? "隐藏中文" : "显示中文";
-
-    favoriteBtn.textContent = "♡";
-    favoriteBtn.setAttribute("aria-label", "收藏文章");
-    favoriteBtn.title = "收藏文章";
-
-    exportPdfBtn.textContent = "⤴";
-    exportPdfBtn.setAttribute("aria-label", "导出 PDF");
-    exportPdfBtn.title = "导出 PDF";
-
-    exportWordBtn.textContent = "⤴";
-    exportWordBtn.setAttribute("aria-label", "导出 Word");
-    exportWordBtn.title = "导出 Word";
+    setButtonContent(readingModeBtn, actionIconSvg("book"), readingMode ? "退出阅读模式" : "阅读模式");
+    setButtonContent(toggleZhBtn, '<span class="action-text-icon">ZH</span>', showChinese ? "隐藏中文" : "显示中文");
+    setButtonContent(favoriteBtn, actionIconSvg("heart"), "收藏文章");
+    setButtonContent(exportPdfBtn, actionIconSvg("export"), "导出 PDF");
+    setButtonContent(exportWordBtn, actionIconSvg("export"), "导出 Word");
     return;
   }
 
-  readingModeBtn.textContent = readingMode ? "退出阅读模式" : "阅读模式";
-  readingModeBtn.setAttribute("aria-label", readingModeBtn.textContent);
-  readingModeBtn.title = readingModeBtn.textContent;
-
-  toggleZhBtn.textContent = showChinese ? "隐藏中文" : "显示中文";
-  toggleZhBtn.setAttribute("aria-label", toggleZhBtn.textContent);
-  toggleZhBtn.title = toggleZhBtn.textContent;
-
-  favoriteBtn.textContent = "收藏文章";
-  favoriteBtn.setAttribute("aria-label", "收藏文章");
-  favoriteBtn.title = "收藏文章";
-
-  exportPdfBtn.textContent = "导出 PDF";
-  exportPdfBtn.setAttribute("aria-label", "导出 PDF");
-  exportPdfBtn.title = "导出 PDF";
-
-  exportWordBtn.textContent = "导出 Word";
-  exportWordBtn.setAttribute("aria-label", "导出 Word");
-  exportWordBtn.title = "导出 Word";
+  setButtonContent(readingModeBtn, readingMode ? "退出阅读模式" : "阅读模式", readingMode ? "退出阅读模式" : "阅读模式");
+  setButtonContent(toggleZhBtn, showChinese ? "隐藏中文" : "显示中文", showChinese ? "隐藏中文" : "显示中文");
+  setButtonContent(favoriteBtn, "收藏文章", "收藏文章");
+  setButtonContent(exportPdfBtn, "导出 PDF", "导出 PDF");
+  setButtonContent(exportWordBtn, "导出 Word", "导出 Word");
 }
 
 function refreshMobileNav() {
