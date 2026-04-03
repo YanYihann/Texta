@@ -831,6 +831,7 @@ function buildExportBundle(title, includeChinese) {
   const glossaryClone = glossaryEl.cloneNode(true);
 
   const wrapper = document.createElement("div");
+  wrapper.className = "export-print-root";
   wrapper.innerHTML = `
     <h1>${escapeHtml(title)}</h1>
     <div>${articleClone.innerHTML}</div>
@@ -856,11 +857,27 @@ function makeWordFriendlyHtml(innerHtml, marginPx) {
         h1 { margin:0 0 8px; }
         h2 { margin:14px 0 8px; }
         .article-title { font-size:22px; margin:0 0 8px; }
-        .para-card { border:1px solid #e5e7eb; border-radius:14px; background:#fff; padding:12px; margin:0 0 10px; }
+        .export-print-root { page-break-inside:auto; }
+        .para-card {
+          border:1px solid #e5e7eb;
+          border-radius:14px;
+          background:#fff;
+          padding:12px;
+          margin:0 0 10px;
+          break-inside: avoid;
+          page-break-inside: avoid;
+          -webkit-column-break-inside: avoid;
+        }
         .para-en,.para-zh { white-space: pre-wrap; line-height: 1.72; margin:0; }
         .para-zh { margin-top:8px; padding-top:8px; border-top:1px dashed #d1d5db; }
         .glossary { border:1px solid #e5e7eb; border-radius:14px; padding:8px 10px; }
-        .glossary-item { border-bottom:1px dashed #e5e7eb; padding:8px 0; }
+        .glossary-item {
+          border-bottom:1px dashed #e5e7eb;
+          padding:8px 0;
+          break-inside: avoid;
+          page-break-inside: avoid;
+          -webkit-column-break-inside: avoid;
+        }
         .glossary-item:last-child { border-bottom:none; }
         .glossary-word { font-weight:700; }
         .glossary-pos { color:#6b7280; font-size:12px; margin-left:6px; }
@@ -882,7 +899,7 @@ function renderPreviewPaper() {
   const marginPx = Number(previewMarginSelect.value || "12");
 
   const bundle = buildExportBundle(title, includeChinese);
-  previewPaperEl.innerHTML = `<div style=\"padding:${marginPx}px;\">${bundle.innerHTML}</div>`;
+  previewPaperEl.innerHTML = `<div class="export-preview-inner" style=\"padding:${marginPx}px;\">${bundle.innerHTML}</div>`;
 }
 
 function openExportPreview(type) {
@@ -965,7 +982,11 @@ async function exportPdfFromPreview() {
       filename: `${safeFileName(title)}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: {
+        mode: ["css", "legacy"],
+        avoid: [".para-card", ".glossary-item", ".article-title", "h2"]
+      }
     })
     .from(previewPaperEl)
     .save();
