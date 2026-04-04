@@ -1453,22 +1453,26 @@ mark.vocab-zh {
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
 
-.notebook-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.5;
+.glossary-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #dbe1ea;
 }
 
-.notebook-toggle.active {
+.glossary-footer-btn {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+  background: #eef6ff;
   color: #1d4ed8;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: none;
 }
 
-.notebook-toggle input {
-  margin: 0;
+.glossary-footer-btn:hover:not(:disabled) {
+  background: #e2efff;
+  box-shadow: none;
 }
 
 .head-left {

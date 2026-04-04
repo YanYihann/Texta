@@ -11,6 +11,7 @@ const exportTitleInput = document.getElementById("exportTitle");
 const fontSizeSelectEl = document.getElementById("fontSizeSelect");
 const libraryFavoritesBtnEl = document.getElementById("libraryFavoritesBtn");
 const libraryNotebookBtnEl = document.getElementById("libraryNotebookBtn");
+const addUnknownToNotebookBtnEl = document.getElementById("addUnknownToNotebookBtn");
 const statusEl = document.getElementById("status");
 const spellHintsEl = document.getElementById("spellHints");
 const wordChipsEl = document.getElementById("wordChips");
@@ -285,8 +286,7 @@ function getWordPref(wordOrKey, word = "") {
   return {
     key,
     word: fallbackWord,
-    mastery: String(vocabPrefs[key]?.mastery || ""),
-    addToNotebook: Boolean(vocabPrefs[key]?.addToNotebook),
+    mastery: String(vocabPrefs[key]?.mastery || "unknown"),
     updatedAt: String(vocabPrefs[key]?.updatedAt || "")
   };
 }
@@ -337,11 +337,33 @@ function syncNotebookEntriesFromLexicon(lexicon) {
   for (const item of Array.isArray(lexicon) ? lexicon : []) {
     const key = keyifyWord(item?.word || "");
     if (!key) continue;
-    const pref = vocabPrefs[key];
-    if (pref?.mastery === "unknown" && pref?.addToNotebook) {
-      upsertNotebookEntry(item);
+    if (!vocabPrefs[key]) {
+      saveWordPref(key, {
+        word: String(item?.word || "").trim(),
+        mastery: "unknown"
+      });
     }
   }
+}
+
+function isWordInNotebook(key) {
+  return notebookEntries.some((item) => item.key === key);
+}
+
+function getUnknownWordsNotInNotebook() {
+  return latestLexicon.filter((item) => {
+    const key = keyifyWord(item?.word || "");
+    if (!key) return false;
+    return getWordPref(key, item?.word || "").mastery !== "mastered" && !isWordInNotebook(key);
+  });
+}
+
+function syncGlossaryFooterButton() {
+  if (!addUnknownToNotebookBtnEl) return;
+  const hasLexicon = Array.isArray(latestLexicon) && latestLexicon.length > 0;
+  const pending = getUnknownWordsNotInNotebook();
+  addUnknownToNotebookBtnEl.disabled = !hasLexicon || pending.length === 0;
+  addUnknownToNotebookBtnEl.textContent = pending.length > 0 ? `将陌生词添加到生词本（${pending.length}）` : "陌生词已全部加入生词本";
 }
 
 function getNotebookEntriesSorted() {
@@ -1029,6 +1051,7 @@ function refreshVocabularySurfaces() {
   renderGlossary(latestLexicon);
   renderNotebookView();
   renderLibraryList();
+  syncGlossaryFooterButton();
   syncActionButtonLabels();
 }
 
@@ -1038,41 +1061,12 @@ function setWordMastery(item, mastery) {
   if (!key) return;
 
   if (mastery === "mastered") {
-    saveWordPref(key, { word, mastery: "mastered", addToNotebook: false });
+    saveWordPref(key, { word, mastery: "mastered" });
     removeNotebookEntry(key);
   } else if (mastery === "unknown") {
-    const pref = getWordPref(key, word);
-    saveWordPref(key, { word, mastery: "unknown", addToNotebook: pref.addToNotebook });
-    if (pref.addToNotebook) {
-      upsertNotebookEntry(item);
-    }
+    saveWordPref(key, { word, mastery: "unknown" });
   } else {
-    saveWordPref(key, { word, mastery: "", addToNotebook: false });
-    removeNotebookEntry(key);
-  }
-
-  refreshVocabularySurfaces();
-}
-
-function setWordNotebookMembership(item, shouldAdd) {
-  const word = String(item?.word || "").trim();
-  const key = keyifyWord(word || item?.key || "");
-  if (!key) return;
-
-  const pref = getWordPref(key, word);
-  if (shouldAdd) {
-    saveWordPref(key, {
-      word,
-      mastery: "unknown",
-      addToNotebook: true
-    });
-    upsertNotebookEntry(item);
-  } else {
-    saveWordPref(key, {
-      word,
-      mastery: pref.mastery,
-      addToNotebook: false
-    });
+    saveWordPref(key, { word, mastery: "unknown" });
     removeNotebookEntry(key);
   }
 
@@ -1162,7 +1156,6 @@ function buildStudyControls(item) {
   const pref = getWordPref(key, item?.word || "");
   const isMastered = pref.mastery === "mastered";
   const isUnknown = pref.mastery === "unknown";
-  const shouldNotebook = isUnknown && pref.addToNotebook;
 
   return `
     <div class="study-controls" data-word-key="${escapeHtml(key)}">
@@ -1170,10 +1163,6 @@ function buildStudyControls(item) {
         <button type="button" class="mastery-btn${isMastered ? " active" : ""}" data-action="mastery" data-word-key="${escapeHtml(key)}" data-mastery="mastered">已掌握</button>
         <button type="button" class="mastery-btn${isUnknown ? " active" : ""}" data-action="mastery" data-word-key="${escapeHtml(key)}" data-mastery="unknown">陌生</button>
       </div>
-      <label class="notebook-toggle${shouldNotebook ? " active" : ""}">
-        <input type="checkbox" data-action="notebook" data-word-key="${escapeHtml(key)}" ${shouldNotebook ? "checked" : ""} />
-        是否将陌生词添加到生词本
-      </label>
     </div>
   `;
 }
@@ -1475,6 +1464,7 @@ function applyArticleData(data) {
   renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon, latestAlignment);
   renderGlossary(latestLexicon);
   renderNotebookView();
+  syncGlossaryFooterButton();
 
   if (Array.isArray(data.missing) && data.missing.length > 0) {
     missingWordsEl.textContent = `提示：仍有 ${data.missing.length} 个词未命中：${data.missing.join(", ")}`;
@@ -1632,18 +1622,6 @@ glossaryEl.addEventListener("click", (event) => {
   speakGlossaryByKeyWithAccent(key || "", accent);
 });
 
-glossaryEl.addEventListener("change", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLInputElement)) return;
-  if (target.matches('input[data-action="notebook"][data-word-key]')) {
-    const key = target.getAttribute("data-word-key") || "";
-    const item = findLexiconItemByKey(key);
-    if (item) {
-      setWordNotebookMembership(item, target.checked);
-    }
-  }
-});
-
 notebookEntriesEl?.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -1667,20 +1645,6 @@ notebookEntriesEl?.addEventListener("click", (event) => {
   }
 });
 
-notebookEntriesEl?.addEventListener("change", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLInputElement)) return;
-  if (target.matches('input[data-action="notebook"][data-word-key]')) {
-    const key = target.getAttribute("data-word-key") || "";
-    const item = findLexiconItemByKey(key);
-    if (item) {
-      currentNotebookFocusKey = key;
-      setWordNotebookMembership(item, target.checked);
-      renderNotebookView();
-    }
-  }
-});
-
 readingModeBtn.addEventListener("click", () => {
   readingMode = !readingMode;
   applyReadingMode();
@@ -1700,6 +1664,21 @@ libraryFavoritesBtnEl?.addEventListener("click", () => {
 
 libraryNotebookBtnEl?.addEventListener("click", () => {
   setLibraryMode("notebook");
+});
+
+addUnknownToNotebookBtnEl?.addEventListener("click", () => {
+  const pending = getUnknownWordsNotInNotebook();
+  if (pending.length === 0) {
+    statusEl.textContent = "当前陌生词已经全部加入生词本。";
+    syncGlossaryFooterButton();
+    return;
+  }
+
+  pending.forEach((item) => upsertNotebookEntry(item));
+  renderNotebookView();
+  renderLibraryList();
+  syncGlossaryFooterButton();
+  statusEl.textContent = `已将 ${pending.length} 个陌生词加入生词本。`;
 });
 
 toggleZhBtn.addEventListener("click", () => {
@@ -1821,6 +1800,7 @@ async function init() {
   applyChineseVisibility();
   renderNotebookView();
   setLibraryMode(currentLibraryMode, { navigate: false, focusArticle: Boolean(latestArticle) });
+  syncGlossaryFooterButton();
   refreshMobileNav();
 }
 
