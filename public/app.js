@@ -9,6 +9,8 @@ const exportWordBtn = document.getElementById("exportWordBtn");
 const favoriteBtn = document.getElementById("favoriteBtn");
 const exportTitleInput = document.getElementById("exportTitle");
 const fontSizeSelectEl = document.getElementById("fontSizeSelect");
+const libraryFavoritesBtnEl = document.getElementById("libraryFavoritesBtn");
+const libraryNotebookBtnEl = document.getElementById("libraryNotebookBtn");
 const statusEl = document.getElementById("status");
 const spellHintsEl = document.getElementById("spellHints");
 const wordChipsEl = document.getElementById("wordChips");
@@ -24,6 +26,10 @@ const mobileBottomNavEl = document.getElementById("mobileBottomNav");
 const mobileNavBtnEls = Array.from(document.querySelectorAll(".mobile-nav-btn"));
 
 const resultSection = document.getElementById("resultSection");
+const articleViewEl = document.getElementById("articleView");
+const notebookViewEl = document.getElementById("notebookView");
+const notebookEntriesEl = document.getElementById("notebookEntries");
+const notebookCountEl = document.getElementById("notebookCount");
 const glossaryPanelEl = document.getElementById("glossaryPanel");
 const missingWordsEl = document.getElementById("missingWords");
 const articleTitleEl = document.getElementById("articleTitle");
@@ -58,9 +64,15 @@ let authToken = localStorage.getItem("texta_auth_token") || "";
 let currentUser = null;
 let currentMobilePage = "home";
 let currentFontSize = localStorage.getItem("texta_font_size") || "small";
+let currentLibraryMode = localStorage.getItem("texta_library_mode") || "favorites";
+let currentNotebookFocusKey = "";
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
+const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
+const NOTEBOOK_KEY = "texta_notebook_v1";
 let favorites = [];
+let vocabPrefs = {};
+let notebookEntries = [];
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
@@ -239,6 +251,103 @@ function saveFavorites() {
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.slice(0, 50)));
 }
 
+function loadVocabPrefs() {
+  try {
+    const raw = localStorage.getItem(VOCAB_PREFS_KEY);
+    const parsed = JSON.parse(raw || "{}");
+    vocabPrefs = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    vocabPrefs = {};
+  }
+}
+
+function saveVocabPrefs() {
+  localStorage.setItem(VOCAB_PREFS_KEY, JSON.stringify(vocabPrefs));
+}
+
+function loadNotebookEntries() {
+  try {
+    const raw = localStorage.getItem(NOTEBOOK_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    notebookEntries = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    notebookEntries = [];
+  }
+}
+
+function saveNotebookEntries() {
+  localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(notebookEntries.slice(0, 500)));
+}
+
+function getWordPref(wordOrKey, word = "") {
+  const key = word ? keyifyWord(wordOrKey) : keyifyWord(wordOrKey || "");
+  const fallbackWord = String(word || wordOrKey || "").trim();
+  return {
+    key,
+    word: fallbackWord,
+    mastery: String(vocabPrefs[key]?.mastery || ""),
+    addToNotebook: Boolean(vocabPrefs[key]?.addToNotebook),
+    updatedAt: String(vocabPrefs[key]?.updatedAt || "")
+  };
+}
+
+function saveWordPref(key, patch = {}) {
+  if (!key) return;
+  const existing = vocabPrefs[key] || {};
+  vocabPrefs[key] = {
+    ...existing,
+    ...patch,
+    updatedAt: new Date().toISOString()
+  };
+  saveVocabPrefs();
+}
+
+function removeNotebookEntry(key) {
+  notebookEntries = notebookEntries.filter((item) => item.key !== key);
+  saveNotebookEntries();
+}
+
+function upsertNotebookEntry(item) {
+  const word = String(item?.word || "").trim();
+  const key = keyifyWord(word);
+  if (!key || !word) return;
+
+  const entry = {
+    key,
+    word,
+    pos: String(item?.pos || ""),
+    senses: Array.isArray(item?.senses) ? item.senses : [],
+    collocations: Array.isArray(item?.collocations) ? item.collocations : [],
+    synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
+    antonyms: Array.isArray(item?.antonyms) ? item.antonyms : [],
+    wordFormation: String(item?.wordFormation || ""),
+    updatedAt: new Date().toISOString()
+  };
+
+  const index = notebookEntries.findIndex((row) => row.key === key);
+  if (index >= 0) {
+    notebookEntries[index] = { ...notebookEntries[index], ...entry };
+  } else {
+    notebookEntries.unshift(entry);
+  }
+  saveNotebookEntries();
+}
+
+function syncNotebookEntriesFromLexicon(lexicon) {
+  for (const item of Array.isArray(lexicon) ? lexicon : []) {
+    const key = keyifyWord(item?.word || "");
+    if (!key) continue;
+    const pref = vocabPrefs[key];
+    if (pref?.mastery === "unknown" && pref?.addToNotebook) {
+      upsertNotebookEntry(item);
+    }
+  }
+}
+
+function getNotebookEntriesSorted() {
+  return [...notebookEntries].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+}
+
 function renderFavorites() {
   if (!favoritesListEl) return;
   if (!favorites.length) {
@@ -261,6 +370,37 @@ function renderFavorites() {
     `
     )
     .join("");
+}
+
+function renderNotebookSidebar() {
+  if (!favoritesListEl) return;
+  const rows = getNotebookEntriesSorted();
+  if (!rows.length) {
+    favoritesListEl.innerHTML = `<div class="empty-library">暂无生词，先把右侧词汇标记成“陌生”并加入生词本。</div>`;
+    return;
+  }
+
+  favoritesListEl.innerHTML = rows
+    .map(
+      (item) => `
+      <div class="fav-item notebook-item" data-notebook-key="${escapeHtml(item.key)}">
+        <div class="fav-left">
+          <div class="fav-main">${escapeHtml(item.word || "未命名单词")}</div>
+          <div class="fav-meta">陌生词 · ${escapeHtml(formatNotebookMeta(item.updatedAt))}</div>
+        </div>
+        <div class="word-state-pill">生词本</div>
+      </div>
+    `
+    )
+    .join("");
+}
+
+function renderLibraryList() {
+  if (currentLibraryMode === "notebook") {
+    renderNotebookSidebar();
+    return;
+  }
+  renderFavorites();
 }
 
 function splitWords(rawText) {
@@ -302,6 +442,15 @@ function todayStamp() {
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function formatNotebookMeta(value) {
+  if (!value) return "最近更新未知";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+  return date.toLocaleString();
 }
 
 function defaultTitleByWords(words) {
@@ -748,6 +897,50 @@ function syncActionButtonLabels() {
   syncActionButtonStates();
 }
 
+function setResultMode(mode) {
+  articleViewEl?.classList.toggle("hidden", mode !== "article");
+  notebookViewEl?.classList.toggle("hidden", mode !== "notebook");
+}
+
+function syncLibraryTabs() {
+  libraryFavoritesBtnEl?.classList.toggle("active", currentLibraryMode === "favorites");
+  libraryNotebookBtnEl?.classList.toggle("active", currentLibraryMode === "notebook");
+}
+
+function focusNotebookEntry(key) {
+  if (!key || !notebookEntriesEl) return;
+  const all = notebookEntriesEl.querySelectorAll(".glossary-item[data-word-key]");
+  all.forEach((el) => el.classList.remove("active"));
+  const target = notebookEntriesEl.querySelector(`.glossary-item[data-word-key="${key}"]`);
+  if (!target) return;
+  target.classList.add("active");
+  target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function setLibraryMode(mode, options = {}) {
+  currentLibraryMode = mode === "notebook" ? "notebook" : "favorites";
+  localStorage.setItem("texta_library_mode", currentLibraryMode);
+  syncLibraryTabs();
+  renderLibraryList();
+
+  if (currentLibraryMode === "notebook") {
+    renderNotebookView();
+    setResultMode("notebook");
+    resultSection.classList.remove("hidden");
+  } else {
+    setResultMode("article");
+    if (options.focusArticle && latestArticle) {
+      resultSection.classList.remove("hidden");
+    }
+  }
+
+  if (isMobileLayout() && options.navigate !== false) {
+    currentMobilePage = "article";
+    applyMobilePageLayout();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
 function refreshMobileNav() {
   syncActionButtonLabels();
   applyMobilePageLayout();
@@ -832,6 +1025,60 @@ function scheduleSpellcheck() {
   spellTimer = setTimeout(runSpellcheck, 350);
 }
 
+function refreshVocabularySurfaces() {
+  renderGlossary(latestLexicon);
+  renderNotebookView();
+  renderLibraryList();
+  syncActionButtonLabels();
+}
+
+function setWordMastery(item, mastery) {
+  const word = String(item?.word || "").trim();
+  const key = keyifyWord(word || item?.key || "");
+  if (!key) return;
+
+  if (mastery === "mastered") {
+    saveWordPref(key, { word, mastery: "mastered", addToNotebook: false });
+    removeNotebookEntry(key);
+  } else if (mastery === "unknown") {
+    const pref = getWordPref(key, word);
+    saveWordPref(key, { word, mastery: "unknown", addToNotebook: pref.addToNotebook });
+    if (pref.addToNotebook) {
+      upsertNotebookEntry(item);
+    }
+  } else {
+    saveWordPref(key, { word, mastery: "", addToNotebook: false });
+    removeNotebookEntry(key);
+  }
+
+  refreshVocabularySurfaces();
+}
+
+function setWordNotebookMembership(item, shouldAdd) {
+  const word = String(item?.word || "").trim();
+  const key = keyifyWord(word || item?.key || "");
+  if (!key) return;
+
+  const pref = getWordPref(key, word);
+  if (shouldAdd) {
+    saveWordPref(key, {
+      word,
+      mastery: "unknown",
+      addToNotebook: true
+    });
+    upsertNotebookEntry(item);
+  } else {
+    saveWordPref(key, {
+      word,
+      mastery: pref.mastery,
+      addToNotebook: false
+    });
+    removeNotebookEntry(key);
+  }
+
+  refreshVocabularySurfaces();
+}
+
 function updateGlossaryFollow(wordKeys) {
   const keys = Array.from(wordKeys || []).filter(Boolean);
   const all = glossaryEl.querySelectorAll(".glossary-item[data-word-key]");
@@ -906,6 +1153,88 @@ function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon, align
   applyChineseVisibility();
 }
 
+function findLexiconItemByKey(key) {
+  return latestLexicon.find((item) => keyifyWord(item?.word || "") === key) || notebookEntries.find((item) => item.key === key) || null;
+}
+
+function buildStudyControls(item) {
+  const key = keyifyWord(item?.word || item?.key || "");
+  const pref = getWordPref(key, item?.word || "");
+  const isMastered = pref.mastery === "mastered";
+  const isUnknown = pref.mastery === "unknown";
+  const shouldNotebook = isUnknown && pref.addToNotebook;
+
+  return `
+    <div class="study-controls" data-word-key="${escapeHtml(key)}">
+      <div class="mastery-group" aria-label="单词掌握状态">
+        <button type="button" class="mastery-btn${isMastered ? " active" : ""}" data-action="mastery" data-word-key="${escapeHtml(key)}" data-mastery="mastered">已掌握</button>
+        <button type="button" class="mastery-btn${isUnknown ? " active" : ""}" data-action="mastery" data-word-key="${escapeHtml(key)}" data-mastery="unknown">陌生</button>
+      </div>
+      <label class="notebook-toggle${shouldNotebook ? " active" : ""}">
+        <input type="checkbox" data-action="notebook" data-word-key="${escapeHtml(key)}" ${shouldNotebook ? "checked" : ""} />
+        是否将陌生词添加到生词本
+      </label>
+    </div>
+  `;
+}
+
+function renderLexiconCard(item, terms = []) {
+  const word = escapeHtml(item?.word || "");
+  const key = keyifyWord(item?.word || item?.key || "");
+  const pos = escapeHtml(item?.pos || "");
+  const senses = Array.isArray(item?.senses) ? item.senses : [];
+  const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
+  const synonyms = Array.isArray(item?.synonyms) ? item.synonyms : [];
+  const antonyms = Array.isArray(item?.antonyms) ? item.antonyms : [];
+  const wordFormation = String(item?.wordFormation || "");
+
+  pronunciationMap.set(key, String(item?.word || ""));
+
+  const senseHtml = senses
+    .map((s) => {
+      const marker = renderSenseSuperscript(escapeHtml(s?.marker || ""));
+      const meaning = highlightText(s?.meaning || "", terms, "vocab-zh", false);
+      return `<div class=\"sense-line\">${marker} ${meaning}</div>`;
+    })
+    .join("");
+
+  const collocationHtml = collocations.length
+    ? collocations.map((c) => `<div class=\"extra-line\">• ${escapeHtml(c)}</div>`).join("")
+    : "<div class=\"extra-line\">(暂无)</div>";
+
+  const synonymHtml = synonyms.length
+    ? `<div class=\"extra-line\">${escapeHtml(synonyms.join(", "))}</div>`
+    : "<div class=\"extra-line\">(暂无)</div>";
+
+  const antonymHtml = antonyms.length
+    ? `<div class=\"extra-line\">${escapeHtml(antonyms.join(", "))}</div>`
+    : "<div class=\"extra-line\">(暂无)</div>";
+
+  return `
+    <div class=\"glossary-item\" data-word-key=\"${key}\">
+      <div class=\"glossary-head\">
+        <div class=\"head-left\">
+          <span class=\"glossary-word\">${word}</span>
+          <span class=\"glossary-pos\">${pos}</span>
+        </div>
+        <div class=\"head-actions\">
+          <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"us\">美音</button>
+          <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"uk\">英音</button>
+        </div>
+      </div>
+      ${senseHtml}
+      <div class=\"extra-line\"><span class=\"extra-label\">短语搭配:</span></div>
+      ${collocationHtml}
+      <div class=\"extra-line\"><span class=\"extra-label\">词根词缀:</span>${escapeHtml(wordFormation || "(暂无)")}</div>
+      <div class=\"extra-line\"><span class=\"extra-label\">同近义词:</span></div>
+      ${synonymHtml}
+      <div class=\"extra-line\"><span class=\"extra-label\">反义词:</span></div>
+      ${antonymHtml}
+      ${buildStudyControls(item)}
+    </div>
+  `;
+}
+
 function renderGlossary(lexicon) {
   if (!Array.isArray(lexicon) || lexicon.length === 0) {
     glossaryEl.innerHTML = "<p>生成后显示词汇扩展内容。</p>";
@@ -914,65 +1243,26 @@ function renderGlossary(lexicon) {
 
   const zhTerms = collectChineseTerms(lexicon);
   pronunciationMap = new Map();
-
-  glossaryEl.innerHTML = lexicon
-    .map((item) => {
-      const word = escapeHtml(item?.word || "");
-      const key = keyifyWord(item?.word || "");
-      const pos = escapeHtml(item?.pos || "");
-      const senses = Array.isArray(item?.senses) ? item.senses : [];
-      const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
-      const synonyms = Array.isArray(item?.synonyms) ? item.synonyms : [];
-      const antonyms = Array.isArray(item?.antonyms) ? item.antonyms : [];
-      const wordFormation = String(item?.wordFormation || "");
-      pronunciationMap.set(key, String(item?.word || ""));
-
-      const senseHtml = senses
-        .map((s) => {
-          const marker = renderSenseSuperscript(escapeHtml(s?.marker || ""));
-          const meaning = highlightText(s?.meaning || "", zhTerms, "vocab-zh", false);
-          return `<div class=\"sense-line\">${marker} ${meaning}</div>`;
-        })
-        .join("");
-
-      const collocationHtml = collocations.length
-        ? collocations.map((c) => `<div class=\"extra-line\">• ${escapeHtml(c)}</div>`).join("")
-        : "<div class=\"extra-line\">(暂无)</div>";
-
-      const synonymHtml = synonyms.length
-        ? `<div class=\"extra-line\">${escapeHtml(synonyms.join(", "))}</div>`
-        : "<div class=\"extra-line\">(暂无)</div>";
-
-      const antonymHtml = antonyms.length
-        ? `<div class=\"extra-line\">${escapeHtml(antonyms.join(", "))}</div>`
-        : "<div class=\"extra-line\">(暂无)</div>";
-
-      return `
-        <div class=\"glossary-item\" data-word-key=\"${key}\">
-          <div class=\"glossary-head\">
-            <div class=\"head-left\">
-              <span class=\"glossary-word\">${word}</span>
-              <span class=\"glossary-pos\">${pos}</span>
-            </div>
-            <div class=\"head-actions\">
-              <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"us\">美音</button>
-              <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"uk\">英音</button>
-            </div>
-          </div>
-          ${senseHtml}
-          <div class=\"extra-line\"><span class=\"extra-label\">短语搭配:</span></div>
-          ${collocationHtml}
-          <div class=\"extra-line\"><span class=\"extra-label\">词根词缀:</span>${escapeHtml(wordFormation || "(暂无)")}</div>
-          <div class=\"extra-line\"><span class=\"extra-label\">同近义词:</span></div>
-          ${synonymHtml}
-          <div class=\"extra-line\"><span class=\"extra-label\">反义词:</span></div>
-          ${antonymHtml}
-        </div>
-      `;
-    })
-    .join("");
-
+  glossaryEl.innerHTML = lexicon.map((item) => renderLexiconCard(item, zhTerms)).join("");
   lastActiveGlossaryKey = "";
+}
+
+function renderNotebookView() {
+  if (!notebookEntriesEl || !notebookCountEl) return;
+  const rows = getNotebookEntriesSorted();
+  notebookCountEl.textContent = `${rows.length} 个单词`;
+
+  if (!rows.length) {
+    notebookEntriesEl.innerHTML = `<div class="empty-library notebook-empty">生词本还是空的。先在右侧词汇区把单词标记成“陌生”，再勾选加入生词本。</div>`;
+    return;
+  }
+
+  const zhTerms = collectChineseTerms(rows);
+  notebookEntriesEl.innerHTML = rows.map((item) => renderLexiconCard(item, zhTerms)).join("");
+
+  if (currentNotebookFocusKey) {
+    window.requestAnimationFrame(() => focusNotebookEntry(currentNotebookFocusKey));
+  }
 }
 
 function safeFileName(name) {
@@ -1181,8 +1471,10 @@ function applyArticleData(data) {
   articleTitleEl.textContent = finalTitle;
   exportTitleInput.value = finalTitle || String(data.defaultTitle || defaultTitleByWords(latestWords));
 
+  syncNotebookEntriesFromLexicon(latestLexicon);
   renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon, latestAlignment);
   renderGlossary(latestLexicon);
+  renderNotebookView();
 
   if (Array.isArray(data.missing) && data.missing.length > 0) {
     missingWordsEl.textContent = `提示：仍有 ${data.missing.length} 个词未命中：${data.missing.join(", ")}`;
@@ -1194,6 +1486,7 @@ function applyArticleData(data) {
   applyChineseVisibility();
   resultSection.classList.remove("hidden");
   glossaryPanelEl.classList.remove("hidden");
+  setLibraryMode("favorites", { navigate: false, focusArticle: true });
   exportPdfBtn.disabled = false;
   exportWordBtn.disabled = false;
   focusMobileResultAfterGenerate();
@@ -1214,7 +1507,7 @@ function renameFavoriteById(id) {
 
   favorites[index].title = nextTitle;
   saveFavorites();
-  renderFavorites();
+  renderLibraryList();
   syncActionButtonLabels();
 
   if (currentFavoriteId && currentFavoriteId === id) {
@@ -1322,11 +1615,70 @@ articleBlocksEl.addEventListener("click", (event) => {
 glossaryEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const masteryBtn = target.closest(".mastery-btn[data-word-key][data-mastery]");
+  if (masteryBtn) {
+    const key = masteryBtn.getAttribute("data-word-key") || "";
+    const mastery = masteryBtn.getAttribute("data-mastery") || "";
+    const item = findLexiconItemByKey(key);
+    if (item) {
+      setWordMastery(item, mastery);
+    }
+    return;
+  }
   const btn = target.closest(".speak-btn[data-word-key]");
   if (!btn) return;
   const key = btn.getAttribute("data-word-key");
   const accent = btn.getAttribute("data-accent") || "us";
   speakGlossaryByKeyWithAccent(key || "", accent);
+});
+
+glossaryEl.addEventListener("change", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  if (target.matches('input[data-action="notebook"][data-word-key]')) {
+    const key = target.getAttribute("data-word-key") || "";
+    const item = findLexiconItemByKey(key);
+    if (item) {
+      setWordNotebookMembership(item, target.checked);
+    }
+  }
+});
+
+notebookEntriesEl?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const masteryBtn = target.closest(".mastery-btn[data-word-key][data-mastery]");
+  if (masteryBtn) {
+    const key = masteryBtn.getAttribute("data-word-key") || "";
+    const mastery = masteryBtn.getAttribute("data-mastery") || "";
+    const item = findLexiconItemByKey(key);
+    if (item) {
+      currentNotebookFocusKey = key;
+      setWordMastery(item, mastery);
+      renderNotebookView();
+    }
+    return;
+  }
+  const speakBtn = target.closest(".speak-btn[data-word-key]");
+  if (speakBtn) {
+    const key = speakBtn.getAttribute("data-word-key");
+    const accent = speakBtn.getAttribute("data-accent") || "us";
+    speakGlossaryByKeyWithAccent(key || "", accent);
+  }
+});
+
+notebookEntriesEl?.addEventListener("change", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  if (target.matches('input[data-action="notebook"][data-word-key]')) {
+    const key = target.getAttribute("data-word-key") || "";
+    const item = findLexiconItemByKey(key);
+    if (item) {
+      currentNotebookFocusKey = key;
+      setWordNotebookMembership(item, target.checked);
+      renderNotebookView();
+    }
+  }
 });
 
 readingModeBtn.addEventListener("click", () => {
@@ -1340,6 +1692,14 @@ mobileNavBtnEls.forEach((btn) => {
     const target = String(btn.getAttribute("data-target") || "home");
     setMobilePage(target);
   });
+});
+
+libraryFavoritesBtnEl?.addEventListener("click", () => {
+  setLibraryMode("favorites", { focusArticle: Boolean(latestArticle) });
+});
+
+libraryNotebookBtnEl?.addEventListener("click", () => {
+  setLibraryMode("notebook");
 });
 
 toggleZhBtn.addEventListener("click", () => {
@@ -1363,7 +1723,7 @@ favoriteBtn.addEventListener("click", () => {
   if (isCurrentArticleFavorited()) {
     favorites = favorites.filter((item) => item.id !== currentFavoriteId);
     saveFavorites();
-    renderFavorites();
+    renderLibraryList();
     syncActionButtonLabels();
     statusEl.textContent = "已取消收藏。";
     return;
@@ -1373,7 +1733,7 @@ favoriteBtn.addEventListener("click", () => {
   currentFavoriteId = item.id;
   favorites.unshift(item);
   saveFavorites();
-  renderFavorites();
+  renderLibraryList();
   syncActionButtonLabels();
   statusEl.textContent = "已加入收藏夹。";
 });
@@ -1381,6 +1741,16 @@ favoriteBtn.addEventListener("click", () => {
 favoritesListEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  if (currentLibraryMode === "notebook") {
+    const notebookItem = target.closest(".notebook-item[data-notebook-key]");
+    if (!notebookItem) return;
+    const key = notebookItem.getAttribute("data-notebook-key") || "";
+    currentNotebookFocusKey = key;
+    setLibraryMode("notebook");
+    focusNotebookEntry(key);
+    return;
+  }
+
   const rename = target.closest(".fav-rename[data-fav-rename]");
   if (rename) {
     const renameId = rename.getAttribute("data-fav-rename");
@@ -1395,7 +1765,7 @@ favoritesListEl.addEventListener("click", (event) => {
       currentFavoriteId = "";
     }
     saveFavorites();
-    renderFavorites();
+    renderLibraryList();
     syncActionButtonLabels();
     statusEl.textContent = "已从收藏夹删除。";
     return;
@@ -1406,6 +1776,7 @@ favoritesListEl.addEventListener("click", (event) => {
   const found = favorites.find((x) => x.id === id);
   if (!found) return;
 
+  setLibraryMode("favorites", { focusArticle: true });
   latestWords = Array.isArray(found.words) ? found.words : [];
   wordsInput.value = latestWords.join(", ");
   applyArticleData(found);
@@ -1442,11 +1813,14 @@ async function init() {
     return;
   }
   loadFavorites();
-  renderFavorites();
+  loadVocabPrefs();
+  loadNotebookEntries();
   renderSpelling();
   applyReadingFontSize();
   applyReadingMode();
   applyChineseVisibility();
+  renderNotebookView();
+  setLibraryMode(currentLibraryMode, { navigate: false, focusArticle: Boolean(latestArticle) });
   refreshMobileNav();
 }
 

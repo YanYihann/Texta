@@ -6,7 +6,7 @@
     <title>Texta</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
-    <link rel="stylesheet" href="./style.css?v=2026.04.04.170500" />
+    <link rel="stylesheet" href="./style.css?v=2026.04.04.171500" />
   </head>
   <body>
     <main class="app-shell">
@@ -45,42 +45,61 @@
         <button id="generateBtn" class="primary-btn">生成文章</button>
         <p id="status"></p>
 
-        <h3 class="fav-title">收藏夹</h3>
+        <div class="library-head">
+          <h3 class="fav-title">内容库</h3>
+          <div class="library-tabs" aria-label="内容切换">
+            <button id="libraryFavoritesBtn" type="button" class="library-tab active">收藏夹</button>
+            <button id="libraryNotebookBtn" type="button" class="library-tab">生词本</button>
+          </div>
+        </div>
         <div id="favoritesList" class="favorites-list"></div>
       </section>
 
       <section id="resultSection" class="panel result-panel hidden">
-        <div class="top-actions">
-          <h2>文章生成结果</h2>
-          <div class="actions">
-            <button id="readingModeBtn" type="button">阅读模式</button>
-            <button id="toggleZhBtn" type="button">隐藏中文</button>
-            <button id="favoriteBtn" type="button">收藏文章</button>
-            <button id="exportPdfBtn" type="button" disabled>导出 PDF</button>
-            <button id="exportWordBtn" type="button" disabled>导出 Word</button>
+        <div id="articleView" class="result-view">
+          <div class="top-actions">
+            <h2>文章生成结果</h2>
+            <div class="actions">
+              <button id="readingModeBtn" type="button">阅读模式</button>
+              <button id="toggleZhBtn" type="button">隐藏中文</button>
+              <button id="favoriteBtn" type="button">收藏文章</button>
+              <button id="exportPdfBtn" type="button" disabled>导出 PDF</button>
+              <button id="exportWordBtn" type="button" disabled>导出 Word</button>
+            </div>
           </div>
+
+          <div class="article-tools-row">
+            <div class="reading-size-control">
+              <label for="fontSizeSelect">阅读字号</label>
+              <select id="fontSizeSelect">
+                <option value="small" selected>小</option>
+                <option value="medium">中</option>
+                <option value="large">大</option>
+              </select>
+            </div>
+          </div>
+
+          <label for="exportTitle">导出标题（默认自动生成，可修改）</label>
+          <input id="exportTitle" type="text" placeholder="Vocabulary YYYY-MM-DD (N words)" />
+
+          <p id="missingWords" class="warning"></p>
+
+          <section id="exportArea" class="export-area">
+            <h3 id="articleTitle" class="article-title"></h3>
+            <div id="articleBlocks" class="article-blocks"></div>
+          </section>
         </div>
 
-        <div class="article-tools-row">
-          <div class="reading-size-control">
-            <label for="fontSizeSelect">阅读字号</label>
-            <select id="fontSizeSelect">
-              <option value="small" selected>小</option>
-              <option value="medium">中</option>
-              <option value="large">大</option>
-            </select>
+        <div id="notebookView" class="result-view notebook-view hidden">
+          <div class="notebook-view-head">
+            <div>
+              <h2>生词本</h2>
+              <p class="subtitle">这里会记录你标记为陌生并加入生词本的单词。</p>
+            </div>
+            <span id="notebookCount" class="notebook-count">0 个单词</span>
           </div>
+          <div id="notebookEntries" class="notebook-entries"></div>
         </div>
-
-        <label for="exportTitle">导出标题（默认自动生成，可修改）</label>
-        <input id="exportTitle" type="text" placeholder="Vocabulary YYYY-MM-DD (N words)" />
-
-        <p id="missingWords" class="warning"></p>
-
-        <section id="exportArea" class="export-area">
-          <h3 id="articleTitle" class="article-title"></h3>
-          <div id="articleBlocks" class="article-blocks"></div>
-        </section>
       </section>
 
       <section id="glossaryPanel" class="panel glossary-panel hidden">
@@ -130,7 +149,7 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-    <script src="./site-config.js?v=2026.04.04.170500"></script>
-    <script src="./app.js?v=2026.04.04.170500"></script>
+    <script src="./site-config.js?v=2026.04.04.171500"></script>
+    <script src="./app.js?v=2026.04.04.171500"></script>
   </body>
 </html>
