@@ -31,6 +31,8 @@ const articleViewEl = document.getElementById("articleView");
 const notebookViewEl = document.getElementById("notebookView");
 const notebookEntriesEl = document.getElementById("notebookEntries");
 const notebookCountEl = document.getElementById("notebookCount");
+const notebookSearchInputEl = document.getElementById("notebookSearchInput");
+const notebookPosFilterEl = document.getElementById("notebookPosFilter");
 const glossaryPanelEl = document.getElementById("glossaryPanel");
 const missingWordsEl = document.getElementById("missingWords");
 const articleTitleEl = document.getElementById("articleTitle");
@@ -67,6 +69,8 @@ let currentMobilePage = "home";
 let currentFontSize = localStorage.getItem("texta_font_size") || "small";
 let currentLibraryMode = localStorage.getItem("texta_library_mode") || "favorites";
 let currentNotebookFocusKey = "";
+let notebookSearchTerm = "";
+let notebookPosFilter = "all";
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
@@ -368,6 +372,48 @@ function syncGlossaryFooterButton() {
 
 function getNotebookEntriesSorted() {
   return [...notebookEntries].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+}
+
+function buildNotebookSearchText(item) {
+  const senses = Array.isArray(item?.senses) ? item.senses.map((sense) => String(sense?.meaning || "").trim()) : [];
+  const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
+  return [item?.word || "", item?.pos || "", ...senses, ...collocations].join(" ").toLowerCase();
+}
+
+function getNotebookPosOptions(rows) {
+  return Array.from(
+    new Set(
+      rows
+        .map((item) => String(item?.pos || "").trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+}
+
+function syncNotebookFilters(rows) {
+  const posOptions = getNotebookPosOptions(rows);
+  if (notebookPosFilterEl) {
+    const optionsHtml = ['<option value="all">全部词性</option>']
+      .concat(posOptions.map((pos) => `<option value="${escapeHtml(pos)}">${escapeHtml(pos)}</option>`))
+      .join("");
+    notebookPosFilterEl.innerHTML = optionsHtml;
+    if (!posOptions.includes(notebookPosFilter) && notebookPosFilter !== "all") {
+      notebookPosFilter = "all";
+    }
+    notebookPosFilterEl.value = notebookPosFilter;
+  }
+  if (notebookSearchInputEl) {
+    notebookSearchInputEl.value = notebookSearchTerm;
+  }
+}
+
+function filterNotebookRows(rows) {
+  const keyword = notebookSearchTerm.trim().toLowerCase();
+  return rows.filter((item) => {
+    const matchKeyword = !keyword || buildNotebookSearchText(item).includes(keyword);
+    const matchPos = notebookPosFilter === "all" || String(item?.pos || "").trim() === notebookPosFilter;
+    return matchKeyword && matchPos;
+  });
 }
 
 function renderFavorites() {
@@ -1239,15 +1285,22 @@ function renderGlossary(lexicon) {
 function renderNotebookView() {
   if (!notebookEntriesEl || !notebookCountEl) return;
   const rows = getNotebookEntriesSorted();
-  notebookCountEl.textContent = `${rows.length} 个单词`;
+  syncNotebookFilters(rows);
+  const filteredRows = filterNotebookRows(rows);
+  notebookCountEl.textContent = filteredRows.length === rows.length ? `${rows.length} 个单词` : `显示 ${filteredRows.length} / ${rows.length} 个单词`;
 
   if (!rows.length) {
-    notebookEntriesEl.innerHTML = `<div class="empty-library notebook-empty">生词本还是空的。先在右侧词汇区把单词标记成“陌生”，再勾选加入生词本。</div>`;
+    notebookEntriesEl.innerHTML = `<div class="empty-library notebook-empty">生词本还是空的。先在右侧词汇区把陌生词加入生词本。</div>`;
     return;
   }
 
-  const zhTerms = collectChineseTerms(rows);
-  notebookEntriesEl.innerHTML = rows.map((item) => renderLexiconCard(item, zhTerms)).join("");
+  if (!filteredRows.length) {
+    notebookEntriesEl.innerHTML = `<div class="empty-library notebook-empty">没有找到符合当前搜索或筛选条件的单词。</div>`;
+    return;
+  }
+
+  const zhTerms = collectChineseTerms(filteredRows);
+  notebookEntriesEl.innerHTML = filteredRows.map((item) => renderLexiconCard(item, zhTerms)).join("");
 
   if (currentNotebookFocusKey) {
     window.requestAnimationFrame(() => focusNotebookEntry(currentNotebookFocusKey));
@@ -1679,6 +1732,16 @@ addUnknownToNotebookBtnEl?.addEventListener("click", () => {
   renderLibraryList();
   syncGlossaryFooterButton();
   statusEl.textContent = `已将 ${pending.length} 个陌生词加入生词本。`;
+});
+
+notebookSearchInputEl?.addEventListener("input", () => {
+  notebookSearchTerm = String(notebookSearchInputEl.value || "");
+  renderNotebookView();
+});
+
+notebookPosFilterEl?.addEventListener("change", () => {
+  notebookPosFilter = String(notebookPosFilterEl.value || "all");
+  renderNotebookView();
 });
 
 toggleZhBtn.addEventListener("click", () => {

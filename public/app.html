@@ -6,7 +6,7 @@
     <title>Texta</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
-    <link rel="stylesheet" href="./style.css?v=2026.04.04.172500" />
+    <link rel="stylesheet" href="./style.css?v=2026.04.04.173500" />
   </head>
   <body>
     <main class="app-shell">
@@ -98,6 +98,12 @@
             </div>
             <span id="notebookCount" class="notebook-count">0 个单词</span>
           </div>
+          <div class="notebook-toolbar">
+            <input id="notebookSearchInput" type="text" placeholder="搜索单词、释义或搭配" />
+            <select id="notebookPosFilter">
+              <option value="all">全部词性</option>
+            </select>
+          </div>
           <div id="notebookEntries" class="notebook-entries"></div>
         </div>
       </section>
@@ -152,7 +158,7 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-    <script src="./site-config.js?v=2026.04.04.172500"></script>
-    <script src="./app.js?v=2026.04.04.172500"></script>
+    <script src="./site-config.js?v=2026.04.04.173500"></script>
+    <script src="./app.js?v=2026.04.04.173500"></script>
   </body>
 </html>

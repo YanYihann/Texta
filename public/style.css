@@ -1244,6 +1244,26 @@ button:disabled {
   white-space: nowrap;
 }
 
+.notebook-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.notebook-toolbar input,
+.notebook-toolbar select {
+  margin: 0;
+}
+
+.notebook-toolbar input {
+  flex: 1;
+}
+
+.notebook-toolbar select {
+  width: 130px;
+}
+
 .notebook-entries {
   display: grid;
   gap: 12px;
@@ -1692,6 +1712,16 @@ body.reading-mode .app-shell {
   .notebook-view-head {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .notebook-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .notebook-toolbar select {
+    width: 100%;
   }
 
   .top-actions {
