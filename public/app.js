@@ -1250,7 +1250,8 @@ function setLibraryMode(mode, options = {}) {
   }
 
   if (isMobileLayout() && options.navigate !== false) {
-    currentMobilePage = "article";
+    const targetPage = options.mobilePage === "glossary" ? "glossary" : "article";
+    currentMobilePage = targetPage;
     applyMobilePageLayout();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -1963,11 +1964,11 @@ mobileNavBtnEls.forEach((btn) => {
 });
 
 libraryFavoritesBtnEl?.addEventListener("click", () => {
-  setLibraryMode("favorites", { focusArticle: Boolean(latestArticle) });
+  setLibraryMode("favorites", { navigate: false, focusArticle: Boolean(latestArticle) });
 });
 
 libraryNotebookBtnEl?.addEventListener("click", () => {
-  setLibraryMode("notebook");
+  setLibraryMode("notebook", { navigate: false });
 });
 
 addUnknownToNotebookBtnEl?.addEventListener("click", () => {
@@ -2039,7 +2040,7 @@ favoritesListEl.addEventListener("click", (event) => {
     if (!notebookItem) return;
     const key = notebookItem.getAttribute("data-notebook-key") || "";
     currentNotebookFocusKey = key;
-    setLibraryMode("notebook");
+    setLibraryMode("notebook", { mobilePage: "glossary" });
     focusNotebookEntry(key);
     return;
   }
@@ -2069,7 +2070,7 @@ favoritesListEl.addEventListener("click", (event) => {
   const found = favorites.find((x) => x.id === id);
   if (!found) return;
 
-  setLibraryMode("favorites", { focusArticle: true });
+  setLibraryMode("favorites", { focusArticle: true, mobilePage: "article" });
   latestWords = Array.isArray(found.words) ? found.words : [];
   wordsInput.value = latestWords.join(", ");
   applyArticleData(found);
