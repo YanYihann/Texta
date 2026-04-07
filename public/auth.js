@@ -107,6 +107,7 @@ registerBtnEl.addEventListener("click", async () => {
     }
 
     localStorage.setItem("texta_auth_token", loginData.token || "");
+    localStorage.setItem("texta_guide_force_open", "1");
     location.href = "./app.html";
   } catch (error) {
     setAuthMessage(`注册失败：${error.message}`);

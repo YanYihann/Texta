@@ -6,7 +6,7 @@
     <title>Texta</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
-    <link rel="stylesheet" href="./style.css?v=2026.04.08.011500" />
+    <link rel="stylesheet" href="./style.css?v=2026.04.08.220000" />
   </head>
   <body>
     <main class="app-shell">
@@ -35,6 +35,18 @@
         <p id="fileImportHint" class="file-import-hint hidden"></p>
         <div id="spellHints" class="spell-hints hidden"></div>
         <div id="wordChips" class="word-chips"></div>
+        <section class="guide-card" aria-label="使用说明">
+          <div class="guide-card-head">
+            <h3>使用说明</h3>
+            <button id="openGuideBtn" type="button" class="ghost-btn">查看完整说明</button>
+          </div>
+          <ol class="guide-steps">
+            <li>输入英文单词或短语（支持逗号、换行，最多 120 个）。</li>
+            <li>可选择生成模式、生成档位、快速模式后点击“生成文章”。</li>
+            <li>点击文中高亮词可跳转到词汇释义，标记“陌生”可加入生词本。</li>
+            <li>支持收藏、跨端同步、导出 PDF/Word。</li>
+          </ol>
+        </section>
 
         <label for="level">难度等级</label>
         <select id="level">
@@ -142,6 +154,34 @@
       <button type="button" class="mobile-nav-btn" data-target="glossary">词汇</button>
     </nav>
 
+    <section id="guideModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-card guide-modal-card">
+        <div class="modal-head">
+          <h3>Texta 使用说明</h3>
+          <button id="closeGuideBtn" type="button" class="ghost-btn">关闭</button>
+        </div>
+
+        <div class="guide-modal-content">
+          <ol class="guide-steps">
+            <li>先在左侧输入单词，建议每次 10-25 个，命中率和可读性更稳定。</li>
+            <li>普通生成用于日常练习；高级生成质量更高但消耗次数更多。</li>
+            <li>中英混合模式适合“中文语境 + 英文挖空词”记忆；普通模式适合整篇阅读。</li>
+            <li>文章生成后可点击高亮词查看释义，并把陌生词加入生词本。</li>
+            <li>收藏夹和生词本会自动同步到云端，不同设备登录同账号可共享。</li>
+            <li>导出前可改标题、选择是否包含中文翻译，并调整页边距。</li>
+          </ol>
+        </div>
+
+        <div class="modal-actions guide-actions">
+          <label class="quick-row guide-check-row" for="guideDontShow">
+            <input id="guideDontShow" type="checkbox" checked />
+            下次不再自动弹出
+          </label>
+          <button id="closeGuideFooterBtn" type="button">我知道了</button>
+        </div>
+      </div>
+    </section>
+
     <section id="exportModal" class="modal hidden" aria-hidden="true">
       <div class="modal-card">
         <div class="modal-head">
@@ -176,7 +216,7 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-    <script src="./site-config.js?v=2026.04.08.011500"></script>
-    <script src="./app.js?v=2026.04.08.011500"></script>
+    <script src="./site-config.js?v=2026.04.08.220000"></script>
+    <script src="./app.js?v=2026.04.08.220000"></script>
   </body>
 </html>

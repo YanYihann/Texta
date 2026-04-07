@@ -6,6 +6,7 @@ const quickModeInput = document.getElementById("quickMode");
 const wordFileInput = document.getElementById("wordFileInput");
 const uploadWordsBtn = document.getElementById("uploadWordsBtn");
 const clearWordsBtn = document.getElementById("clearWordsBtn");
+const openGuideBtn = document.getElementById("openGuideBtn");
 const fileImportHintEl = document.getElementById("fileImportHint");
 const generateBtn = document.getElementById("generateBtn");
 const readingModeBtn = document.getElementById("readingModeBtn");
@@ -53,6 +54,10 @@ const previewIncludeZhInput = document.getElementById("previewIncludeZh");
 const previewMarginSelect = document.getElementById("previewMargin");
 const previewPaperEl = document.getElementById("previewPaper");
 const confirmExportBtn = document.getElementById("confirmExportBtn");
+const guideModalEl = document.getElementById("guideModal");
+const closeGuideBtnEl = document.getElementById("closeGuideBtn");
+const closeGuideFooterBtnEl = document.getElementById("closeGuideFooterBtn");
+const guideDontShowEl = document.getElementById("guideDontShow");
 
 let latestArticle = "";
 let latestWords = [];
@@ -83,6 +88,7 @@ const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
 const NOTEBOOK_KEY = "texta_notebook_v1";
+const GUIDE_FORCE_OPEN_KEY = "texta_guide_force_open";
 let favorites = [];
 let vocabPrefs = {};
 let notebookEntries = [];
@@ -175,6 +181,49 @@ function setAuthToken(token) {
   } else {
     localStorage.removeItem("texta_auth_token");
   }
+}
+
+function getGuideSeenKey(user = currentUser) {
+  const userId = String(user?.id || "").trim();
+  if (!userId) return "texta_guide_seen_guest";
+  return `texta_guide_seen_${userId}`;
+}
+
+function markGuideSeen(user = currentUser) {
+  const key = getGuideSeenKey(user);
+  localStorage.setItem(key, "1");
+}
+
+function shouldAutoOpenGuide(user = currentUser) {
+  if (localStorage.getItem(GUIDE_FORCE_OPEN_KEY) === "1") {
+    return true;
+  }
+  const key = getGuideSeenKey(user);
+  return localStorage.getItem(key) !== "1";
+}
+
+function openGuideModal(autoOpen = false) {
+  if (!guideModalEl) return;
+  if (guideDontShowEl) {
+    guideDontShowEl.checked = true;
+  }
+  guideModalEl.classList.remove("hidden");
+  guideModalEl.setAttribute("aria-hidden", "false");
+  if (autoOpen) {
+    statusEl.textContent = "欢迎使用 Texta，可先查看一次使用说明。";
+  }
+}
+
+function closeGuideModal(options = {}) {
+  if (!guideModalEl) return;
+  const { respectCheckbox = true } = options;
+  const shouldRemember = !respectCheckbox || !guideDontShowEl || guideDontShowEl.checked;
+  if (shouldRemember) {
+    markGuideSeen();
+  }
+  localStorage.removeItem(GUIDE_FORCE_OPEN_KEY);
+  guideModalEl.classList.add("hidden");
+  guideModalEl.setAttribute("aria-hidden", "true");
 }
 
 function renderUsage(usage, user = currentUser) {
@@ -2184,6 +2233,23 @@ toggleZhBtn.addEventListener("click", () => {
 exportPdfBtn.addEventListener("click", () => openExportPreview("pdf"));
 exportWordBtn.addEventListener("click", () => openExportPreview("word"));
 closeModalBtn.addEventListener("click", closeExportPreview);
+openGuideBtn?.addEventListener("click", () => openGuideModal(false));
+closeGuideBtnEl?.addEventListener("click", () => closeGuideModal({ respectCheckbox: true }));
+closeGuideFooterBtnEl?.addEventListener("click", () => closeGuideModal({ respectCheckbox: true }));
+guideModalEl?.addEventListener("click", (event) => {
+  if (event.target === guideModalEl) {
+    closeGuideModal({ respectCheckbox: true });
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (guideModalEl && !guideModalEl.classList.contains("hidden")) {
+    closeGuideModal({ respectCheckbox: true });
+  }
+  if (exportModalEl && !exportModalEl.classList.contains("hidden")) {
+    closeExportPreview();
+  }
+});
 fontSizeSelectEl?.addEventListener("change", () => {
   currentFontSize = String(fontSizeSelectEl.value || "small");
   applyReadingFontSize();
@@ -2298,6 +2364,9 @@ async function init() {
   setLibraryMode(currentLibraryMode, { navigate: false, focusArticle: Boolean(latestArticle) });
   syncGlossaryFooterButton();
   refreshMobileNav();
+  if (shouldAutoOpenGuide(currentUser)) {
+    window.setTimeout(() => openGuideModal(true), 120);
+  }
 }
 
 init();
