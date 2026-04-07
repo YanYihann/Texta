@@ -927,28 +927,40 @@ async function generateLexicon(words, quickMode) {
 
 async function generateArticlePackage(words, level, quickMode, lexicon, generationMode = "standard", extraConstraint = "") {
   const promptLevel = levelToPromptText(level);
-  const lengthRule = quickMode ? "Length: 120-180 words." : words.length > 16 ? "Length: 320-450 words." : "Length: 220-320 words.";
-  const paragraphRule = quickMode
-    ? "Use 2-3 short paragraphs separated by blank lines."
-    : words.length > 16
-      ? "Use 4-5 paragraphs separated by blank lines."
-      : "Use 3-4 paragraphs separated by blank lines.";
+  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
+  const lengthRule = isMixedMode
+    ? `Use compact output with ${words.length}-${Math.max(words.length + 2, Math.ceil(words.length * 1.15))} short sentences.`
+    : quickMode
+      ? "Length: 120-180 words."
+      : words.length > 16
+        ? "Length: 320-450 words."
+        : "Length: 220-320 words.";
+  const paragraphRule = isMixedMode
+    ? "Break into short blocks (about 3-5 sentences per paragraph) with blank lines."
+    : quickMode
+      ? "Use 2-3 short paragraphs separated by blank lines."
+      : words.length > 16
+        ? "Use 4-5 paragraphs separated by blank lines."
+        : "Use 3-4 paragraphs separated by blank lines.";
 
-  const vocabGuide = lexicon
+  const vocabGuide = (lexicon || [])
     .map((item) => {
       const sensesText = item.senses.map((s) => `${s.marker} ${s.meaning}`).join("; ");
       return `${item.word} (${item.pos || "-"}): ${sensesText}`;
     })
     .join("\n");
 
-  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
   const modeRules = isMixedMode
     ? [
         "Write a Chinese-first mixed-language article.",
-        "The main body must be natural Chinese sentences.",
+        "The main body must be short and natural Chinese sentences.",
         "Insert target words in English only, do not translate target words into Chinese.",
         "For each target word, use exactly the original input form (no plural/past/ing).",
         "Each target word should appear once if possible, and never more than twice.",
+        "Most sentences should contain exactly one target word.",
+        "Keep Chinese background concise; avoid long explanatory paragraphs.",
+        "Do NOT output keyword list sections such as '片段1：补充关键词 ...'.",
+        "Do NOT output standalone dictionary lines such as 'n. xxx' in the body.",
         "If it is hard to connect all words in one coherent story, split into several short fragments/sections, but all target words must be covered."
       ]
     : ["Write an English IELTS-style article."];
@@ -1050,6 +1062,63 @@ function findOverusedWords(article, words, maxAllowed = 2) {
   return overused;
 }
 
+function hasMixedArtifactContent(article) {
+  const text = String(article || "");
+  return (
+    /片段\s*\d+\s*[:：]\s*补充关键词/i.test(text) ||
+    /"title"\s*:\s*"/i.test(text) ||
+    /"article"\s*:\s*"/i.test(text) ||
+    /补充关键词/.test(text)
+  );
+}
+
+function countSentenceHitRatio(article, words) {
+  const segments = String(article || "")
+    .replace(/\r/g, "")
+    .split(/[。！？!?；;]+/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (segments.length === 0) {
+    return 0;
+  }
+  const escapedWords = (words || []).map((w) => String(w || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean);
+  if (escapedWords.length === 0) {
+    return 0;
+  }
+  let hitCount = 0;
+  for (const seg of segments) {
+    const hasWord = escapedWords.some((w) => new RegExp(`\\b${w}\\b`, "i").test(seg));
+    if (hasWord) {
+      hitCount += 1;
+    }
+  }
+  return hitCount / segments.length;
+}
+
+function buildCompactMixedArticle(words, lexicon) {
+  const markerMap = new Map(
+    (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
+  );
+  const templates = [
+    (token) => `刚进门就看到 ${token}，我立刻开始处理细节。`,
+    (token) => `这一步如果忽略 ${token}，后面很容易出错。`,
+    (token) => `我先把 ${token} 稳住，节奏一下就顺了。`,
+    (token) => `遇到突发情况时，${token} 往往是关键线索。`,
+    (token) => `我把今天的重点记成 ${token}，提醒自己更谨慎。`,
+    (token) => `看似普通的一刻，因为 ${token} 变得很真实。`
+  ];
+
+  const lines = (words || []).map((word, index) => {
+    const marker = markerMap.get(String(word).toLowerCase()) || "①";
+    const token = `${word}${marker}`;
+    const template = templates[index % templates.length];
+    return template(token);
+  });
+
+  const chunks = chunkArray(lines, 4);
+  return chunks.map((group) => group.join("")).join("\n\n");
+}
+
 function appendMissingWordsFragmentsMixed(article, missingWords, lexicon) {
   if (!Array.isArray(missingWords) || missingWords.length === 0) {
     return String(article || "");
@@ -1057,11 +1126,11 @@ function appendMissingWordsFragmentsMixed(article, missingWords, lexicon) {
   const markerMap = new Map(
     (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
   );
-  const fragments = missingWords.map((word, index) => {
+  const fragments = missingWords.map((word) => {
     const marker = markerMap.get(String(word).toLowerCase()) || "①";
-    return `片段${index + 1}：这个情境里我特别记住了 ${word}${marker}。`;
+    return `这一句我只记住 ${word}${marker}，继续往下推进。`;
   });
-  return `${String(article || "").trim()}\n\n${fragments.join("\n\n")}`.trim();
+  return `${String(article || "").trim()}\n\n${fragments.join("")}`.trim();
 }
 
 async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
@@ -1892,7 +1961,8 @@ app.post("/api/generate", async (req, res) => {
           overused.length > 0
             ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
             : "",
-          "If needed, split into short fragments, but keep natural Chinese body and include every target word."
+          "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
+          "Mixed mode must look compact: most sentences include one target word and avoid long Chinese-only lines."
         ].join(" ")
       );
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
@@ -1915,6 +1985,17 @@ app.post("/api/generate", async (req, res) => {
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
           missing = findMissingWords(articlePack.article, words);
         }
+      }
+    }
+
+    if (generationMode === "mixed") {
+      const hitRatio = countSentenceHitRatio(articlePack.article, words);
+      const hasArtifacts = hasMixedArtifactContent(articlePack.article);
+      if (missing.length > 0 || hasArtifacts || hitRatio < 0.72) {
+        articlePack.article = buildCompactMixedArticle(words, lexicon);
+        articlePack.title = "中英混合速记";
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        missing = findMissingWords(articlePack.article, words);
       }
     }
 
