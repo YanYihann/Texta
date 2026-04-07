@@ -304,9 +304,21 @@ function dedupeBy(items, pickKey) {
   return out;
 }
 
+function normalizeIsoDate(value, fallback = new Date().toISOString()) {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toISOString();
+}
+
 function normalizeFavorite(item) {
+  const nowIso = new Date().toISOString();
   const id = String(item?.id || "").trim() || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const savedAt = String(item?.savedAt || "").trim() || new Date().toISOString();
+  const savedAtRaw = String(item?.savedAt || "").trim();
+  const savedAt = savedAtRaw || nowIso;
+  const createdAt = normalizeIsoDate(item?.createdAt || savedAtRaw, nowIso);
+  const updatedAt = normalizeIsoDate(item?.updatedAt || item?.createdAt || savedAtRaw, nowIso);
   return {
     id,
     title: String(item?.title || "未命名文章"),
@@ -318,15 +330,15 @@ function normalizeFavorite(item) {
     paragraphsZh: Array.isArray(item?.paragraphsZh) ? item.paragraphsZh : [],
     alignment: Array.isArray(item?.alignment) ? item.alignment : [],
     missing: Array.isArray(item?.missing) ? item.missing : [],
-    createdAt: String(item?.createdAt || savedAt),
-    updatedAt: String(item?.updatedAt || savedAt)
+    createdAt,
+    updatedAt
   };
 }
 
 function normalizeNotebookEntry(item) {
+  const nowIso = new Date().toISOString();
   const word = String(item?.word || "").trim();
   const key = String(item?.key || item?.wordKey || keyifyWord(word)).trim();
-  const now = new Date().toISOString();
   if (!key) return null;
   return {
     id: String(item?.id || "").trim() || `nb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -338,14 +350,15 @@ function normalizeNotebookEntry(item) {
     synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
     antonyms: Array.isArray(item?.antonyms) ? item.antonyms : [],
     wordFormation: String(item?.wordFormation || ""),
-    createdAt: String(item?.createdAt || now),
-    updatedAt: String(item?.updatedAt || now)
+    createdAt: normalizeIsoDate(item?.createdAt, nowIso),
+    updatedAt: normalizeIsoDate(item?.updatedAt || item?.createdAt, nowIso)
   };
 }
 
 function normalizeVocabPrefsMap(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const out = {};
+  const nowIso = new Date().toISOString();
   for (const [key, value] of Object.entries(raw)) {
     const wordKey = String(key || "").trim();
     if (!wordKey) continue;
@@ -353,8 +366,8 @@ function normalizeVocabPrefsMap(raw) {
     out[wordKey] = {
       word: String(value?.word || ""),
       mastery,
-      createdAt: String(value?.createdAt || value?.updatedAt || new Date().toISOString()),
-      updatedAt: String(value?.updatedAt || new Date().toISOString())
+      createdAt: normalizeIsoDate(value?.createdAt || value?.updatedAt, nowIso),
+      updatedAt: normalizeIsoDate(value?.updatedAt || value?.createdAt, nowIso)
     };
   }
   return out;
