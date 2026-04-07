@@ -508,6 +508,12 @@ h3 {
   gap: 8px;
 }
 
+.user-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .user-badge {
   display: inline-flex;
   align-items: center;
@@ -529,11 +535,23 @@ h3 {
 }
 
 .guide-card {
-  margin-top: 12px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 10px 12px;
+  display: none !important;
+}
+
+.guide-mini-btn {
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.guide-mini-btn:hover {
+  background: #e2e8ff;
+  box-shadow: none;
 }
 
 .guide-card-head {
@@ -1803,18 +1821,14 @@ body.reading-mode .app-shell {
     padding: 9px 10px;
   }
 
-  .guide-card {
-    padding: 9px 10px;
+  .user-row-actions {
+    gap: 6px;
   }
 
-  .guide-card-head {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .guide-steps {
-    font-size: 12px;
-    line-height: 1.55;
+  .guide-mini-btn {
+    min-height: 26px;
+    padding: 3px 9px;
+    font-size: 11px;
   }
 
   .library-head {

@@ -30,6 +30,8 @@ const upgradeVipBtnEl = document.getElementById("upgradeVipBtn");
 const adminReviewLinkEl = document.getElementById("adminReviewLink");
 const adminUsageLinkEl = document.getElementById("adminUsageLink");
 const inputPanelEl = document.querySelector(".input-panel");
+const userRowEl = document.querySelector(".user-row");
+const guideCardEl = document.querySelector(".guide-card");
 const mobileBottomNavEl = document.getElementById("mobileBottomNav");
 const mobileNavBtnEls = Array.from(document.querySelectorAll(".mobile-nav-btn"));
 
@@ -224,6 +226,34 @@ function closeGuideModal(options = {}) {
   localStorage.removeItem(GUIDE_FORCE_OPEN_KEY);
   guideModalEl.classList.add("hidden");
   guideModalEl.setAttribute("aria-hidden", "true");
+}
+
+function mountGuideButtonNearUser() {
+  if (!openGuideBtn || !userRowEl) return;
+
+  if (guideCardEl) {
+    guideCardEl.classList.add("hidden");
+  }
+
+  let actionsEl = userRowEl.querySelector(".user-row-actions");
+  if (!actionsEl) {
+    actionsEl = document.createElement("div");
+    actionsEl.className = "user-row-actions";
+    userRowEl.appendChild(actionsEl);
+  }
+
+  if (logoutBtnEl && logoutBtnEl.parentElement !== actionsEl) {
+    actionsEl.appendChild(logoutBtnEl);
+  }
+
+  openGuideBtn.classList.remove("ghost-btn");
+  openGuideBtn.classList.add("guide-mini-btn");
+  openGuideBtn.textContent = "说明";
+  openGuideBtn.setAttribute("aria-label", "使用说明");
+  openGuideBtn.title = "使用说明";
+  if (openGuideBtn.parentElement !== actionsEl) {
+    actionsEl.insertBefore(openGuideBtn, actionsEl.firstChild);
+  }
 }
 
 function renderUsage(usage, user = currentUser) {
@@ -2347,6 +2377,7 @@ logoutBtnEl.addEventListener("click", async () => {
 });
 
 async function init() {
+  mountGuideButtonNearUser();
   const ok = await loadMe();
   if (!ok) {
     location.href = "./index.html";
