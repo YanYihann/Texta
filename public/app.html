@@ -27,6 +27,12 @@
         </div>
         <label for="words" class="field-note-label">单词/短语列表（换行、逗号分隔，空格会保留在短语内）</label>
         <textarea id="words" placeholder="例如: catastrophic, evaporate, drain, drip"></textarea>
+        <input id="wordFileInput" type="file" class="hidden" accept=".txt,.md,.csv,.json" />
+        <div class="file-tools-row">
+          <button id="uploadWordsBtn" type="button" class="ghost-btn">上传文件识别单词</button>
+          <button id="clearWordsBtn" type="button" class="ghost-btn">清空输入</button>
+        </div>
+        <p id="fileImportHint" class="file-import-hint hidden"></p>
         <div id="spellHints" class="spell-hints hidden"></div>
         <div id="wordChips" class="word-chips"></div>
 
@@ -158,7 +164,7 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-    <script src="./site-config.js?v=2026.04.04.173500"></script>
-    <script src="./app.js?v=2026.04.04.173500"></script>
+    <script src="./site-config.js?v=2026.04.07.234500"></script>
+    <script src="./app.js?v=2026.04.07.234500"></script>
   </body>
 </html>

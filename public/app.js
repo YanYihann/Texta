@@ -1,6 +1,10 @@
 ﻿const wordsInput = document.getElementById("words");
 const levelSelect = document.getElementById("level");
 const quickModeInput = document.getElementById("quickMode");
+const wordFileInput = document.getElementById("wordFileInput");
+const uploadWordsBtn = document.getElementById("uploadWordsBtn");
+const clearWordsBtn = document.getElementById("clearWordsBtn");
+const fileImportHintEl = document.getElementById("fileImportHint");
 const generateBtn = document.getElementById("generateBtn");
 const readingModeBtn = document.getElementById("readingModeBtn");
 const toggleZhBtn = document.getElementById("toggleZhBtn");
@@ -724,6 +728,86 @@ function splitWords(rawText) {
     .map((w) => w.trim())
     .filter(Boolean)
     .filter((value, index, arr) => arr.findIndex((x) => x.toLowerCase() === value.toLowerCase()) === index);
+}
+
+function normalizeWordToken(raw) {
+  return String(raw || "")
+    .trim()
+    .replace(/^[^A-Za-z]+/, "")
+    .replace(/[^A-Za-z-]+$/g, "");
+}
+
+function extractWordsFromText(rawText) {
+  const matches = String(rawText || "").match(/[A-Za-z][A-Za-z-]{1,29}/g) || [];
+  const out = [];
+  const seen = new Set();
+  for (const raw of matches) {
+    const token = normalizeWordToken(raw);
+    if (!token) continue;
+    const key = token.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(token);
+    if (out.length >= 120) break;
+  }
+  return out;
+}
+
+function showFileImportHint(message, isError = false) {
+  if (!fileImportHintEl) return;
+  fileImportHintEl.textContent = String(message || "").trim();
+  fileImportHintEl.classList.remove("hidden", "error");
+  if (isError) {
+    fileImportHintEl.classList.add("error");
+  }
+}
+
+function readTextFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("读取文件失败，请重试。"));
+    reader.readAsText(file, "UTF-8");
+  });
+}
+
+async function handleWordFileImport(file) {
+  if (!file) return;
+  const name = String(file.name || "");
+  const lower = name.toLowerCase();
+  const supported = [".txt", ".md", ".csv", ".json"];
+  if (!supported.some((ext) => lower.endsWith(ext))) {
+    showFileImportHint("暂仅支持 txt / md / csv / json 文件。", true);
+    return;
+  }
+
+  try {
+    const text = await readTextFile(file);
+    const words = extractWordsFromText(text);
+    if (words.length === 0) {
+      showFileImportHint("未识别到英文单词，请检查文件内容。", true);
+      return;
+    }
+
+    const current = splitWords(wordsInput.value);
+    const merged = [...current];
+    const seen = new Set(current.map((x) => x.toLowerCase()));
+    for (const word of words) {
+      const key = word.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(word);
+      if (merged.length >= 120) break;
+    }
+
+    wordsInput.value = merged.join(", ");
+    scheduleSpellcheck();
+    renderSpelling();
+    showFileImportHint(`已从 ${name} 识别并导入 ${Math.min(words.length, 120)} 个单词。`);
+    statusEl.textContent = `文件识别完成，当前共 ${merged.length} 个单词。`;
+  } catch (error) {
+    showFileImportHint(error.message || "文件解析失败。", true);
+  }
 }
 
 function splitParagraphs(rawText) {
@@ -1885,6 +1969,24 @@ generateBtn.addEventListener("click", async () => {
 });
 
 wordsInput.addEventListener("input", scheduleSpellcheck);
+uploadWordsBtn?.addEventListener("click", () => {
+  wordFileInput?.click();
+});
+wordFileInput?.addEventListener("change", async () => {
+  const file = wordFileInput.files && wordFileInput.files[0] ? wordFileInput.files[0] : null;
+  await handleWordFileImport(file);
+  wordFileInput.value = "";
+});
+clearWordsBtn?.addEventListener("click", () => {
+  wordsInput.value = "";
+  spellState = [];
+  renderSpelling();
+  if (fileImportHintEl) {
+    fileImportHintEl.textContent = "";
+    fileImportHintEl.classList.add("hidden");
+  }
+  statusEl.textContent = "已清空单词输入。";
+});
 
 articleBlocksEl.addEventListener("click", (event) => {
   const target = event.target;
