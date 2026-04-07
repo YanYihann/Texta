@@ -1045,6 +1045,7 @@ async function generateArticlePackage(
         "Write a Chinese-first mixed-language article.",
         "The main body must be short and natural Chinese sentences.",
         "Insert target words in English only, do not translate target words into Chinese.",
+        "Never place Chinese gloss directly adjacent to target words (avoid patterns like 水water / 排水drain / water水).",
         "For each target word, use exactly the original input form (no plural/past/ing).",
         "Each target word should appear once if possible, and never more than twice.",
         "Most sentences should contain exactly one target word.",
@@ -1201,10 +1202,60 @@ function stripStandaloneGlossLines(article, words) {
   return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-function normalizeMixedArticleStyle(article, words) {
+function buildMixedInlineGlossMap(lexicon) {
+  const map = new Map();
+  for (const item of Array.isArray(lexicon) ? lexicon : []) {
+    const word = String(item?.word || "").trim().toLowerCase();
+    if (!word) continue;
+    const senses = Array.isArray(item?.senses) ? item.senses : [];
+    const terms = new Set();
+    for (const sense of senses) {
+      const meaning = String(sense?.meaning || "")
+        .replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, " ")
+        .trim();
+      const found = meaning.match(/[\u4e00-\u9fff]{1,8}/g) || [];
+      for (const token of found) {
+        if (token) terms.add(token);
+      }
+    }
+    if (terms.size > 0) {
+      map.set(word, Array.from(terms).sort((a, b) => b.length - a.length));
+    }
+  }
+  return map;
+}
+
+function stripInlineChineseGlossAroundWords(article, lexicon) {
+  let text = String(article || "");
+  const glossMap = buildMixedInlineGlossMap(lexicon);
+  for (const [word, zhTerms] of glossMap.entries()) {
+    if (!zhTerms.length) continue;
+    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    for (const term of zhTerms) {
+      const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const zhBeforeEn = new RegExp(`(^|[^\\u4e00-\\u9fff])${escapedTerm}\\s*(${escapedWord})([①②③④⑤⑥⑦⑧⑨⑩]?)`, "gi");
+      const enBeforeZh = new RegExp(`(^|[^A-Za-z])(${escapedWord})([①②③④⑤⑥⑦⑧⑨⑩]?)\\s*${escapedTerm}`, "gi");
+      text = text.replace(zhBeforeEn, (_m, prefix, enWord, marker) => `${prefix}${enWord}${marker}`);
+      text = text.replace(enBeforeZh, (_m, prefix, enWord, marker) => `${prefix}${enWord}${marker}`);
+    }
+  }
+  return text;
+}
+
+function normalizeMixedCnEnSpacing(article) {
+  let text = String(article || "");
+  // Ensure Chinese-English boundaries have spacing for cleaner mixed-text layout.
+  text = text.replace(/([\u4e00-\u9fff])([A-Za-z][A-Za-z-]{0,63}(?:[①②③④⑤⑥⑦⑧⑨⑩])?)/g, "$1 $2");
+  text = text.replace(/([A-Za-z][A-Za-z-]{0,63}(?:[①②③④⑤⑥⑦⑧⑨⑩])?)([\u4e00-\u9fff])/g, "$1 $2");
+  return text;
+}
+
+function normalizeMixedArticleStyle(article, words, lexicon = []) {
   let text = String(article || "");
   text = cleanMixedArtifactText(text);
   text = normalizeMixedParenthesisGloss(text, words);
+  text = stripInlineChineseGlossAroundWords(text, lexicon);
+  text = normalizeMixedCnEnSpacing(text);
   text = stripStandaloneGlossLines(text, words);
   text = text.replace(/[ ]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   return text;
@@ -2106,7 +2157,7 @@ app.post("/api/generate", async (req, res) => {
     const lexicon = await generateLexicon(words, quickMode, selectedModel);
     let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode, "", selectedModel);
     if (generationMode === "mixed") {
-      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
+      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
     }
     articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
     let missing = findMissingWords(articlePack.article, words);
@@ -2132,7 +2183,7 @@ app.post("/api/generate", async (req, res) => {
         selectedModel
       );
       if (generationMode === "mixed") {
-        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
+        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
       }
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       missing = findMissingWords(articlePack.article, words);
@@ -2140,7 +2191,7 @@ app.post("/api/generate", async (req, res) => {
     }
 
     if (generationMode === "mixed") {
-      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
+      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       missing = findMissingWords(articlePack.article, words);
     }
@@ -2161,14 +2212,14 @@ app.post("/api/generate", async (req, res) => {
           selectedModel
         );
         articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewriteNotice}\n${rewritten}`.trim();
-        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
+        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
         articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
         missing = findMissingWords(articlePack.article, words);
 
         if (missing.length > 0) {
           const fallbackRewrite = buildMissingRewriteFallback(missing, lexicon, generationMode);
           articlePack.article = `${String(articlePack.article || "").trim()}\n${fallbackRewrite}`.trim();
-          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
+          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
           missing = findMissingWords(articlePack.article, words);
         }
