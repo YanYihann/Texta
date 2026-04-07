@@ -1,6 +1,7 @@
 ﻿const wordsInput = document.getElementById("words");
 const levelSelect = document.getElementById("level");
 const generationModeSelect = document.getElementById("generationMode");
+const generationQualitySelect = document.getElementById("generationQuality");
 const quickModeInput = document.getElementById("quickMode");
 const wordFileInput = document.getElementById("wordFileInput");
 const uploadWordsBtn = document.getElementById("uploadWordsBtn");
@@ -61,6 +62,7 @@ let latestParagraphsZh = [];
 let latestAlignment = [];
 let latestUsage = null;
 let latestGenerationMode = "standard";
+let latestGenerationQuality = "normal";
 let showChinese = true;
 let pendingExportType = "pdf";
 let readingMode = false;
@@ -1907,6 +1909,7 @@ function applyArticleData(data) {
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
   latestGenerationMode = String(data.generationMode || "standard").toLowerCase() === "mixed" ? "mixed" : "standard";
+  latestGenerationQuality = String(data.generationQuality || "normal").toLowerCase() === "advanced" ? "advanced" : "normal";
   if (data && data.usage) {
     renderUsage(data.usage);
   }
@@ -1986,6 +1989,7 @@ generateBtn.addEventListener("click", async () => {
   const wordsText = wordsInput.value.trim();
   const level = levelSelect.value;
   const generationMode = String(generationModeSelect?.value || "standard");
+  const generationQuality = String(generationQualitySelect?.value || "normal").toLowerCase() === "advanced" ? "advanced" : "normal";
   const quickMode = Boolean(quickModeInput.checked);
 
   if (!wordsText) {
@@ -1999,7 +2003,8 @@ generateBtn.addEventListener("click", async () => {
   resultSection.classList.add("hidden");
   glossaryPanelEl.classList.add("hidden");
   missingWordsEl.textContent = "";
-  statusEl.textContent = quickMode ? "快速模式生成中（更省钱）..." : "AI 正在生成双语文章，请稍等（大约10-15秒）...";
+  const qualityLabel = generationQuality === "advanced" ? "高级生成（GPT-4o，消耗2次）" : "普通生成（GPT-4o-mini，消耗1次）";
+  statusEl.textContent = quickMode ? `${qualityLabel} + 快速模式生成中...` : `AI 正在${qualityLabel}，请稍等（大约10-15秒）...`;
 
   try {
     latestWords = splitWords(wordsText);
@@ -2011,7 +2016,7 @@ generateBtn.addEventListener("click", async () => {
     const response = await apiFetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ words: wordsText, level, quickMode, generationMode })
+      body: JSON.stringify({ words: wordsText, level, quickMode, generationMode, generationQuality })
     });
 
     const data = await response.json();

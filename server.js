@@ -9,7 +9,9 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const OPENAI_MODEL_NORMAL = process.env.OPENAI_MODEL_NORMAL || process.env.OPENAI_MODEL || "gpt-4o-mini";
+const OPENAI_MODEL_ADVANCED = process.env.OPENAI_MODEL_ADVANCED || "gpt-4o";
+const ADVANCED_USAGE_COST = Math.max(1, Number(process.env.ADVANCED_USAGE_COST || 2));
 const OPENAI_API_MODE = String(process.env.OPENAI_API_MODE || "responses").toLowerCase();
 
 function normalizeBaseUrl(raw) {
@@ -290,6 +292,26 @@ function getDailyLimit(user) {
   return plan === "vip" ? 50 : 10;
 }
 
+function normalizeGenerationQuality(raw) {
+  return String(raw || "").toLowerCase() === "advanced" ? "advanced" : "normal";
+}
+
+function getGenerationProfile(rawQuality) {
+  const quality = normalizeGenerationQuality(rawQuality);
+  if (quality === "advanced") {
+    return {
+      quality,
+      model: OPENAI_MODEL_ADVANCED,
+      usageCost: ADVANCED_USAGE_COST
+    };
+  }
+  return {
+    quality: "normal",
+    model: OPENAI_MODEL_NORMAL,
+    usageCost: 1
+  };
+}
+
 function getUsageSnapshot(store, user, dateKey = getShanghaiDateKey()) {
   const usageDaily = store?.usageDaily && typeof store.usageDaily === "object" ? store.usageDaily : {};
   const userUsage = usageDaily[user.id] && typeof usageDaily[user.id] === "object" ? usageDaily[user.id] : {};
@@ -305,28 +327,46 @@ function getUsageSnapshot(store, user, dateKey = getShanghaiDateKey()) {
   };
 }
 
-function bumpUsage(store, user, dateKey = getShanghaiDateKey()) {
+function bumpUsage(store, user, dateKey = getShanghaiDateKey(), amount = 1) {
   if (!store.usageDaily || typeof store.usageDaily !== "object") {
     store.usageDaily = {};
   }
   if (!store.usageDaily[user.id] || typeof store.usageDaily[user.id] !== "object") {
     store.usageDaily[user.id] = {};
   }
-  store.usageDaily[user.id][dateKey] = Number(store.usageDaily[user.id][dateKey] || 0) + 1;
+  const delta = Math.max(1, Math.floor(Number(amount) || 1));
+  store.usageDaily[user.id][dateKey] = Number(store.usageDaily[user.id][dateKey] || 0) + delta;
 }
 
-async function logUsageEvent(user, usedAt = new Date()) {
+async function logUsageEvent(user, usedAt = new Date(), count = 1) {
   if (!user?.id) return;
-  const bucket = getShanghaiHourBucket(usedAt);
-  await prisma.usageLog.create({
-    data: {
+  const total = Math.max(1, Math.floor(Number(count) || 1));
+  if (total === 1) {
+    const bucket = getShanghaiHourBucket(usedAt);
+    await prisma.usageLog.create({
+      data: {
+        userId: String(user.id),
+        usedAt: usedAt.toISOString(),
+        dateKey: bucket.dateKey,
+        hourKey: bucket.hourKey,
+        periodLabel: bucket.periodLabel
+      }
+    });
+    return;
+  }
+
+  const rows = Array.from({ length: total }).map((_, idx) => {
+    const ts = new Date(usedAt.getTime() + idx);
+    const bucket = getShanghaiHourBucket(ts);
+    return {
       userId: String(user.id),
-      usedAt: usedAt.toISOString(),
+      usedAt: ts.toISOString(),
       dateKey: bucket.dateKey,
       hourKey: bucket.hourKey,
       periodLabel: bucket.periodLabel
-    }
+    };
   });
+  await prisma.usageLog.createMany({ data: rows });
 }
 
 function compareUsageUsers(a, b) {
@@ -785,6 +825,7 @@ async function callOpenAIText(prompt, options = {}) {
   const useChat = OPENAI_API_MODE === "chat";
   const endpoint = useChat ? `${base}/chat/completions` : `${base}/responses`;
   const maxTokens = Number.isFinite(options.maxTokens) ? options.maxTokens : undefined;
+  const model = String(options.model || OPENAI_MODEL_NORMAL).trim() || OPENAI_MODEL_NORMAL;
 
   for (let attempt = 1; attempt <= OPENAI_RETRY_COUNT + 1; attempt += 1) {
     const controller = new AbortController();
@@ -800,12 +841,12 @@ async function callOpenAIText(prompt, options = {}) {
         body: JSON.stringify(
           useChat
             ? {
-                model: OPENAI_MODEL,
+                model,
                 messages: [{ role: "user", content: prompt }],
                 ...(maxTokens ? { max_tokens: maxTokens } : {})
               }
             : {
-                model: OPENAI_MODEL,
+                model,
                 input: prompt,
                 ...(maxTokens ? { max_output_tokens: maxTokens } : {})
               }
@@ -855,7 +896,7 @@ async function callOpenAIText(prompt, options = {}) {
   throw new Error("Unexpected request state.");
 }
 
-async function generateLexicon(words, quickMode) {
+async function generateLexicon(words, quickMode, model) {
   const generateLexiconChunk = async (chunkWords) => {
     const prompt = [
       "You are an IELTS vocabulary assistant.",
@@ -874,7 +915,7 @@ async function generateLexicon(words, quickMode) {
       `Words: ${chunkWords.join(", ")}`
     ].join("\n");
 
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 650 : 1300 });
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 650 : 1300, model });
     let parsed = extractJsonArray(text);
 
     if (!Array.isArray(parsed)) {
@@ -884,7 +925,7 @@ async function generateLexicon(words, quickMode) {
         "Keep same order as input words.",
         `Words: ${chunkWords.join(", ")}`
       ].join("\n");
-      const retryText = await callOpenAIText(retryPrompt, { maxTokens: quickMode ? 650 : 1300 });
+      const retryText = await callOpenAIText(retryPrompt, { maxTokens: quickMode ? 650 : 1300, model });
       parsed = extractJsonArray(retryText);
     }
 
@@ -914,7 +955,7 @@ async function generateLexicon(words, quickMode) {
         "If a word is misspelled, infer the most likely intended word and still provide useful meanings for the given spelling.",
         `Words: ${c.join(", ")}`
       ].join("\n");
-      const fallbackText = await callOpenAIText(fallbackPrompt, { maxTokens: quickMode ? 700 : 1400 });
+      const fallbackText = await callOpenAIText(fallbackPrompt, { maxTokens: quickMode ? 700 : 1400, model });
       const fallbackParsed = extractJsonArray(fallbackText);
       recoveredAll = recoveredAll.concat(normalizeLexicon(c, fallbackParsed));
     }
@@ -925,7 +966,15 @@ async function generateLexicon(words, quickMode) {
   return lexicon;
 }
 
-async function generateArticlePackage(words, level, quickMode, lexicon, generationMode = "standard", extraConstraint = "") {
+async function generateArticlePackage(
+  words,
+  level,
+  quickMode,
+  lexicon,
+  generationMode = "standard",
+  extraConstraint = "",
+  model
+) {
   const promptLevel = levelToPromptText(level);
   const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
   const lengthRule = isMixedMode
@@ -986,7 +1035,7 @@ async function generateArticlePackage(words, level, quickMode, lexicon, generati
     .join("\n");
 
   const maxTokens = quickMode ? 420 : words.length > 16 ? 1200 : 820;
-  const text = await callOpenAIText(prompt, { maxTokens });
+  const text = await callOpenAIText(prompt, { maxTokens, model });
   const parsed = extractJsonObject(text);
 
   if (parsed && typeof parsed.title === "string" && typeof parsed.article === "string") {
@@ -1099,7 +1148,7 @@ function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mi
   return lines.join("\n");
 }
 
-async function generateMissingWordsRewrite(missingWords, lexicon, generationMode, quickMode) {
+async function generateMissingWordsRewrite(missingWords, lexicon, generationMode, quickMode, model) {
   const words = Array.isArray(missingWords) ? missingWords.map((x) => String(x || "").trim()).filter(Boolean) : [];
   if (words.length === 0) {
     return "";
@@ -1143,7 +1192,7 @@ async function generateMissingWordsRewrite(missingWords, lexicon, generationMode
       ].join("\n");
 
   try {
-    const rewritten = await callOpenAIText(prompt, { maxTokens: quickMode ? 220 : 420 });
+    const rewritten = await callOpenAIText(prompt, { maxTokens: quickMode ? 220 : 420, model });
     const cleaned = isMixedMode ? cleanMixedArtifactText(rewritten) : String(rewritten || "").trim();
     if (cleaned) {
       return cleaned;
@@ -1155,7 +1204,7 @@ async function generateMissingWordsRewrite(missingWords, lexicon, generationMode
   return buildMissingRewriteFallback(words, lexicon, generationMode);
 }
 
-async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
+async function generateParagraphTranslations(paragraphs, lexicon, quickMode, model) {
   if (!paragraphs.length) {
     return [];
   }
@@ -1178,7 +1227,7 @@ async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
     JSON.stringify(paragraphs)
   ].join("\n");
 
-  const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 520 : 980 });
+  const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 520 : 980, model });
   const parsed = extractJsonArray(text);
 
   if (!Array.isArray(parsed)) {
@@ -1323,7 +1372,7 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
   return output;
 }
 
-async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode) {
+async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, model) {
   if (!Array.isArray(words) || words.length === 0) {
     return [];
   }
@@ -1356,7 +1405,7 @@ async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, qui
   ].join("\n");
 
   try {
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 680 : 1200 });
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 680 : 1200, model });
     const parsedObj = extractJsonObject(text);
     if (parsedObj) {
       return normalizeAlignment(words, lexicon, parsedObj, paragraphsEn, paragraphsZh);
@@ -1939,10 +1988,15 @@ app.post("/api/generate", async (req, res) => {
     if (!authedUser) return;
     const storeBefore = await readAuthStore();
     const usageBefore = getUsageSnapshot(storeBefore, authedUser);
-    if (!usageBefore.isUnlimited && usageBefore.remaining <= 0) {
+    const generationQuality = normalizeGenerationQuality(req.body?.generationQuality || "normal");
+    const generationProfile = getGenerationProfile(generationQuality);
+
+    if (!usageBefore.isUnlimited && Number(usageBefore.remaining || 0) < generationProfile.usageCost) {
       return res.status(429).json({
-        error: "Daily limit reached. Upgrade to VIP for 50 uses/day.",
-        usage: usageBefore
+        error: `Insufficient quota. ${generationQuality === "advanced" ? "Advanced generation" : "Normal generation"} requires ${generationProfile.usageCost} use(s).`,
+        usage: usageBefore,
+        needed: generationProfile.usageCost,
+        generationQuality
       });
     }
     if (!OPENAI_API_KEY) {
@@ -1963,8 +2017,10 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ error: "Too many words. Please keep it under 120 words." });
     }
 
-    const lexicon = await generateLexicon(words, quickMode);
-    let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode);
+    const selectedModel = generationProfile.model;
+
+    const lexicon = await generateLexicon(words, quickMode, selectedModel);
+    let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode, "", selectedModel);
     articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
     let missing = findMissingWords(articlePack.article, words);
     let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
@@ -1985,7 +2041,8 @@ app.post("/api/generate", async (req, res) => {
             : "",
           "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
           "Mixed mode must look compact: most sentences include one target word and avoid long Chinese-only lines."
-        ].join(" ")
+        ].join(" "),
+        selectedModel
       );
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       missing = findMissingWords(articlePack.article, words);
@@ -2006,7 +2063,13 @@ app.post("/api/generate", async (req, res) => {
       } else {
         const missingBeforeRewrite = missing.slice();
         const rewriteNotice = `提示：主文章仍有 ${missingBeforeRewrite.length} 个词未命中：${missingBeforeRewrite.join(", ")}。以下为补充重写短句：`;
-        const rewritten = await generateMissingWordsRewrite(missingBeforeRewrite, lexicon, generationMode, quickMode);
+        const rewritten = await generateMissingWordsRewrite(
+          missingBeforeRewrite,
+          lexicon,
+          generationMode,
+          quickMode,
+          selectedModel
+        );
         articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewriteNotice}\n${rewritten}`.trim();
         articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
         missing = findMissingWords(articlePack.article, words);
@@ -2021,15 +2084,15 @@ app.post("/api/generate", async (req, res) => {
     }
 
     const paragraphsEn = splitParagraphs(articlePack.article);
-    const paragraphsZh = await generateParagraphTranslations(paragraphsEn, lexicon, quickMode);
-    const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode);
+    const paragraphsZh = await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
+    const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel);
     const defaultTitle = defaultTitleByDate(words.length);
 
     const storeAfter = await readAuthStore();
-    bumpUsage(storeAfter, authedUser);
+    bumpUsage(storeAfter, authedUser, getShanghaiDateKey(), generationProfile.usageCost);
     await writeAuthStore(storeAfter);
     try {
-      await logUsageEvent(authedUser);
+      await logUsageEvent(authedUser, new Date(), generationProfile.usageCost);
     } catch (usageLogError) {
       console.error("Failed to write usage log:", usageLogError);
     }
@@ -2040,6 +2103,9 @@ app.post("/api/generate", async (req, res) => {
       defaultTitle,
       article: articlePack.article,
       generationMode,
+      generationQuality,
+      usageCost: generationProfile.usageCost,
+      model: selectedModel,
       missing,
       lexicon,
       paragraphsEn,
