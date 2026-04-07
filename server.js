@@ -518,6 +518,19 @@ function sanitizeVocabPrefsPayload(rawValue) {
   return out;
 }
 
+function encodeFavoriteId(userId, rawId) {
+  const source = normalizeText(rawId, 80) || `fav_${crypto.randomBytes(8).toString("hex")}`;
+  const prefix = `${userId}__`;
+  if (source.startsWith(prefix)) return source;
+  return `${prefix}${source}`;
+}
+
+function decodeFavoriteId(userId, storedId) {
+  const raw = String(storedId || "");
+  const prefix = `${userId}__`;
+  return raw.startsWith(prefix) ? raw.slice(prefix.length) : raw;
+}
+
 function splitWords(rawText) {
   return String(rawText || "")
     .split(/[\n,，]+/)
@@ -1295,7 +1308,7 @@ app.get("/api/library", async (req, res) => {
     ]);
 
     const favorites = favoriteRows.map((row) => ({
-      id: row.id,
+      id: decodeFavoriteId(user.id, row.id),
       title: row.title,
       savedAt: row.savedAt,
       words: Array.isArray(row.words) ? row.words : [],
@@ -1347,6 +1360,7 @@ app.post("/api/library/sync", async (req, res) => {
 
     const favoriteRows = sanitizeFavoritesPayload(req.body?.favorites).map((row) => ({
       ...row,
+      id: encodeFavoriteId(user.id, row.id),
       userId: user.id
     }));
     const notebookRows = sanitizeNotebookPayload(req.body?.notebookEntries).map((row) => ({
@@ -1358,21 +1372,19 @@ app.post("/api/library/sync", async (req, res) => {
       userId: user.id
     }));
 
-    await prisma.$transaction(async (tx) => {
-      await tx.favoriteArticle.deleteMany({ where: { userId: user.id } });
-      await tx.notebookEntry.deleteMany({ where: { userId: user.id } });
-      await tx.userVocabPref.deleteMany({ where: { userId: user.id } });
+    await prisma.favoriteArticle.deleteMany({ where: { userId: user.id } });
+    await prisma.notebookEntry.deleteMany({ where: { userId: user.id } });
+    await prisma.userVocabPref.deleteMany({ where: { userId: user.id } });
 
-      if (favoriteRows.length > 0) {
-        await tx.favoriteArticle.createMany({ data: favoriteRows });
-      }
-      if (notebookRows.length > 0) {
-        await tx.notebookEntry.createMany({ data: notebookRows });
-      }
-      if (vocabRows.length > 0) {
-        await tx.userVocabPref.createMany({ data: vocabRows });
-      }
-    });
+    if (favoriteRows.length > 0) {
+      await prisma.favoriteArticle.createMany({ data: favoriteRows });
+    }
+    if (notebookRows.length > 0) {
+      await prisma.notebookEntry.createMany({ data: notebookRows });
+    }
+    if (vocabRows.length > 0) {
+      await prisma.userVocabPref.createMany({ data: vocabRows });
+    }
 
     res.json({
       ok: true,

@@ -467,8 +467,11 @@ async function syncLibraryNow() {
     if (!response.ok) {
       throw new Error(`library sync failed (${response.status})`);
     }
-  } catch {
-    // Keep local data and retry on later writes.
+  } catch (error) {
+    console.warn("Library sync failed:", error);
+    if (statusEl) {
+      statusEl.textContent = "云端同步暂时失败，已保存在本地，稍后会自动重试。";
+    }
   } finally {
     librarySyncInFlight = false;
     if (librarySyncPending) {
