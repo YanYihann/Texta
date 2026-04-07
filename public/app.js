@@ -1,5 +1,6 @@
 ﻿const wordsInput = document.getElementById("words");
 const levelSelect = document.getElementById("level");
+const generationModeSelect = document.getElementById("generationMode");
 const quickModeInput = document.getElementById("quickMode");
 const wordFileInput = document.getElementById("wordFileInput");
 const uploadWordsBtn = document.getElementById("uploadWordsBtn");
@@ -1914,6 +1915,7 @@ function favoriteFromCurrent() {
 generateBtn.addEventListener("click", async () => {
   const wordsText = wordsInput.value.trim();
   const level = levelSelect.value;
+  const generationMode = String(generationModeSelect?.value || "standard");
   const quickMode = Boolean(quickModeInput.checked);
 
   if (!wordsText) {
@@ -1939,7 +1941,7 @@ generateBtn.addEventListener("click", async () => {
     const response = await apiFetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ words: wordsText, level, quickMode })
+      body: JSON.stringify({ words: wordsText, level, quickMode, generationMode })
     });
 
     const data = await response.json();

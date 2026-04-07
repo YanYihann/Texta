@@ -900,7 +900,7 @@ async function generateLexicon(words, quickMode) {
   return lexicon;
 }
 
-async function generateArticlePackage(words, level, quickMode, lexicon, extraConstraint = "") {
+async function generateArticlePackage(words, level, quickMode, lexicon, generationMode = "standard", extraConstraint = "") {
   const promptLevel = levelToPromptText(level);
   const lengthRule = quickMode ? "Length: 120-180 words." : words.length > 16 ? "Length: 320-450 words." : "Length: 220-320 words.";
   const paragraphRule = quickMode
@@ -916,8 +916,18 @@ async function generateArticlePackage(words, level, quickMode, lexicon, extraCon
     })
     .join("\n");
 
+  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
+  const modeRules = isMixedMode
+    ? [
+        "Write a Chinese-first mixed-language article.",
+        "Most sentence structure should be natural Chinese, while target words remain in English.",
+        "Keep the overall article readable for Chinese learners and IELTS context."
+      ]
+    : ["Write an English IELTS-style article."];
+
   const prompt = [
-    "Write an English IELTS-style article and return ONLY JSON object:",
+    ...modeRules,
+    "Return ONLY JSON object:",
     '{"title":"...", "article":"..."}',
     `Level: ${promptLevel}.`,
     lengthRule,
@@ -1781,6 +1791,7 @@ app.post("/api/generate", async (req, res) => {
     const rawWords = String(req.body.words || "");
     const level = String(req.body.level || "中级");
     const quickMode = Boolean(req.body.quickMode);
+    const generationMode = String(req.body.generationMode || "standard").toLowerCase() === "mixed" ? "mixed" : "standard";
     const words = splitWords(rawWords);
 
     if (words.length === 0) {
@@ -1792,7 +1803,7 @@ app.post("/api/generate", async (req, res) => {
     }
 
     const lexicon = await generateLexicon(words, quickMode);
-    let articlePack = await generateArticlePackage(words, level, quickMode, lexicon);
+    let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode);
     articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
     let missing = findMissingWords(articlePack.article, words);
 
@@ -1803,6 +1814,7 @@ app.post("/api/generate", async (req, res) => {
         level,
         quickMode,
         lexicon,
+        generationMode,
         [
           `Important fix (round ${i + 1}): ensure ALL missing words appear naturally.`,
           `Missing words: ${missing.join(", ")}.`,
