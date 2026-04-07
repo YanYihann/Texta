@@ -1008,6 +1008,7 @@ async function generateArticlePackage(
         "Each target word should appear once if possible, and never more than twice.",
         "Most sentences should contain exactly one target word.",
         "Keep Chinese background concise; avoid long explanatory paragraphs.",
+        "Do NOT use glossary parentheses style such as 中文（word） or 中文（word + meaning）.",
         "Do NOT output keyword list sections such as '片段1：补充关键词 ...'.",
         "Do NOT output standalone dictionary lines such as 'n. xxx' in the body.",
         "If it is hard to connect all words in one coherent story, split into several short fragments/sections, but all target words must be covered."
@@ -1111,16 +1112,6 @@ function findOverusedWords(article, words, maxAllowed = 2) {
   return overused;
 }
 
-function hasMixedArtifactContent(article) {
-  const text = String(article || "");
-  return (
-    /片段\s*\d+\s*[:：]\s*补充关键词/i.test(text) ||
-    /"title"\s*:\s*"/i.test(text) ||
-    /"article"\s*:\s*"/i.test(text) ||
-    /补充关键词/.test(text)
-  );
-}
-
 function cleanMixedArtifactText(article) {
   let text = String(article || "").replace(/\r/g, "");
   text = text.replace(/片段\s*\d+\s*[:：]\s*补充关键词[^\n]*(?:\n|$)/gi, "");
@@ -1130,6 +1121,52 @@ function cleanMixedArtifactText(article) {
   text = text.replace(/\\n/g, "\n").replace(/\\"/g, '"');
   text = text.replace(/\n{3,}/g, "\n\n");
   return text.trim();
+}
+
+function normalizeMixedParenthesisGloss(article, words) {
+  const source = String(article || "");
+  const wordSet = new Set((words || []).map((w) => String(w || "").toLowerCase()));
+  if (wordSet.size === 0) {
+    return source;
+  }
+
+  // Convert patterns like: 中文（drip / drip v. 滴下） -> 中文 drip
+  return source.replace(/[（(]\s*([A-Za-z][A-Za-z-]{1,40})([\s\S]{0,80}?)[）)]/g, (full, word) => {
+    const token = String(word || "").trim();
+    if (!token) return full;
+    if (!wordSet.has(token.toLowerCase())) return full;
+    return ` ${token}`;
+  });
+}
+
+function stripStandaloneGlossLines(article, words) {
+  const wordSet = new Set((words || []).map((w) => String(w || "").toLowerCase()));
+  const lines = String(article || "")
+    .split(/\n+/)
+    .map((line) => String(line || "").trim());
+
+  const kept = lines.filter((line) => {
+    if (!line) return false;
+    if (/^(?:n|v|adj|adv)\.\s*[\u4e00-\u9fff]/i.test(line)) {
+      return false;
+    }
+    const lower = line.toLowerCase();
+    if (wordSet.has(lower)) {
+      return false;
+    }
+    return true;
+  });
+
+  return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function normalizeMixedArticleStyle(article, words) {
+  let text = String(article || "");
+  text = cleanMixedArtifactText(text);
+  text = normalizeMixedParenthesisGloss(text, words);
+  text = stripStandaloneGlossLines(text, words);
+  text = text.replace(/[ ]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  return text;
 }
 
 function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mixed") {
@@ -1173,6 +1210,7 @@ async function generateMissingWordsRewrite(missingWords, lexicon, generationMode
         "Write concise Chinese sentences.",
         "Each sentence must include exactly one target English word in original form.",
         "Each target word must appear exactly once across the whole output.",
+        "Do NOT use parentheses style like 中文（word）.",
         "Do NOT output standalone dictionary lines such as 'n. xxx'.",
         "Words:",
         words.join(", "),
@@ -2021,6 +2059,9 @@ app.post("/api/generate", async (req, res) => {
 
     const lexicon = await generateLexicon(words, quickMode, selectedModel);
     let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode, "", selectedModel);
+    if (generationMode === "mixed") {
+      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
+    }
     articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
     let missing = findMissingWords(articlePack.article, words);
     let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
@@ -2044,13 +2085,16 @@ app.post("/api/generate", async (req, res) => {
         ].join(" "),
         selectedModel
       );
+      if (generationMode === "mixed") {
+        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
+      }
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       missing = findMissingWords(articlePack.article, words);
       overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
     }
 
-    if (generationMode === "mixed" && hasMixedArtifactContent(articlePack.article)) {
-      articlePack.article = cleanMixedArtifactText(articlePack.article);
+    if (generationMode === "mixed") {
+      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       missing = findMissingWords(articlePack.article, words);
     }
@@ -2071,12 +2115,14 @@ app.post("/api/generate", async (req, res) => {
           selectedModel
         );
         articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewriteNotice}\n${rewritten}`.trim();
+        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
         articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
         missing = findMissingWords(articlePack.article, words);
 
         if (missing.length > 0) {
           const fallbackRewrite = buildMissingRewriteFallback(missing, lexicon, generationMode);
           articlePack.article = `${String(articlePack.article || "").trim()}\n${fallbackRewrite}`.trim();
+          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words);
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
           missing = findMissingWords(articlePack.article, words);
         }
