@@ -109,68 +109,66 @@ async function writeAuthStore(store) {
     }
   }
 
-  await prisma.$transaction(async (tx) => {
-    for (const user of users) {
-      await tx.user.upsert({
-        where: { id: String(user.id) },
-        create: {
-          id: String(user.id),
-          email: String(user.email || "").toLowerCase(),
-          name: String(user.name || ""),
-          passwordHash: String(user.passwordHash || ""),
-          role: String(user.role || "user"),
-          plan: String(user.plan || "free"),
-          createdAt: String(user.createdAt || new Date().toISOString())
-        },
-        update: {
-          email: String(user.email || "").toLowerCase(),
-          name: String(user.name || ""),
-          passwordHash: String(user.passwordHash || ""),
-          role: String(user.role || "user"),
-          plan: String(user.plan || "free")
-        }
-      });
-    }
+  for (const user of users) {
+    await prisma.user.upsert({
+      where: { id: String(user.id) },
+      create: {
+        id: String(user.id),
+        email: String(user.email || "").toLowerCase(),
+        name: String(user.name || ""),
+        passwordHash: String(user.passwordHash || ""),
+        role: String(user.role || "user"),
+        plan: String(user.plan || "free"),
+        createdAt: String(user.createdAt || new Date().toISOString())
+      },
+      update: {
+        email: String(user.email || "").toLowerCase(),
+        name: String(user.name || ""),
+        passwordHash: String(user.passwordHash || ""),
+        role: String(user.role || "user"),
+        plan: String(user.plan || "free")
+      }
+    });
+  }
 
-    await tx.session.deleteMany({});
-    if (sessions.length > 0) {
-      await tx.session.createMany({
-        data: sessions.map((s) => ({
-          token: String(s.token),
-          userId: String(s.userId),
-          expiresAt: BigInt(Number(s.expiresAt || 0)),
-          createdAt: BigInt(Number(s.createdAt || Date.now()))
-        }))
-      });
-    }
+  await prisma.session.deleteMany({});
+  if (sessions.length > 0) {
+    await prisma.session.createMany({
+      data: sessions.map((s) => ({
+        token: String(s.token),
+        userId: String(s.userId),
+        expiresAt: BigInt(Number(s.expiresAt || 0)),
+        createdAt: BigInt(Number(s.createdAt || Date.now()))
+      }))
+    });
+  }
 
-    await tx.usageDaily.deleteMany({});
-    if (usageRows.length > 0) {
-      await tx.usageDaily.createMany({ data: usageRows });
-    }
+  await prisma.usageDaily.deleteMany({});
+  if (usageRows.length > 0) {
+    await prisma.usageDaily.createMany({ data: usageRows });
+  }
 
-    await tx.vipRequest.deleteMany({});
-    if (vipRequests.length > 0) {
-      await tx.vipRequest.createMany({
-        data: vipRequests.map((x) => ({
-          id: String(x.id),
-          userId: String(x.userId || ""),
-          userEmail: String(x.userEmail || ""),
-          payerName: String(x.payerName || ""),
-          amount: String(x.amount || ""),
-          paidAt: String(x.paidAt || ""),
-          proofCode: String(x.proofCode || ""),
-          proofImageUrl: String(x.proofImageUrl || ""),
-          note: String(x.note || ""),
-          status: String(x.status || "pending"),
-          createdAt: String(x.createdAt || new Date().toISOString()),
-          reviewedAt: String(x.reviewedAt || ""),
-          reviewerId: String(x.reviewerId || ""),
-          reviewNote: String(x.reviewNote || "")
-        }))
-      });
-    }
-  });
+  await prisma.vipRequest.deleteMany({});
+  if (vipRequests.length > 0) {
+    await prisma.vipRequest.createMany({
+      data: vipRequests.map((x) => ({
+        id: String(x.id),
+        userId: String(x.userId || ""),
+        userEmail: String(x.userEmail || ""),
+        payerName: String(x.payerName || ""),
+        amount: String(x.amount || ""),
+        paidAt: String(x.paidAt || ""),
+        proofCode: String(x.proofCode || ""),
+        proofImageUrl: String(x.proofImageUrl || ""),
+        note: String(x.note || ""),
+        status: String(x.status || "pending"),
+        createdAt: String(x.createdAt || new Date().toISOString()),
+        reviewedAt: String(x.reviewedAt || ""),
+        reviewerId: String(x.reviewerId || ""),
+        reviewNote: String(x.reviewNote || "")
+      }))
+    });
+  }
 }
 
 async function readAuthStore() {
