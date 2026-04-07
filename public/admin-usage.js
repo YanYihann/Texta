@@ -78,7 +78,7 @@ function formatRolePlan(user) {
   const role = String(user?.role || "").toLowerCase();
   const plan = String(user?.plan || "").toLowerCase();
   if (role === "admin") return "管理员";
-  if (plan === "vip") return "VIP用户";
+  if (plan === "vip") return "VIP 用户";
   return "普通用户";
 }
 
