@@ -78,6 +78,11 @@ const NOTEBOOK_KEY = "texta_notebook_v1";
 let favorites = [];
 let vocabPrefs = {};
 let notebookEntries = [];
+let librarySyncTimer = null;
+let librarySyncInFlight = false;
+let librarySyncPending = false;
+let librarySyncPaused = false;
+const LIBRARY_SYNC_DELAY_MS = 800;
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
@@ -254,6 +259,7 @@ function loadFavorites() {
 
 function saveFavorites() {
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.slice(0, 50)));
+  scheduleLibrarySync();
 }
 
 function loadVocabPrefs() {
@@ -268,6 +274,7 @@ function loadVocabPrefs() {
 
 function saveVocabPrefs() {
   localStorage.setItem(VOCAB_PREFS_KEY, JSON.stringify(vocabPrefs));
+  scheduleLibrarySync();
 }
 
 function loadNotebookEntries() {
@@ -282,6 +289,228 @@ function loadNotebookEntries() {
 
 function saveNotebookEntries() {
   localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(notebookEntries.slice(0, 500)));
+  scheduleLibrarySync();
+}
+
+function dedupeBy(items, pickKey) {
+  const out = [];
+  const seen = new Set();
+  for (const item of items || []) {
+    const key = pickKey(item);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+function normalizeFavorite(item) {
+  const id = String(item?.id || "").trim() || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const savedAt = String(item?.savedAt || "").trim() || new Date().toISOString();
+  return {
+    id,
+    title: String(item?.title || "未命名文章"),
+    savedAt,
+    words: Array.isArray(item?.words) ? item.words : [],
+    article: String(item?.article || ""),
+    lexicon: Array.isArray(item?.lexicon) ? item.lexicon : [],
+    paragraphsEn: Array.isArray(item?.paragraphsEn) ? item.paragraphsEn : [],
+    paragraphsZh: Array.isArray(item?.paragraphsZh) ? item.paragraphsZh : [],
+    alignment: Array.isArray(item?.alignment) ? item.alignment : [],
+    missing: Array.isArray(item?.missing) ? item.missing : [],
+    createdAt: String(item?.createdAt || savedAt),
+    updatedAt: String(item?.updatedAt || savedAt)
+  };
+}
+
+function normalizeNotebookEntry(item) {
+  const word = String(item?.word || "").trim();
+  const key = String(item?.key || item?.wordKey || keyifyWord(word)).trim();
+  const now = new Date().toISOString();
+  if (!key) return null;
+  return {
+    id: String(item?.id || "").trim() || `nb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    key,
+    word: word || key,
+    pos: String(item?.pos || ""),
+    senses: Array.isArray(item?.senses) ? item.senses : [],
+    collocations: Array.isArray(item?.collocations) ? item.collocations : [],
+    synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
+    antonyms: Array.isArray(item?.antonyms) ? item.antonyms : [],
+    wordFormation: String(item?.wordFormation || ""),
+    createdAt: String(item?.createdAt || now),
+    updatedAt: String(item?.updatedAt || now)
+  };
+}
+
+function normalizeVocabPrefsMap(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const wordKey = String(key || "").trim();
+    if (!wordKey) continue;
+    const mastery = String(value?.mastery || "").toLowerCase() === "mastered" ? "mastered" : "unknown";
+    out[wordKey] = {
+      word: String(value?.word || ""),
+      mastery,
+      createdAt: String(value?.createdAt || value?.updatedAt || new Date().toISOString()),
+      updatedAt: String(value?.updatedAt || new Date().toISOString())
+    };
+  }
+  return out;
+}
+
+function applyLibraryState({ favorites: incomingFavorites, notebookEntries: incomingNotebook, vocabPrefs: incomingVocabPrefs }) {
+  const normalizedFavorites = dedupeBy(
+    (Array.isArray(incomingFavorites) ? incomingFavorites : []).map(normalizeFavorite),
+    (item) => item.id
+  ).slice(0, 50);
+
+  const normalizedNotebook = dedupeBy(
+    (Array.isArray(incomingNotebook) ? incomingNotebook : [])
+      .map(normalizeNotebookEntry)
+      .filter(Boolean),
+    (item) => item.key
+  ).slice(0, 500);
+
+  const normalizedVocab = normalizeVocabPrefsMap(incomingVocabPrefs);
+
+  librarySyncPaused = true;
+  favorites = normalizedFavorites;
+  notebookEntries = normalizedNotebook;
+  vocabPrefs = normalizedVocab;
+  saveFavorites();
+  saveNotebookEntries();
+  saveVocabPrefs();
+  librarySyncPaused = false;
+}
+
+function mergeByUpdatedAt(existingMap, nextMap) {
+  const merged = { ...existingMap };
+  for (const [key, value] of Object.entries(nextMap || {})) {
+    const current = merged[key];
+    if (!current) {
+      merged[key] = value;
+      continue;
+    }
+    const a = String(current.updatedAt || "");
+    const b = String(value.updatedAt || "");
+    if (b >= a) {
+      merged[key] = value;
+    }
+  }
+  return merged;
+}
+
+function mergeLibrary(localState, remoteState) {
+  const localFavorites = (localState.favorites || []).map(normalizeFavorite);
+  const remoteFavorites = (remoteState.favorites || []).map(normalizeFavorite);
+  const favoriteMap = new Map();
+  for (const item of remoteFavorites) favoriteMap.set(item.id, item);
+  for (const item of localFavorites) {
+    if (!favoriteMap.has(item.id)) favoriteMap.set(item.id, item);
+  }
+  const favoritesMerged = Array.from(favoriteMap.values())
+    .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+    .slice(0, 50);
+
+  const localNotebook = (localState.notebookEntries || [])
+    .map(normalizeNotebookEntry)
+    .filter(Boolean);
+  const remoteNotebook = (remoteState.notebookEntries || [])
+    .map(normalizeNotebookEntry)
+    .filter(Boolean);
+  const notebookMap = new Map();
+  for (const item of remoteNotebook) notebookMap.set(item.key, item);
+  for (const item of localNotebook) {
+    const existing = notebookMap.get(item.key);
+    if (!existing || String(item.updatedAt || "") >= String(existing.updatedAt || "")) {
+      notebookMap.set(item.key, item);
+    }
+  }
+  const notebookMerged = Array.from(notebookMap.values())
+    .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+    .slice(0, 500);
+
+  const localVocab = normalizeVocabPrefsMap(localState.vocabPrefs || {});
+  const remoteVocab = normalizeVocabPrefsMap(remoteState.vocabPrefs || {});
+  const vocabMerged = mergeByUpdatedAt(remoteVocab, localVocab);
+
+  return {
+    favorites: favoritesMerged,
+    notebookEntries: notebookMerged,
+    vocabPrefs: vocabMerged
+  };
+}
+
+function librarySnapshot() {
+  return {
+    favorites: favorites.slice(0, 50),
+    notebookEntries: notebookEntries.slice(0, 500),
+    vocabPrefs
+  };
+}
+
+async function syncLibraryNow() {
+  if (!authToken || librarySyncPaused) return;
+  if (librarySyncInFlight) {
+    librarySyncPending = true;
+    return;
+  }
+  librarySyncInFlight = true;
+  try {
+    const response = await apiFetch("/api/library/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(librarySnapshot())
+    });
+    if (!response.ok) {
+      throw new Error(`library sync failed (${response.status})`);
+    }
+  } catch {
+    // Keep local data and retry on later writes.
+  } finally {
+    librarySyncInFlight = false;
+    if (librarySyncPending) {
+      librarySyncPending = false;
+      scheduleLibrarySync(true);
+    }
+  }
+}
+
+function scheduleLibrarySync(immediate = false) {
+  if (!authToken || librarySyncPaused) return;
+  if (librarySyncTimer) {
+    clearTimeout(librarySyncTimer);
+  }
+  const delay = immediate ? 0 : LIBRARY_SYNC_DELAY_MS;
+  librarySyncTimer = setTimeout(() => {
+    librarySyncTimer = null;
+    void syncLibraryNow();
+  }, delay);
+}
+
+async function hydrateLibraryFromServer() {
+  if (!authToken) return;
+  const localState = {
+    favorites: favorites.slice(),
+    notebookEntries: notebookEntries.slice(),
+    vocabPrefs: { ...vocabPrefs }
+  };
+  try {
+    const response = await apiFetch("/api/library");
+    if (!response.ok) return;
+    const remote = await response.json();
+    const merged = mergeLibrary(localState, {
+      favorites: Array.isArray(remote?.favorites) ? remote.favorites : [],
+      notebookEntries: Array.isArray(remote?.notebookEntries) ? remote.notebookEntries : [],
+      vocabPrefs: remote?.vocabPrefs && typeof remote.vocabPrefs === "object" ? remote.vocabPrefs : {}
+    });
+    applyLibraryState(merged);
+    await syncLibraryNow();
+  } catch {
+    // Keep local data if the server is temporarily unavailable.
+  }
 }
 
 function getWordPref(wordOrKey, word = "") {
@@ -298,10 +527,12 @@ function getWordPref(wordOrKey, word = "") {
 function saveWordPref(key, patch = {}) {
   if (!key) return;
   const existing = vocabPrefs[key] || {};
+  const now = new Date().toISOString();
   vocabPrefs[key] = {
     ...existing,
     ...patch,
-    updatedAt: new Date().toISOString()
+    createdAt: String(existing.createdAt || patch.createdAt || now),
+    updatedAt: now
   };
   saveVocabPrefs();
 }
@@ -1549,6 +1780,7 @@ function renameFavoriteById(id) {
   }
 
   favorites[index].title = nextTitle;
+  favorites[index].updatedAt = new Date().toISOString();
   saveFavorites();
   renderLibraryList();
   syncActionButtonLabels();
@@ -1561,6 +1793,7 @@ function renameFavoriteById(id) {
 }
 
 function favoriteFromCurrent() {
+  const now = new Date().toISOString();
   return {
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     title: articleTitleEl.textContent || defaultTitleByWords(latestWords),
@@ -1571,7 +1804,9 @@ function favoriteFromCurrent() {
     paragraphsEn: latestParagraphsEn,
     paragraphsZh: latestParagraphsZh,
     alignment: latestAlignment,
-    missing: []
+    missing: [],
+    createdAt: now,
+    updatedAt: now
   };
 }
 
@@ -1857,6 +2092,7 @@ async function init() {
   loadFavorites();
   loadVocabPrefs();
   loadNotebookEntries();
+  await hydrateLibraryFromServer();
   renderSpelling();
   applyReadingFontSize();
   applyReadingMode();

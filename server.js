@@ -397,6 +397,129 @@ async function requireAdmin(req, res) {
   }
   return user;
 }
+
+function cloneJsonSafe(value, fallback) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeText(value, maxLen = 20000) {
+  return String(value || "").trim().slice(0, maxLen);
+}
+
+function normalizeIso(value, fallback = new Date().toISOString()) {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toISOString();
+}
+
+function normalizeStringArray(raw, maxItems = 200, itemMaxLen = 500) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => normalizeText(item, itemMaxLen))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function sanitizeFavoritesPayload(rawList) {
+  if (!Array.isArray(rawList)) return [];
+  const now = new Date().toISOString();
+  const out = [];
+  const seen = new Set();
+
+  for (const raw of rawList.slice(0, 200)) {
+    const words = normalizeStringArray(raw?.words, 120, 80);
+    const id = normalizeText(raw?.id, 80) || `fav_${crypto.randomBytes(8).toString("hex")}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+
+    out.push({
+      id,
+      userId: "",
+      title: normalizeText(raw?.title, 200) || "未命名文章",
+      savedAt: normalizeText(raw?.savedAt, 120) || now,
+      words,
+      article: normalizeText(raw?.article, 120000),
+      lexicon: cloneJsonSafe(Array.isArray(raw?.lexicon) ? raw.lexicon.slice(0, 300) : [], []),
+      paragraphsEn: cloneJsonSafe(Array.isArray(raw?.paragraphsEn) ? raw.paragraphsEn.slice(0, 120) : [], []),
+      paragraphsZh: cloneJsonSafe(Array.isArray(raw?.paragraphsZh) ? raw.paragraphsZh.slice(0, 120) : [], []),
+      alignment: cloneJsonSafe(Array.isArray(raw?.alignment) ? raw.alignment.slice(0, 300) : [], []),
+      missing: cloneJsonSafe(Array.isArray(raw?.missing) ? raw.missing.slice(0, 120) : [], []),
+      createdAt: normalizeIso(raw?.createdAt, now),
+      updatedAt: normalizeIso(raw?.updatedAt, now)
+    });
+  }
+
+  return out;
+}
+
+function sanitizeNotebookPayload(rawList) {
+  if (!Array.isArray(rawList)) return [];
+  const now = new Date().toISOString();
+  const out = [];
+  const seen = new Set();
+
+  for (const raw of rawList.slice(0, 2000)) {
+    const word = normalizeText(raw?.word, 120);
+    const key =
+      normalizeText(raw?.key, 120) ||
+      normalizeText(raw?.wordKey, 120) ||
+      word.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+
+    out.push({
+      id: normalizeText(raw?.id, 80) || `nb_${crypto.randomBytes(8).toString("hex")}`,
+      userId: "",
+      wordKey: key,
+      word: word || key,
+      pos: normalizeText(raw?.pos, 80),
+      senses: cloneJsonSafe(Array.isArray(raw?.senses) ? raw.senses.slice(0, 20) : [], []),
+      collocations: cloneJsonSafe(Array.isArray(raw?.collocations) ? raw.collocations.slice(0, 20) : [], []),
+      synonyms: cloneJsonSafe(Array.isArray(raw?.synonyms) ? raw.synonyms.slice(0, 30) : [], []),
+      antonyms: cloneJsonSafe(Array.isArray(raw?.antonyms) ? raw.antonyms.slice(0, 30) : [], []),
+      wordFormation: normalizeText(raw?.wordFormation, 2000),
+      createdAt: normalizeIso(raw?.createdAt, now),
+      updatedAt: normalizeIso(raw?.updatedAt, now)
+    });
+  }
+
+  return out;
+}
+
+function sanitizeVocabPrefsPayload(rawValue) {
+  const now = new Date().toISOString();
+  const out = [];
+  const seen = new Set();
+  const sourceEntries =
+    rawValue && typeof rawValue === "object" && !Array.isArray(rawValue) ? Object.entries(rawValue) : [];
+
+  for (const [rawKey, rawItem] of sourceEntries.slice(0, 5000)) {
+    const wordKey = normalizeText(rawKey, 120);
+    if (!wordKey || seen.has(wordKey)) continue;
+    seen.add(wordKey);
+
+    const masteryRaw = normalizeText(rawItem?.mastery, 32).toLowerCase();
+    const mastery = masteryRaw === "mastered" ? "mastered" : "unknown";
+    out.push({
+      id: normalizeText(rawItem?.id, 80) || `vp_${crypto.randomBytes(8).toString("hex")}`,
+      userId: "",
+      wordKey,
+      word: normalizeText(rawItem?.word, 120),
+      mastery,
+      createdAt: normalizeIso(rawItem?.createdAt, now),
+      updatedAt: normalizeIso(rawItem?.updatedAt, now)
+    });
+  }
+
+  return out;
+}
+
 function splitWords(rawText) {
   return String(rawText || "")
     .split(/[\n,，]+/)
@@ -1150,6 +1273,120 @@ app.get("/api/usage", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to get usage.", detail: error.message });
+  }
+});
+
+app.get("/api/library", async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+
+    const [favoriteRows, notebookRows, vocabRows] = await Promise.all([
+      prisma.favoriteArticle.findMany({
+        where: { userId: user.id },
+        orderBy: { updatedAt: "desc" }
+      }),
+      prisma.notebookEntry.findMany({
+        where: { userId: user.id },
+        orderBy: { updatedAt: "desc" }
+      }),
+      prisma.userVocabPref.findMany({
+        where: { userId: user.id },
+        orderBy: { updatedAt: "desc" }
+      })
+    ]);
+
+    const favorites = favoriteRows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      savedAt: row.savedAt,
+      words: Array.isArray(row.words) ? row.words : [],
+      article: row.article,
+      lexicon: Array.isArray(row.lexicon) ? row.lexicon : [],
+      paragraphsEn: Array.isArray(row.paragraphsEn) ? row.paragraphsEn : [],
+      paragraphsZh: Array.isArray(row.paragraphsZh) ? row.paragraphsZh : [],
+      alignment: Array.isArray(row.alignment) ? row.alignment : [],
+      missing: Array.isArray(row.missing) ? row.missing : [],
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt
+    }));
+
+    const notebookEntries = notebookRows.map((row) => ({
+      id: row.id,
+      key: row.wordKey,
+      word: row.word,
+      pos: row.pos,
+      senses: Array.isArray(row.senses) ? row.senses : [],
+      collocations: Array.isArray(row.collocations) ? row.collocations : [],
+      synonyms: Array.isArray(row.synonyms) ? row.synonyms : [],
+      antonyms: Array.isArray(row.antonyms) ? row.antonyms : [],
+      wordFormation: row.wordFormation,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt
+    }));
+
+    const vocabPrefs = {};
+    for (const row of vocabRows) {
+      vocabPrefs[row.wordKey] = {
+        word: row.word,
+        mastery: row.mastery,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+      };
+    }
+
+    res.json({ ok: true, favorites, notebookEntries, vocabPrefs });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to load library.", detail: error.message });
+  }
+});
+
+app.post("/api/library/sync", async (req, res) => {
+  try {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+
+    const favoriteRows = sanitizeFavoritesPayload(req.body?.favorites).map((row) => ({
+      ...row,
+      userId: user.id
+    }));
+    const notebookRows = sanitizeNotebookPayload(req.body?.notebookEntries).map((row) => ({
+      ...row,
+      userId: user.id
+    }));
+    const vocabRows = sanitizeVocabPrefsPayload(req.body?.vocabPrefs).map((row) => ({
+      ...row,
+      userId: user.id
+    }));
+
+    await prisma.$transaction(async (tx) => {
+      await tx.favoriteArticle.deleteMany({ where: { userId: user.id } });
+      await tx.notebookEntry.deleteMany({ where: { userId: user.id } });
+      await tx.userVocabPref.deleteMany({ where: { userId: user.id } });
+
+      if (favoriteRows.length > 0) {
+        await tx.favoriteArticle.createMany({ data: favoriteRows });
+      }
+      if (notebookRows.length > 0) {
+        await tx.notebookEntry.createMany({ data: notebookRows });
+      }
+      if (vocabRows.length > 0) {
+        await tx.userVocabPref.createMany({ data: vocabRows });
+      }
+    });
+
+    res.json({
+      ok: true,
+      counts: {
+        favorites: favoriteRows.length,
+        notebookEntries: notebookRows.length,
+        vocabPrefs: vocabRows.length
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to sync library.", detail: error.message });
   }
 });
 

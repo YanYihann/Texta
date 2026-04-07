@@ -71,3 +71,53 @@ model VipRequest {
 
   @@index([userId, status])
 }
+
+model FavoriteArticle {
+  id           String @id
+  userId       String
+  title        String
+  savedAt      String
+  words        Json
+  article      String
+  lexicon      Json
+  paragraphsEn Json
+  paragraphsZh Json
+  alignment    Json
+  missing      Json
+  createdAt    String
+  updatedAt    String
+
+  @@index([userId, updatedAt])
+  @@index([userId, savedAt])
+}
+
+model NotebookEntry {
+  id           String @id @default(cuid())
+  userId       String
+  wordKey      String
+  word         String
+  pos          String
+  senses       Json
+  collocations Json
+  synonyms     Json
+  antonyms     Json
+  wordFormation String
+  createdAt    String
+  updatedAt    String
+
+  @@unique([userId, wordKey])
+  @@index([userId, updatedAt])
+}
+
+model UserVocabPref {
+  id        String @id @default(cuid())
+  userId    String
+  wordKey   String
+  word      String
+  mastery   String
+  createdAt String
+  updatedAt String
+
+  @@unique([userId, wordKey])
+  @@index([userId, updatedAt])
+}
