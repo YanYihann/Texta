@@ -616,6 +616,31 @@ function extractJsonObject(text) {
   }
 }
 
+function decodeJsonEscapedString(value) {
+  const raw = String(value || "");
+  try {
+    return JSON.parse(`"${raw}"`);
+  } catch {
+    return raw
+      .replace(/\\"/g, '"')
+      .replace(/\\n/g, "\n")
+      .replace(/\\\\/g, "\\");
+  }
+}
+
+function extractTitleArticleLoose(text) {
+  const source = String(text || "");
+  const titleMatch = source.match(/"title"\s*:\s*"((?:\\.|[^"\\])*)"/i);
+  const articleMatch = source.match(/"article"\s*:\s*"((?:\\.|[^"\\])*)"/i);
+  if (!titleMatch || !articleMatch) {
+    return null;
+  }
+  return {
+    title: decodeJsonEscapedString(titleMatch[1]).trim(),
+    article: decodeJsonEscapedString(articleMatch[1]).trim()
+  };
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -959,6 +984,14 @@ async function generateArticlePackage(words, level, quickMode, lexicon, generati
     };
   }
 
+  const looseParsed = extractTitleArticleLoose(text);
+  if (looseParsed && looseParsed.article) {
+    return {
+      title: looseParsed.title || defaultTitleByDate(words.length),
+      article: looseParsed.article
+    };
+  }
+
   const lines = text.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
   const guessedTitle = lines[0] || defaultTitleByDate(words.length);
   const guessedArticle = lines.slice(1).join("\n\n") || text;
@@ -1024,10 +1057,9 @@ function appendMissingWordsFragmentsMixed(article, missingWords, lexicon) {
   const markerMap = new Map(
     (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
   );
-  const chunks = chunkArray(missingWords, 4);
-  const fragments = chunks.map((chunk, index) => {
-    const wordsWithMarkers = chunk.map((w) => `${w}${markerMap.get(String(w).toLowerCase()) || "①"}`).join("、");
-    return `片段${index + 1}：补充关键词 ${wordsWithMarkers}。`;
+  const fragments = missingWords.map((word, index) => {
+    const marker = markerMap.get(String(word).toLowerCase()) || "①";
+    return `片段${index + 1}：这个情境里我特别记住了 ${word}${marker}。`;
   });
   return `${String(article || "").trim()}\n\n${fragments.join("\n\n")}`.trim();
 }
@@ -1846,7 +1878,7 @@ app.post("/api/generate", async (req, res) => {
     let missing = findMissingWords(articlePack.article, words);
     let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
 
-    const retryCount = quickMode ? 1 : 2;
+    const retryCount = generationMode === "mixed" ? (quickMode ? 2 : 4) : quickMode ? 1 : 2;
     for (let i = 0; i < retryCount && (missing.length > 0 || overused.length > 0); i += 1) {
       articlePack = await generateArticlePackage(
         words,
@@ -1855,12 +1887,12 @@ app.post("/api/generate", async (req, res) => {
         lexicon,
         generationMode,
         [
-          `Important fix (round ${i + 1}): ensure ALL missing words appear naturally.`,
+          `Important fix (round ${i + 1}): ALL target words must be included.`,
           `Missing words: ${missing.join(", ")}.`,
           overused.length > 0
             ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
             : "",
-          "You can add one concise final paragraph to include any remaining words."
+          "If needed, split into short fragments, but keep natural Chinese body and include every target word."
         ].join(" ")
       );
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
