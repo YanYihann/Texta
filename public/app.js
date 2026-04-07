@@ -1159,10 +1159,26 @@ function buildMixedLexiconNoteMap(lexicon) {
   for (const item of Array.isArray(lexicon) ? lexicon : []) {
     const key = keyifyWord(item?.word || "");
     if (!key) continue;
-    const pos = String(item?.pos || "").trim();
-    const meaning = String(item?.senses?.[0]?.meaning || "").trim();
-    const note = [pos, meaning].filter(Boolean).join(" ");
-    map.set(key, note || "词义待补充");
+    const rawPos = String(item?.pos || "").trim();
+    const pos = /^(n|v|adj|adv)\.?$/i.test(rawPos)
+      ? rawPos.toLowerCase().endsWith(".")
+        ? rawPos.toLowerCase()
+        : `${rawPos.toLowerCase()}.`
+      : /noun/i.test(rawPos)
+        ? "n."
+        : /verb/i.test(rawPos)
+          ? "v."
+          : /adjective/i.test(rawPos)
+            ? "adj."
+            : /adverb/i.test(rawPos)
+              ? "adv."
+              : rawPos;
+    const senses = Array.isArray(item?.senses) ? item.senses : [];
+    const zhMeaning =
+      senses.map((s) => String(s?.meaning || "").trim()).find((text) => /[\u4e00-\u9fff]/.test(text)) ||
+      "中文释义待补充";
+    const note = [pos, zhMeaning].filter(Boolean).join(" ").trim();
+    map.set(key, note || "中文释义待补充");
   }
   return map;
 }

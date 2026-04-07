@@ -923,7 +923,8 @@ async function generateArticlePackage(words, level, quickMode, lexicon, generati
         "The main body must be natural Chinese sentences.",
         "Insert target words in English only, do not translate target words into Chinese.",
         "For each target word, use exactly the original input form (no plural/past/ing).",
-        "Each target word should appear once if possible, and never more than twice."
+        "Each target word should appear once if possible, and never more than twice.",
+        "If it is hard to connect all words in one coherent story, split into several short fragments/sections, but all target words must be covered."
       ]
     : ["Write an English IELTS-style article."];
 
@@ -1014,6 +1015,21 @@ function findOverusedWords(article, words, maxAllowed = 2) {
     }
   }
   return overused;
+}
+
+function appendMissingWordsFragmentsMixed(article, missingWords, lexicon) {
+  if (!Array.isArray(missingWords) || missingWords.length === 0) {
+    return String(article || "");
+  }
+  const markerMap = new Map(
+    (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
+  );
+  const chunks = chunkArray(missingWords, 4);
+  const fragments = chunks.map((chunk, index) => {
+    const wordsWithMarkers = chunk.map((w) => `${w}${markerMap.get(String(w).toLowerCase()) || "①"}`).join("、");
+    return `片段${index + 1}：补充关键词 ${wordsWithMarkers}。`;
+  });
+  return `${String(article || "").trim()}\n\n${fragments.join("\n\n")}`.trim();
 }
 
 async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
@@ -1857,6 +1873,16 @@ app.post("/api/generate", async (req, res) => {
         articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
         articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
         missing = findMissingWords(articlePack.article, words);
+      } else {
+        articlePack.article = appendMissingWordsFragmentsMixed(articlePack.article, missing, lexicon);
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        missing = findMissingWords(articlePack.article, words);
+        if (missing.length > 0) {
+          // Absolute fallback to guarantee full hit coverage for mixed mode.
+          articlePack.article = appendMissingWordsFragmentsMixed(articlePack.article, missing, lexicon);
+          articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+          missing = findMissingWords(articlePack.article, words);
+        }
       }
     }
 

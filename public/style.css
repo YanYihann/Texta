@@ -1420,11 +1420,15 @@ mark.vocab-en {
 
 .mixed-vocab mark.vocab-en {
   line-height: 1.08;
+  font-size: 1.22em;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 6px;
 }
 
 .mixed-note {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.1;
   color: #b91c1c;
   font-weight: 600;
@@ -1908,7 +1912,7 @@ body.reading-mode .app-shell {
   }
 
   .mixed-note {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .para-card.mixed-mode .para-en {
