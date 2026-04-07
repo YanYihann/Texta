@@ -2032,16 +2032,20 @@ generateBtn.addEventListener("click", async () => {
       }
       throw new Error(data.error || "今日次数已用完");
     }
-    if (!response.ok) {
-      throw new Error((data && (data.detail || data.error)) || "请求失败");
-    }
+      if (!response.ok) {
+        throw new Error((data && (data.detail || data.error)) || "请求失败");
+      }
 
-    applyArticleData({ ...data, words: latestWords });
-    statusEl.textContent = "生成完成。";
-  } catch (error) {
-    statusEl.textContent = `生成失败：${error.message}`;
-  } finally {
-    generateBtn.disabled = false;
+      applyArticleData({ ...data, words: latestWords });
+      const usedModel = String(data?.model || "").trim();
+      const usedCost = Number(data?.usageCost || (generationQuality === "advanced" ? 2 : 1));
+      statusEl.textContent = usedModel
+        ? `生成完成（实际模型：${usedModel}，本次消耗：${usedCost} 次）。`
+        : "生成完成。";
+    } catch (error) {
+      statusEl.textContent = `生成失败：${error.message}`;
+    } finally {
+      generateBtn.disabled = false;
   }
 });
 
