@@ -2003,7 +2003,7 @@ generateBtn.addEventListener("click", async () => {
   resultSection.classList.add("hidden");
   glossaryPanelEl.classList.add("hidden");
   missingWordsEl.textContent = "";
-  const qualityLabel = generationQuality === "advanced" ? "高级生成（GPT-4o，消耗2次）" : "普通生成（GPT-4o-mini，消耗1次）";
+  const qualityLabel = generationQuality === "advanced" ? "高级生成（消耗2次）" : "普通生成（消耗1次）";
   statusEl.textContent = quickMode ? `${qualityLabel} + 快速模式生成中...` : `AI 正在${qualityLabel}，请稍等（大约10-15秒）...`;
 
   try {
@@ -2037,11 +2037,8 @@ generateBtn.addEventListener("click", async () => {
       }
 
       applyArticleData({ ...data, words: latestWords });
-      const usedModel = String(data?.model || "").trim();
       const usedCost = Number(data?.usageCost || (generationQuality === "advanced" ? 2 : 1));
-      statusEl.textContent = usedModel
-        ? `生成完成（实际模型：${usedModel}，本次消耗：${usedCost} 次）。`
-        : "生成完成。";
+      statusEl.textContent = `生成完成（本次消耗：${usedCost} 次）。`;
     } catch (error) {
       statusEl.textContent = `生成失败：${error.message}`;
     } finally {
