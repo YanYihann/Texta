@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Texta 用户使用查看</title>
+    <title>Texta 鐢ㄦ埛浣跨敤鏌ョ湅</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
     <link rel="stylesheet" href="./style.css" />
@@ -12,36 +12,40 @@
     <main class="app-shell admin-shell admin-wide-shell">
       <section class="panel result-panel">
         <div class="top-actions">
-          <h2>用户使用查看</h2>
+          <h2>鐢ㄦ埛浣跨敤鏌ョ湅</h2>
           <div class="actions">
-            <button id="refreshUsageBtn" type="button">刷新</button>
-            <a class="upgrade-link" href="./admin.html">VIP审核中心</a>
-            <a class="upgrade-link" href="./app.html">返回主页面</a>
+            <button id="refreshUsageBtn" type="button">鍒锋柊</button>
+            <a class="upgrade-link" href="./admin.html">VIP瀹℃牳涓績</a>
+            <a class="upgrade-link" href="./app.html">杩斿洖涓婚〉闈?/a>
           </div>
         </div>
 
         <div class="usage-toolbar">
           <div>
-            <label for="usageSearchInput">搜索用户</label>
-            <input id="usageSearchInput" type="text" placeholder="输入用户名或邮箱" />
+            <label for="usageSearchInput">鎼滅储鐢ㄦ埛</label>
+            <input id="usageSearchInput" type="text" placeholder="杈撳叆鐢ㄦ埛鍚嶆垨閭" />
           </div>
           <div>
-            <label for="usageRoleFilter">身份筛选</label>
+            <label for="usageRoleFilter">韬唤绛涢€?/label>
             <select id="usageRoleFilter">
-              <option value="all">全部身份</option>
-              <option value="admin">管理员</option>
-              <option value="vip">VIP用户</option>
-              <option value="user">普通用户</option>
+              <option value="all">鍏ㄩ儴韬唤</option>
+              <option value="admin">绠＄悊鍛?/option>
+              <option value="vip">VIP鐢ㄦ埛</option>
+              <option value="user">鏅€氱敤鎴?/option>
             </select>
           </div>
           <div>
-            <label for="usageSortHint">排序方式</label>
-            <input id="usageSortHint" type="text" value="按总使用次数降序" readonly />
+            <label for="usageSortSelect">鎺掑簭鏂瑰紡</label>
+            <select id="usageSortSelect">
+              <option value="totalUsage">鎸夋€讳娇鐢ㄦ鏁伴檷搴?</option>
+              <option value="latestUsedAt">鎸夋渶杩戜娇鐢ㄦ椂闂撮檷搴?</option>
+              <option value="createdAt">鎸夌敤鎴锋敞鍐屾椂闂撮檷搴?</option>
+            </select>
           </div>
         </div>
 
         <div id="usageSummaryRow" class="usage-summary-row"></div>
-        <p id="usageStatus" class="subtitle">加载中...</p>
+        <p id="usageStatus" class="subtitle">鍔犺浇涓?..</p>
         <div id="usageUserList" class="admin-list"></div>
       </section>
     </main>
@@ -49,3 +53,4 @@
     <script src="./admin-usage.js?v=2026.04.04.130500"></script>
   </body>
 </html>
+

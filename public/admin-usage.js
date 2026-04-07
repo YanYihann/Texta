@@ -4,6 +4,7 @@ const usageSummaryRowEl = document.getElementById("usageSummaryRow");
 const refreshUsageBtnEl = document.getElementById("refreshUsageBtn");
 const usageSearchInputEl = document.getElementById("usageSearchInput");
 const usageRoleFilterEl = document.getElementById("usageRoleFilter");
+const usageSortSelectEl = document.getElementById("usageSortSelect");
 
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 let allUsers = [];
@@ -89,6 +90,37 @@ function getRoleKey(user) {
   return "user";
 }
 
+function toTimeValue(value) {
+  const text = String(value || "").trim();
+  if (!text) return 0;
+  const time = new Date(text).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function sortUsers(items) {
+  const mode = String(usageSortSelectEl?.value || "totalUsage");
+  const sorted = [...items];
+
+  sorted.sort((a, b) => {
+    if (mode === "latestUsedAt") {
+      const diff = toTimeValue(b.latestUsedAt) - toTimeValue(a.latestUsedAt);
+      if (diff !== 0) return diff;
+    } else if (mode === "createdAt") {
+      const diff = toTimeValue(b.createdAt) - toTimeValue(a.createdAt);
+      if (diff !== 0) return diff;
+    } else {
+      const diff = Number(b.totalUsage || 0) - Number(a.totalUsage || 0);
+      if (diff !== 0) return diff;
+    }
+
+    const usageDiff = Number(b.totalUsage || 0) - Number(a.totalUsage || 0);
+    if (usageDiff !== 0) return usageDiff;
+    return toTimeValue(b.createdAt) - toTimeValue(a.createdAt);
+  });
+
+  return sorted;
+}
+
 async function ensureAdmin() {
   const token = getToken();
   if (!token) {
@@ -161,17 +193,18 @@ function filterUsers() {
     const roleOk = roleFilter === "all" || getRoleKey(user) === roleFilter;
     return searchOk && roleOk;
   });
+  const sortedItems = sortUsers(items);
 
-  renderSummary(items);
+  renderSummary(sortedItems);
 
-  if (items.length === 0) {
+  if (sortedItems.length === 0) {
     usageUserListEl.innerHTML = '<div class="usage-empty">没有匹配到用户</div>';
     usageStatusEl.textContent = "请调整搜索关键词或筛选条件。";
     return;
   }
 
-  usageUserListEl.innerHTML = items.map(renderUserCard).join("");
-  usageStatusEl.textContent = `共找到 ${items.length} 位用户。`;
+  usageUserListEl.innerHTML = sortedItems.map(renderUserCard).join("");
+  usageStatusEl.textContent = `共找到 ${sortedItems.length} 位用户。`;
 }
 
 async function loadUsageOverview() {
@@ -198,6 +231,7 @@ async function loadUsageOverview() {
 
 usageSearchInputEl.addEventListener("input", filterUsers);
 usageRoleFilterEl.addEventListener("change", filterUsers);
+usageSortSelectEl?.addEventListener("change", filterUsers);
 
 refreshUsageBtnEl.addEventListener("click", async () => {
   try {
