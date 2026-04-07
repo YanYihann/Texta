@@ -296,6 +296,10 @@ function normalizeGenerationQuality(raw) {
   return String(raw || "").toLowerCase() === "advanced" ? "advanced" : "normal";
 }
 
+function normalizeGenerationMode(raw) {
+  return String(raw || "").toLowerCase() === "mixed" ? "mixed" : "standard";
+}
+
 function getGenerationProfile(rawQuality) {
   const quality = normalizeGenerationQuality(rawQuality);
   if (quality === "advanced") {
@@ -464,6 +468,43 @@ function normalizeStringArray(raw, maxItems = 200, itemMaxLen = 500) {
     .slice(0, maxItems);
 }
 
+function parseAlignmentPayload(rawAlignment) {
+  if (Array.isArray(rawAlignment)) {
+    return {
+      items: rawAlignment,
+      generationMode: "standard",
+      generationQuality: "normal"
+    };
+  }
+
+  if (rawAlignment && typeof rawAlignment === "object") {
+    const items = Array.isArray(rawAlignment.items) ? rawAlignment.items : [];
+    const meta = rawAlignment.meta && typeof rawAlignment.meta === "object" ? rawAlignment.meta : {};
+    return {
+      items,
+      generationMode: normalizeGenerationMode(meta.generationMode),
+      generationQuality: normalizeGenerationQuality(meta.generationQuality)
+    };
+  }
+
+  return {
+    items: [],
+    generationMode: "standard",
+    generationQuality: "normal"
+  };
+}
+
+function buildAlignmentPayload(rawAlignment, rawGenerationMode, rawGenerationQuality) {
+  const parsed = parseAlignmentPayload(rawAlignment);
+  return {
+    items: cloneJsonSafe(Array.isArray(parsed.items) ? parsed.items.slice(0, 300) : [], []),
+    meta: {
+      generationMode: normalizeGenerationMode(rawGenerationMode || parsed.generationMode),
+      generationQuality: normalizeGenerationQuality(rawGenerationQuality || parsed.generationQuality)
+    }
+  };
+}
+
 function sanitizeFavoritesPayload(rawList) {
   if (!Array.isArray(rawList)) return [];
   const now = new Date().toISOString();
@@ -486,7 +527,7 @@ function sanitizeFavoritesPayload(rawList) {
       lexicon: cloneJsonSafe(Array.isArray(raw?.lexicon) ? raw.lexicon.slice(0, 300) : [], []),
       paragraphsEn: cloneJsonSafe(Array.isArray(raw?.paragraphsEn) ? raw.paragraphsEn.slice(0, 120) : [], []),
       paragraphsZh: cloneJsonSafe(Array.isArray(raw?.paragraphsZh) ? raw.paragraphsZh.slice(0, 120) : [], []),
-      alignment: cloneJsonSafe(Array.isArray(raw?.alignment) ? raw.alignment.slice(0, 300) : [], []),
+      alignment: buildAlignmentPayload(raw?.alignment, raw?.generationMode, raw?.generationQuality),
       missing: cloneJsonSafe(Array.isArray(raw?.missing) ? raw.missing.slice(0, 120) : [], []),
       createdAt: normalizeIso(raw?.createdAt, now),
       updatedAt: normalizeIso(raw?.updatedAt, now)
@@ -1565,20 +1606,25 @@ app.get("/api/library", async (req, res) => {
       })
     ]);
 
-    const favorites = favoriteRows.map((row) => ({
-      id: decodeFavoriteId(user.id, row.id),
-      title: row.title,
-      savedAt: row.savedAt,
-      words: Array.isArray(row.words) ? row.words : [],
-      article: row.article,
-      lexicon: Array.isArray(row.lexicon) ? row.lexicon : [],
-      paragraphsEn: Array.isArray(row.paragraphsEn) ? row.paragraphsEn : [],
-      paragraphsZh: Array.isArray(row.paragraphsZh) ? row.paragraphsZh : [],
-      alignment: Array.isArray(row.alignment) ? row.alignment : [],
-      missing: Array.isArray(row.missing) ? row.missing : [],
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt
-    }));
+    const favorites = favoriteRows.map((row) => {
+      const alignmentParsed = parseAlignmentPayload(row.alignment);
+      return {
+        id: decodeFavoriteId(user.id, row.id),
+        title: row.title,
+        savedAt: row.savedAt,
+        words: Array.isArray(row.words) ? row.words : [],
+        article: row.article,
+        lexicon: Array.isArray(row.lexicon) ? row.lexicon : [],
+        paragraphsEn: Array.isArray(row.paragraphsEn) ? row.paragraphsEn : [],
+        paragraphsZh: Array.isArray(row.paragraphsZh) ? row.paragraphsZh : [],
+        alignment: alignmentParsed.items,
+        generationMode: alignmentParsed.generationMode,
+        generationQuality: alignmentParsed.generationQuality,
+        missing: Array.isArray(row.missing) ? row.missing : [],
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+      };
+    });
 
     const notebookEntries = notebookRows.map((row) => ({
       id: row.id,

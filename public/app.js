@@ -338,7 +338,7 @@ function loadFavorites() {
   try {
     const raw = localStorage.getItem(FAVORITES_KEY);
     const parsed = JSON.parse(raw || "[]");
-    favorites = Array.isArray(parsed) ? parsed : [];
+    favorites = Array.isArray(parsed) ? parsed.map(normalizeFavorite) : [];
   } catch {
     favorites = [];
   }
@@ -399,6 +399,14 @@ function normalizeIsoDate(value, fallback = new Date().toISOString()) {
   return date.toISOString();
 }
 
+function normalizeGenerationModeValue(raw) {
+  return String(raw || "").toLowerCase() === "mixed" ? "mixed" : "standard";
+}
+
+function normalizeGenerationQualityValue(raw) {
+  return String(raw || "").toLowerCase() === "advanced" ? "advanced" : "normal";
+}
+
 function normalizeFavorite(item) {
   const nowIso = new Date().toISOString();
   const id = String(item?.id || "").trim() || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -406,6 +414,8 @@ function normalizeFavorite(item) {
   const savedAt = savedAtRaw || nowIso;
   const createdAt = normalizeIsoDate(item?.createdAt || savedAtRaw, nowIso);
   const updatedAt = normalizeIsoDate(item?.updatedAt || item?.createdAt || savedAtRaw, nowIso);
+  const generationMode = normalizeGenerationModeValue(item?.generationMode);
+  const generationQuality = normalizeGenerationQualityValue(item?.generationQuality);
   return {
     id,
     title: String(item?.title || "未命名文章"),
@@ -416,6 +426,8 @@ function normalizeFavorite(item) {
     paragraphsEn: Array.isArray(item?.paragraphsEn) ? item.paragraphsEn : [],
     paragraphsZh: Array.isArray(item?.paragraphsZh) ? item.paragraphsZh : [],
     alignment: Array.isArray(item?.alignment) ? item.alignment : [],
+    generationMode,
+    generationQuality,
     missing: Array.isArray(item?.missing) ? item.missing : [],
     createdAt,
     updatedAt
@@ -1987,8 +1999,14 @@ function applyArticleData(data) {
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
-  latestGenerationMode = String(data.generationMode || "standard").toLowerCase() === "mixed" ? "mixed" : "standard";
-  latestGenerationQuality = String(data.generationQuality || "normal").toLowerCase() === "advanced" ? "advanced" : "normal";
+  latestGenerationMode = normalizeGenerationModeValue(data.generationMode || "standard");
+  latestGenerationQuality = normalizeGenerationQualityValue(data.generationQuality || "normal");
+  if (generationModeSelect) {
+    generationModeSelect.value = latestGenerationMode;
+  }
+  if (generationQualitySelect) {
+    generationQualitySelect.value = latestGenerationQuality;
+  }
   if (data && data.usage) {
     renderUsage(data.usage);
   }
@@ -2058,6 +2076,8 @@ function favoriteFromCurrent() {
     paragraphsEn: latestParagraphsEn,
     paragraphsZh: latestParagraphsZh,
     alignment: latestAlignment,
+    generationMode: latestGenerationMode,
+    generationQuality: latestGenerationQuality,
     missing: [],
     createdAt: now,
     updatedAt: now
