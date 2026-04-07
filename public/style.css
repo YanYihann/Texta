@@ -1410,6 +1410,31 @@ mark.vocab-en {
   padding: 0 2px;
 }
 
+.mixed-vocab {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  vertical-align: baseline;
+  margin: 0 1px;
+}
+
+.mixed-vocab mark.vocab-en {
+  line-height: 1.08;
+}
+
+.mixed-note {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.1;
+  color: #b91c1c;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.para-card.mixed-mode .para-en {
+  line-height: 2.02;
+}
+
 mark.vocab-zh {
   background: var(--highlight-zh);
   border-radius: 5px;
@@ -1880,6 +1905,14 @@ body.reading-mode .app-shell {
   .para-zh {
     margin-top: 6px;
     padding-top: 6px;
+  }
+
+  .mixed-note {
+    font-size: 10px;
+  }
+
+  .para-card.mixed-mode .para-en {
+    line-height: 1.86;
   }
 
   .mastery-group {

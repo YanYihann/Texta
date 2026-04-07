@@ -60,6 +60,7 @@ let latestParagraphsEn = [];
 let latestParagraphsZh = [];
 let latestAlignment = [];
 let latestUsage = null;
+let latestGenerationMode = "standard";
 let showChinese = true;
 let pendingExportType = "pdf";
 let readingMode = false;
@@ -1153,6 +1154,54 @@ function highlightEnglishWithAlignment(text, words, alignment) {
   return html;
 }
 
+function buildMixedLexiconNoteMap(lexicon) {
+  const map = new Map();
+  for (const item of Array.isArray(lexicon) ? lexicon : []) {
+    const key = keyifyWord(item?.word || "");
+    if (!key) continue;
+    const pos = String(item?.pos || "").trim();
+    const meaning = String(item?.senses?.[0]?.meaning || "").trim();
+    const note = [pos, meaning].filter(Boolean).join(" ");
+    map.set(key, note || "词义待补充");
+  }
+  return map;
+}
+
+function highlightMixedEnglishWithNotes(text, words, alignment, lexicon) {
+  const rows = Array.isArray(alignment) ? alignment : [];
+  const formToKey = new Map();
+
+  for (const row of rows) {
+    const key = keyifyWord(row?.word || "");
+    if (!key) continue;
+    const forms = Array.isArray(row?.english_forms) ? row.english_forms : [];
+    const merged = [String(row?.word || ""), ...forms].map((x) => String(x || "").trim()).filter(Boolean);
+    for (const form of merged) {
+      formToKey.set(form.toLowerCase(), key);
+    }
+  }
+
+  for (const w of words || []) {
+    const key = keyifyWord(w);
+    if (!key || formToKey.has(String(w).toLowerCase())) continue;
+    formToKey.set(String(w).toLowerCase(), key);
+  }
+
+  const forms = Array.from(formToKey.keys()).sort((a, b) => b.length - a.length).map((f) => escapeRegExp(f));
+  const noteMap = buildMixedLexiconNoteMap(lexicon);
+  let normalized = normalizeSenseMarkerSpacing(String(text || "")).replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
+  let html = escapeHtml(normalized);
+  if (forms.length > 0) {
+    const combined = new RegExp(`\\b(${forms.join("|")})\\b`, "gi");
+    html = html.replace(combined, (m) => {
+      const key = formToKey.get(String(m).toLowerCase()) || resolveWordKeyByToken(m, words) || keyifyWord(m);
+      const note = escapeHtml(noteMap.get(key) || "词义待补充");
+      return `<span class=\"mixed-vocab\" data-word-key=\"${key}\"><mark class=\"vocab-en\" data-word-key=\"${key}\">${m}</mark><span class=\"mixed-note\">${note}</span></span>`;
+    });
+  }
+  return html;
+}
+
 function highlightChineseWithKeys(text, termKeyPairs) {
   let html = escapeHtml(normalizeSenseMarkerSpacing(normalizeZhSenseMarkers(text)));
   for (const item of termKeyPairs || []) {
@@ -1505,19 +1554,23 @@ function speakGlossaryByKeyWithAccent(key, accent) {
   window.speechSynthesis.speak(u);
 }
 
-function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon, alignment) {
+function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon, alignment, generationMode = "standard") {
+  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
   const zhTermKeyPairs = buildChineseTermKeyPairsFromAlignment(alignment, lexicon);
 
   articleBlocksEl.innerHTML = paragraphsEn
     .map((en, i) => {
-      const zh = paragraphsZh[i] || "(该段翻译生成失败，请重试)";
-      const enHtml = highlightEnglishWithAlignment(en, words, alignment).replace(/\n/g, "<br>");
+      const zh = paragraphsZh[i] || "";
+      const enHtml = (isMixedMode
+        ? highlightMixedEnglishWithNotes(en, words, alignment, lexicon)
+        : highlightEnglishWithAlignment(en, words, alignment)
+      ).replace(/\n/g, "<br>");
       const zhHtml = highlightChineseWithAlignment(zh, zhTermKeyPairs, alignment).replace(/\n/g, "<br>");
 
       return `
-        <article class=\"para-card\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
+        <article class=\"para-card${isMixedMode ? " mixed-mode" : ""}\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
           <p class=\"para-en\">${enHtml}</p>
-          <p class=\"para-zh\">${zhHtml}</p>
+          ${isMixedMode ? "" : `<p class=\"para-zh\">${zhHtml || "(该段翻译生成失败，请重试)"}</p>`}
         </article>
       `;
     })
@@ -1837,6 +1890,7 @@ function applyArticleData(data) {
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
+  latestGenerationMode = String(data.generationMode || "standard").toLowerCase() === "mixed" ? "mixed" : "standard";
   if (data && data.usage) {
     renderUsage(data.usage);
   }
@@ -1847,7 +1901,7 @@ function applyArticleData(data) {
   exportTitleInput.value = finalTitle || String(data.defaultTitle || defaultTitleByWords(latestWords));
 
   syncNotebookEntriesFromLexicon(latestLexicon);
-  renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon, latestAlignment);
+  renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon, latestAlignment, latestGenerationMode);
   renderGlossary(latestLexicon);
   renderNotebookView();
   syncGlossaryFooterButton();

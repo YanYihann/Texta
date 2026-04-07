@@ -920,8 +920,10 @@ async function generateArticlePackage(words, level, quickMode, lexicon, generati
   const modeRules = isMixedMode
     ? [
         "Write a Chinese-first mixed-language article.",
-        "Most sentence structure should be natural Chinese, while target words remain in English.",
-        "Keep the overall article readable for Chinese learners and IELTS context."
+        "The main body must be natural Chinese sentences.",
+        "Insert target words in English only, do not translate target words into Chinese.",
+        "For each target word, use exactly the original input form (no plural/past/ing).",
+        "Each target word should appear once if possible, and never more than twice."
       ]
     : ["Write an English IELTS-style article."];
 
@@ -992,6 +994,26 @@ function levelToPromptText(level) {
     return "advanced";
   }
   return "intermediate";
+}
+
+function countWordOccurrences(text, word) {
+  const source = String(text || "");
+  const escaped = String(word || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escaped) return 0;
+  const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+  const matches = source.match(regex);
+  return matches ? matches.length : 0;
+}
+
+function findOverusedWords(article, words, maxAllowed = 2) {
+  const overused = [];
+  for (const word of words || []) {
+    const count = countWordOccurrences(article, word);
+    if (count > maxAllowed) {
+      overused.push(word);
+    }
+  }
+  return overused;
 }
 
 async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
@@ -1806,9 +1828,10 @@ app.post("/api/generate", async (req, res) => {
     let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode);
     articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
     let missing = findMissingWords(articlePack.article, words);
+    let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
 
     const retryCount = quickMode ? 1 : 2;
-    for (let i = 0; i < retryCount && missing.length > 0; i += 1) {
+    for (let i = 0; i < retryCount && (missing.length > 0 || overused.length > 0); i += 1) {
       articlePack = await generateArticlePackage(
         words,
         level,
@@ -1818,17 +1841,23 @@ app.post("/api/generate", async (req, res) => {
         [
           `Important fix (round ${i + 1}): ensure ALL missing words appear naturally.`,
           `Missing words: ${missing.join(", ")}.`,
+          overused.length > 0
+            ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
+            : "",
           "You can add one concise final paragraph to include any remaining words."
         ].join(" ")
       );
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       missing = findMissingWords(articlePack.article, words);
+      overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
     }
 
     if (missing.length > 0) {
-      articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
-      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-      missing = findMissingWords(articlePack.article, words);
+      if (generationMode !== "mixed") {
+        articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        missing = findMissingWords(articlePack.article, words);
+      }
     }
 
     const paragraphsEn = splitParagraphs(articlePack.article);
@@ -1850,6 +1879,7 @@ app.post("/api/generate", async (req, res) => {
       title: articlePack.title || defaultTitle,
       defaultTitle,
       article: articlePack.article,
+      generationMode,
       missing,
       lexicon,
       paragraphsEn,
