@@ -1072,65 +1072,87 @@ function hasMixedArtifactContent(article) {
   );
 }
 
-function countSentenceHitRatio(article, words) {
-  const segments = String(article || "")
-    .replace(/\r/g, "")
-    .split(/[。！？!?；;]+/g)
-    .map((x) => x.trim())
-    .filter(Boolean);
-  if (segments.length === 0) {
-    return 0;
-  }
-  const escapedWords = (words || []).map((w) => String(w || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean);
-  if (escapedWords.length === 0) {
-    return 0;
-  }
-  let hitCount = 0;
-  for (const seg of segments) {
-    const hasWord = escapedWords.some((w) => new RegExp(`\\b${w}\\b`, "i").test(seg));
-    if (hasWord) {
-      hitCount += 1;
-    }
-  }
-  return hitCount / segments.length;
+function cleanMixedArtifactText(article) {
+  let text = String(article || "").replace(/\r/g, "");
+  text = text.replace(/片段\s*\d+\s*[:：]\s*补充关键词[^\n]*(?:\n|$)/gi, "");
+  text = text.replace(/(^|\n)\s*补充关键词[^\n]*(?:\n|$)/gi, "\n");
+  text = text.replace(/^\s*\{\s*"title"\s*:\s*"[\s\S]*?"article"\s*:\s*"/i, "");
+  text = text.replace(/"\s*\}\s*$/i, "");
+  text = text.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+  text = text.replace(/\n{3,}/g, "\n\n");
+  return text.trim();
 }
 
-function buildCompactMixedArticle(words, lexicon) {
+function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mixed") {
   const markerMap = new Map(
     (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
   );
-  const templates = [
-    (token) => `刚进门就看到 ${token}，我立刻开始处理细节。`,
-    (token) => `这一步如果忽略 ${token}，后面很容易出错。`,
-    (token) => `我先把 ${token} 稳住，节奏一下就顺了。`,
-    (token) => `遇到突发情况时，${token} 往往是关键线索。`,
-    (token) => `我把今天的重点记成 ${token}，提醒自己更谨慎。`,
-    (token) => `看似普通的一刻，因为 ${token} 变得很真实。`
-  ];
-
-  const lines = (words || []).map((word, index) => {
+  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
+  const lines = (missingWords || []).map((word, index) => {
     const marker = markerMap.get(String(word).toLowerCase()) || "①";
     const token = `${word}${marker}`;
-    const template = templates[index % templates.length];
-    return template(token);
+    if (isMixedMode) {
+      return `补写句${index + 1}：这个场景里我重新记住了 ${token}。`;
+    }
+    return `Supplement ${index + 1}: The key point in this line is ${token}.`;
   });
-
-  const chunks = chunkArray(lines, 4);
-  return chunks.map((group) => group.join("")).join("\n\n");
+  return lines.join("\n");
 }
 
-function appendMissingWordsFragmentsMixed(article, missingWords, lexicon) {
-  if (!Array.isArray(missingWords) || missingWords.length === 0) {
-    return String(article || "");
+async function generateMissingWordsRewrite(missingWords, lexicon, generationMode, quickMode) {
+  const words = Array.isArray(missingWords) ? missingWords.map((x) => String(x || "").trim()).filter(Boolean) : [];
+  if (words.length === 0) {
+    return "";
   }
-  const markerMap = new Map(
-    (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
-  );
-  const fragments = missingWords.map((word) => {
-    const marker = markerMap.get(String(word).toLowerCase()) || "①";
-    return `这一句我只记住 ${word}${marker}，继续往下推进。`;
-  });
-  return `${String(article || "").trim()}\n\n${fragments.join("")}`.trim();
+
+  const guideMap = new Map((lexicon || []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  const vocabGuide = words
+    .map((word) => {
+      const item = guideMap.get(word.toLowerCase());
+      const pos = String(item?.pos || "").trim();
+      const senses = Array.isArray(item?.senses) ? item.senses : [];
+      const meaning = senses.map((s) => String(s?.meaning || "").trim()).find(Boolean) || "词义待补充";
+      return `${word} (${pos || "-"}): ${meaning}`;
+    })
+    .join("\n");
+
+  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
+  const prompt = isMixedMode
+    ? [
+        "You are rewriting missing vocabulary content for a mixed Chinese-English learning passage.",
+        "Return plain text only. No JSON, no markdown, no list bullets.",
+        "Write concise Chinese sentences.",
+        "Each sentence must include exactly one target English word in original form.",
+        "Each target word must appear exactly once across the whole output.",
+        "Do NOT output standalone dictionary lines such as 'n. xxx'.",
+        "Words:",
+        words.join(", "),
+        "Vocabulary guide:",
+        vocabGuide
+      ].join("\n")
+    : [
+        "You are rewriting missing vocabulary content for an English passage.",
+        "Return plain text only.",
+        "Write concise natural English sentences.",
+        "Each sentence must include exactly one target word.",
+        "Each target word must appear exactly once.",
+        "Words:",
+        words.join(", "),
+        "Vocabulary guide:",
+        vocabGuide
+      ].join("\n");
+
+  try {
+    const rewritten = await callOpenAIText(prompt, { maxTokens: quickMode ? 220 : 420 });
+    const cleaned = isMixedMode ? cleanMixedArtifactText(rewritten) : String(rewritten || "").trim();
+    if (cleaned) {
+      return cleaned;
+    }
+  } catch (error) {
+    console.error("Failed to rewrite missing words:", error.message);
+  }
+
+  return buildMissingRewriteFallback(words, lexicon, generationMode);
 }
 
 async function generateParagraphTranslations(paragraphs, lexicon, quickMode) {
@@ -1970,32 +1992,31 @@ app.post("/api/generate", async (req, res) => {
       overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
     }
 
+    if (generationMode === "mixed" && hasMixedArtifactContent(articlePack.article)) {
+      articlePack.article = cleanMixedArtifactText(articlePack.article);
+      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+      missing = findMissingWords(articlePack.article, words);
+    }
+
     if (missing.length > 0) {
       if (generationMode !== "mixed") {
         articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
         articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
         missing = findMissingWords(articlePack.article, words);
       } else {
-        articlePack.article = appendMissingWordsFragmentsMixed(articlePack.article, missing, lexicon);
+        const missingBeforeRewrite = missing.slice();
+        const rewriteNotice = `提示：主文章仍有 ${missingBeforeRewrite.length} 个词未命中：${missingBeforeRewrite.join(", ")}。以下为补充重写短句：`;
+        const rewritten = await generateMissingWordsRewrite(missingBeforeRewrite, lexicon, generationMode, quickMode);
+        articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewriteNotice}\n${rewritten}`.trim();
         articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
         missing = findMissingWords(articlePack.article, words);
+
         if (missing.length > 0) {
-          // Absolute fallback to guarantee full hit coverage for mixed mode.
-          articlePack.article = appendMissingWordsFragmentsMixed(articlePack.article, missing, lexicon);
+          const fallbackRewrite = buildMissingRewriteFallback(missing, lexicon, generationMode);
+          articlePack.article = `${String(articlePack.article || "").trim()}\n${fallbackRewrite}`.trim();
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
           missing = findMissingWords(articlePack.article, words);
         }
-      }
-    }
-
-    if (generationMode === "mixed") {
-      const hitRatio = countSentenceHitRatio(articlePack.article, words);
-      const hasArtifacts = hasMixedArtifactContent(articlePack.article);
-      if (missing.length > 0 || hasArtifacts || hitRatio < 0.72) {
-        articlePack.article = buildCompactMixedArticle(words, lexicon);
-        articlePack.title = "中英混合速记";
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-        missing = findMissingWords(articlePack.article, words);
       }
     }
 
