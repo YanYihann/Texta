@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL_NORMAL = process.env.OPENAI_MODEL_NORMAL || process.env.OPENAI_MODEL || "gpt-4o-mini";
 const OPENAI_MODEL_ADVANCED = process.env.OPENAI_MODEL_ADVANCED || "gpt-4o";
-const ADVANCED_USAGE_COST = Math.max(1, Number(process.env.ADVANCED_USAGE_COST || 2));
+const ADVANCED_USAGE_COST = Math.max(1, Number(process.env.ADVANCED_USAGE_COST || 5));
 const OPENAI_API_MODE = String(process.env.OPENAI_API_MODE || "responses").toLowerCase();
 
 function normalizeBaseUrl(raw) {
