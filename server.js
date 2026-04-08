@@ -1065,6 +1065,7 @@ async function generateArticlePackage(
         "Do NOT use glossary parentheses style such as 中文（word） or 中文（word + meaning）.",
         "Do NOT output Chinese gloss + English word pairs such as 板球 cricket / 无菌 sterility.",
         "When Chinese characters directly connect with a target word, keep compact form like 打cricket / 的sterility (no extra spaces).",
+        "Avoid duplicate Chinese+English semantics around the same blank: use 非常cruel, not 非常残忍cruel.",
         "Do NOT output keyword list sections such as '片段1：补充关键词 ...'.",
         "Do NOT output standalone dictionary lines such as 'n. xxx' in the body.",
         "If it is hard to connect all words in one coherent story, split into several short fragments/sections, but all target words must be covered."
@@ -1217,6 +1218,22 @@ function stripStandaloneGlossLines(article, words) {
   return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+function buildGlossTokenVariants(rawToken) {
+  const token = String(rawToken || "").trim();
+  const variants = new Set();
+  if (!token) return variants;
+  variants.add(token);
+
+  // Common Chinese adjective/adverb particles; helps remove forms like 残忍的 + cruel.
+  if (token.length > 1 && /[的地得]$/.test(token)) {
+    variants.add(token.slice(0, -1));
+  }
+  if (token.length > 2 && /[性化]$/.test(token)) {
+    variants.add(token.slice(0, -1));
+  }
+  return variants;
+}
+
 function buildMixedInlineGlossMap(lexicon) {
   const map = new Map();
   for (const item of Array.isArray(lexicon) ? lexicon : []) {
@@ -1230,7 +1247,10 @@ function buildMixedInlineGlossMap(lexicon) {
         .trim();
       const found = meaning.match(/[\u4e00-\u9fff]{1,8}/g) || [];
       for (const token of found) {
-        if (token) terms.add(token);
+        const variants = buildGlossTokenVariants(token);
+        for (const variant of variants) {
+          if (variant) terms.add(variant);
+        }
       }
     }
     if (terms.size > 0) {
@@ -1274,6 +1294,118 @@ function normalizeMixedArticleStyle(article, words, lexicon = []) {
   text = stripStandaloneGlossLines(text, words);
   text = text.replace(/[ ]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   return text;
+}
+
+function escapeRegex(text) {
+  return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildWordContextSnippetMap(article, words) {
+  const source = String(article || "").replace(/\r/g, "\n");
+  const segments = source
+    .split(/(?<=[。！？!?；;\n])/)
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+  const map = new Map();
+
+  for (const rawWord of Array.isArray(words) ? words : []) {
+    const word = String(rawWord || "").trim();
+    if (!word) continue;
+    const regex = new RegExp(`\\b${escapeRegex(word)}\\b`, "i");
+    const hit = segments.find((seg) => regex.test(seg)) || "";
+    if (hit) {
+      map.set(word.toLowerCase(), hit.replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "").trim().slice(0, 180));
+    }
+  }
+  return map;
+}
+
+function mergeLexiconWithContextMeanings(lexicon, contextRows) {
+  const contextMap = new Map();
+  for (const row of Array.isArray(contextRows) ? contextRows : []) {
+    const word = String(row?.word || "").trim().toLowerCase();
+    if (!word || contextMap.has(word)) continue;
+    const meaning = String(row?.meaning || "").trim();
+    const pos = String(row?.pos || "").trim();
+    contextMap.set(word, { meaning, pos });
+  }
+
+  return (Array.isArray(lexicon) ? lexicon : []).map((item) => {
+    const word = String(item?.word || "").trim();
+    const key = word.toLowerCase();
+    const ctx = contextMap.get(key);
+    if (!ctx) return item;
+
+    const oldSenses = Array.isArray(item?.senses) ? item.senses : [];
+    const fallbackMeaning =
+      oldSenses.map((s) => String(s?.meaning || "").trim()).find((x) => /[\u4e00-\u9fff]/.test(x)) || "词义待补充";
+    const primaryMeaning = /[\u4e00-\u9fff]/.test(ctx.meaning) ? ctx.meaning : fallbackMeaning;
+    const primaryPos = ctx.pos || String(item?.pos || "");
+
+    const senseMeanings = [primaryMeaning];
+    for (const sense of oldSenses) {
+      const m = String(sense?.meaning || "").trim();
+      if (!m || senseMeanings.includes(m)) continue;
+      senseMeanings.push(m);
+      if (senseMeanings.length >= 5) break;
+    }
+
+    const senses = senseMeanings.map((meaning, idx) => ({
+      marker: toCircledNumber(idx + 1),
+      meaning
+    }));
+
+    return {
+      ...item,
+      pos: primaryPos || item?.pos || "",
+      senses
+    };
+  });
+}
+
+async function refineMixedLexiconByContext(words, lexicon, article, quickMode, model) {
+  const vocab = Array.isArray(lexicon) ? lexicon : [];
+  if (!Array.isArray(words) || words.length === 0 || vocab.length === 0) {
+    return vocab;
+  }
+
+  const contextMap = buildWordContextSnippetMap(article, words);
+  const guide = words
+    .map((word) => {
+      const item = vocab.find((x) => String(x?.word || "").toLowerCase() === String(word || "").toLowerCase());
+      const senses = Array.isArray(item?.senses) ? item.senses : [];
+      const sensesText = senses.map((s) => `${s.marker} ${String(s?.meaning || "").trim()}`).join("; ");
+      const ctx = contextMap.get(String(word || "").toLowerCase()) || "";
+      return `${word} | context: ${ctx || "(no context found)"} | candidates: ${sensesText || "(none)"}`;
+    })
+    .join("\n");
+
+  const prompt = [
+    "You are refining Chinese glosses for an IELTS mixed Chinese-English cloze article.",
+    "Return ONLY JSON array in same order as input words.",
+    "Each item format: {\"word\": string, \"pos\": string, \"meaning\": string}.",
+    "meaning must match the article context exactly and be concise Chinese (2-8 chars).",
+    "Prioritize the most common IELTS exam sense in this context.",
+    "Avoid rare/archaic senses and avoid literal dictionary noise.",
+    "When context is lab cleanliness, sterility should be 无菌 (not 不育).",
+    "When context is emotional anger, bristle should be 发怒/恼火 (not 竖起).",
+    "Do not include English in meaning.",
+    `Words: ${words.join(", ")}`,
+    "Word context + candidate senses:",
+    guide
+  ].join("\n");
+
+  try {
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 420 : 820, model });
+    const parsed = extractJsonArray(text);
+    if (!Array.isArray(parsed)) {
+      return vocab;
+    }
+    return mergeLexiconWithContextMeanings(vocab, parsed);
+  } catch (error) {
+    console.error("Failed to refine context meanings:", error.message);
+    return vocab;
+  }
 }
 
 function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mixed") {
@@ -2171,7 +2303,7 @@ app.post("/api/generate", async (req, res) => {
 
     const selectedModel = generationProfile.model;
 
-    const lexicon = await generateLexicon(words, quickMode, selectedModel);
+    let lexicon = await generateLexicon(words, quickMode, selectedModel);
     let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode, "", selectedModel);
     if (generationMode === "mixed") {
       articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
@@ -2241,6 +2373,14 @@ app.post("/api/generate", async (req, res) => {
           missing = findMissingWords(articlePack.article, words);
         }
       }
+    }
+
+    if (generationMode === "mixed") {
+      lexicon = await refineMixedLexiconByContext(words, lexicon, articlePack.article, quickMode, selectedModel);
+      articlePack.article = String(articlePack.article || "").replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
+      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+      missing = findMissingWords(articlePack.article, words);
     }
 
     const paragraphsEn = splitParagraphs(articlePack.article);
