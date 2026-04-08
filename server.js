@@ -736,12 +736,52 @@ function decodeFavoriteId(userId, storedId) {
   return raw.startsWith(prefix) ? raw.slice(prefix.length) : raw;
 }
 
+function normalizeInputWordToken(rawToken) {
+  let token = String(rawToken || "")
+    .replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, " ")
+    .replace(/^[\s\-*•·\d.)]+/, "")
+    .trim();
+  if (!token) return "";
+
+  // Inline dictionary style: "drip v. 滴落" => "drip", "water n." => "water"
+  const inlinePos = token.match(/^(.+?)\s+(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?(?:\s+.*)?$/i);
+  if (inlinePos && /[A-Za-z]/.test(String(inlinePos[1] || ""))) {
+    token = String(inlinePos[1] || "").trim();
+  }
+  token = token.replace(/\s+(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?\s*$/i, "").trim();
+  // Chinese gloss in parentheses: "drip（滴落）" => "drip"
+  token = token.replace(/[（(][^）)]*[\u4e00-\u9fff][^）)]*[）)]\s*$/g, "").trim();
+
+  // Standalone glossary tags: "adj.", "adj. 基础的", "noun", etc.
+  if (/^(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?$/i.test(token)) {
+    return "";
+  }
+  if (/^(?:noun|verb|adjective|adverb|preposition|pronoun|conjunction|numeral|determiner|interjection)\.?$/i.test(token)) {
+    return "";
+  }
+  if (/^(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?\s*[\u4e00-\u9fff].*$/i.test(token)) {
+    return "";
+  }
+
+  if (/[\u4e00-\u9fff]/.test(token)) {
+    const englishChunk = token.match(/[A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*)*/);
+    token = englishChunk ? englishChunk[0] : "";
+  }
+
+  token = token
+    .replace(/[^A-Za-z'\-\s]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return /[A-Za-z]/.test(token) ? token : "";
+}
+
 function splitWords(rawText) {
-  return String(rawText || "")
+  const rawItems = String(rawText || "")
     .split(/[\n,，]+/)
-    .map((w) => w.trim())
-    .filter(Boolean)
-    .filter((value, index, arr) => arr.findIndex((x) => x.toLowerCase() === value.toLowerCase()) === index);
+    .map((w) => normalizeInputWordToken(w))
+    .filter(Boolean);
+  return rawItems.filter((value, index, arr) => arr.findIndex((x) => x.toLowerCase() === value.toLowerCase()) === index);
 }
 
 function splitParagraphs(article) {
@@ -779,9 +819,19 @@ async function runWithConcurrency(items, concurrency, worker) {
   return out;
 }
 
+function buildWordPresenceRegex(word) {
+  const normalized = String(word || "").trim();
+  if (!normalized) return null;
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+  return new RegExp(`(^|[^A-Za-z])${escaped}(?:[①②③④⑤⑥⑦⑧⑨⑩])?(?=$|[^A-Za-z])`, "i");
+}
+
 function findMissingWords(article, words) {
-  const text = String(article || "").toLowerCase();
-  return words.filter((w) => !text.includes(w.toLowerCase()));
+  const text = String(article || "");
+  return (Array.isArray(words) ? words : []).filter((w) => {
+    const regex = buildWordPresenceRegex(w);
+    return regex ? !regex.test(text) : true;
+  });
 }
 
 function enforceWordMarkers(article, lexicon) {
@@ -1345,9 +1395,11 @@ function levelToPromptText(level) {
 
 function countWordOccurrences(text, word) {
   const source = String(text || "");
-  const escaped = String(word || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = String(word || "")
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\s+/g, "\\s+");
   if (!escaped) return 0;
-  const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+  const regex = new RegExp(`(^|[^A-Za-z])${escaped}(?:[①②③④⑤⑥⑦⑧⑨⑩])?(?=$|[^A-Za-z])`, "gi");
   const matches = source.match(regex);
   return matches ? matches.length : 0;
 }

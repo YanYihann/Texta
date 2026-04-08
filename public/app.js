@@ -891,12 +891,48 @@ function renderLibraryList() {
   renderFavorites();
 }
 
+function normalizeInputWordToken(rawToken) {
+  let token = String(rawToken || "")
+    .replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, " ")
+    .replace(/^[\s\-*•·\d.)]+/, "")
+    .trim();
+  if (!token) return "";
+
+  const inlinePos = token.match(/^(.+?)\s+(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?(?:\s+.*)?$/i);
+  if (inlinePos && /[A-Za-z]/.test(String(inlinePos[1] || ""))) {
+    token = String(inlinePos[1] || "").trim();
+  }
+  token = token.replace(/\s+(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?\s*$/i, "").trim();
+  token = token.replace(/[（(][^）)]*[\u4e00-\u9fff][^）)]*[）)]\s*$/g, "").trim();
+  if (/^(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?$/i.test(token)) {
+    return "";
+  }
+  if (/^(?:noun|verb|adjective|adverb|preposition|pronoun|conjunction|numeral|determiner|interjection)\.?$/i.test(token)) {
+    return "";
+  }
+  if (/^(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?\s*[\u4e00-\u9fff].*$/i.test(token)) {
+    return "";
+  }
+
+  if (/[\u4e00-\u9fff]/.test(token)) {
+    const englishChunk = token.match(/[A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*)*/);
+    token = englishChunk ? englishChunk[0] : "";
+  }
+
+  token = token
+    .replace(/[^A-Za-z'\-\s]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return /[A-Za-z]/.test(token) ? token : "";
+}
+
 function splitWords(rawText) {
-  return String(rawText || "")
+  const rawItems = String(rawText || "")
     .split(/[\n,，]+/)
-    .map((w) => w.trim())
-    .filter(Boolean)
-    .filter((value, index, arr) => arr.findIndex((x) => x.toLowerCase() === value.toLowerCase()) === index);
+    .map((w) => normalizeInputWordToken(w))
+    .filter(Boolean);
+  return rawItems.filter((value, index, arr) => arr.findIndex((x) => x.toLowerCase() === value.toLowerCase()) === index);
 }
 
 function normalizeWordToken(raw) {
