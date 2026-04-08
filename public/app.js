@@ -1405,7 +1405,7 @@ function applyReadingMode() {
 
 function updateMobileNavVisibility() {
   if (!mobileBottomNavEl) return;
-  mobileBottomNavEl.classList.toggle("hidden", !isMobileLayout() || readingMode);
+  mobileBottomNavEl.classList.toggle("hidden", !isMobileLayout());
 }
 
 function updateMobileNavActive(target = "") {
@@ -1426,12 +1426,17 @@ function hasGlossaryPage() {
 function applyMobilePageLayout() {
   updateMobileNavVisibility();
 
-  if (!isMobileLayout() || readingMode) {
+  if (!isMobileLayout()) {
     inputPanelEl?.classList.remove("mobile-page-hidden");
     resultSection?.classList.remove("mobile-page-hidden");
     glossaryPanelEl?.classList.remove("mobile-page-hidden");
     updateMobileNavActive("");
     return;
+  }
+
+  if (readingMode && currentMobilePage === "home" && hasArticlePage()) {
+    // In mobile reading mode, keep user on content page so bottom nav remains useful.
+    currentMobilePage = "article";
   }
 
   if (currentMobilePage === "article" && !hasArticlePage()) {
