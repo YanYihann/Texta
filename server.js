@@ -1478,12 +1478,31 @@ function normalizeMixedCnEnCompact(article) {
   return text;
 }
 
+function stripAdjectiveDeAfterWords(article, lexicon) {
+  let text = String(article || "");
+  const adjectives = (Array.isArray(lexicon) ? lexicon : [])
+    .map((item) => ({
+      word: String(item?.word || "").trim(),
+      pos: String(item?.pos || "").trim().toLowerCase()
+    }))
+    .filter((item) => item.word && /^(adj|adjective)\.?$/.test(item.pos));
+
+  for (const item of adjectives) {
+    const escapedWord = escapeRegex(item.word);
+    // Mixed mode style target: fundamental的概念 -> fundamental概念
+    const pattern = new RegExp(`\\b(${escapedWord})\\b([①②③④⑤⑥⑦⑧⑨⑩]?)\\s*的`, "gi");
+    text = text.replace(pattern, "$1$2");
+  }
+  return text;
+}
+
 function normalizeMixedArticleStyle(article, words, lexicon = []) {
   let text = String(article || "");
   text = cleanMixedArtifactText(text);
   text = normalizeMixedParenthesisGloss(text, words);
   text = stripInlineChineseGlossAroundWords(text, lexicon);
   text = normalizeMixedCnEnCompact(text);
+  text = stripAdjectiveDeAfterWords(text, lexicon);
   text = stripStandaloneGlossLines(text, words);
   text = text.replace(/[ ]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   return text;
