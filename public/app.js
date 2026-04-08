@@ -20,6 +20,9 @@ const libraryFavoritesBtnEl = document.getElementById("libraryFavoritesBtn");
 const libraryNotebookBtnEl = document.getElementById("libraryNotebookBtn");
 const addUnknownToNotebookBtnEl = document.getElementById("addUnknownToNotebookBtn");
 const statusEl = document.getElementById("status");
+const adminDiagPanelEl = document.getElementById("adminDiagPanel");
+const adminDiagSummaryEl = document.getElementById("adminDiagSummary");
+const adminDiagBarsEl = document.getElementById("adminDiagBars");
 const spellHintsEl = document.getElementById("spellHints");
 const wordChipsEl = document.getElementById("wordChips");
 const favoritesListEl = document.getElementById("favoritesList");
@@ -295,6 +298,51 @@ function renderUsage(usage, user = currentUser) {
   }
 }
 
+function clearAdminDiagnosticsView() {
+  if (adminDiagSummaryEl) adminDiagSummaryEl.textContent = "";
+  if (adminDiagBarsEl) adminDiagBarsEl.innerHTML = "";
+}
+
+function renderAdminDiagnostics(data) {
+  const isAdmin = String(currentUser?.role || "").toLowerCase() === "admin";
+  if (!adminDiagPanelEl) return;
+  if (!isAdmin || !data || typeof data !== "object") {
+    adminDiagPanelEl.classList.add("hidden");
+    clearAdminDiagnosticsView();
+    return;
+  }
+
+  const totalRequests = Number(data.totalRequests || 0);
+  const totalDurationMs = Number(data.totalDurationMs || 0);
+  const byStep = Array.isArray(data.byStep) ? data.byStep.slice(0, 8) : [];
+  const maxCount = byStep.reduce((mx, row) => Math.max(mx, Number(row?.requests || 0)), 0) || 1;
+
+  if (adminDiagSummaryEl) {
+    adminDiagSummaryEl.textContent = `${totalRequests} 次请求 · ${Math.round(totalDurationMs)}ms`;
+  }
+
+  if (adminDiagBarsEl) {
+    adminDiagBarsEl.innerHTML = byStep.length
+      ? byStep
+          .map((row) => {
+            const step = escapeHtml(String(row?.step || "unknown"));
+            const count = Number(row?.requests || 0);
+            const width = Math.max(8, Math.round((count / maxCount) * 100));
+            return `
+              <div class="admin-diag-row">
+                <span class="admin-diag-step">${step}</span>
+                <span class="admin-diag-bar-track"><span class="admin-diag-bar-fill" style="width:${width}%"></span></span>
+                <span class="admin-diag-count">${count}</span>
+              </div>
+            `;
+          })
+          .join("")
+      : `<div class="admin-diag-row"><span class="admin-diag-step">无数据</span><span class="admin-diag-bar-track"></span><span class="admin-diag-count">0</span></div>`;
+  }
+
+  adminDiagPanelEl.classList.remove("hidden");
+}
+
 async function refreshUsage() {
   if (!authToken) return;
   try {
@@ -327,9 +375,11 @@ async function loadMe() {
     userBadgeEl.textContent = `${currentUser?.name || currentUser?.email || "用户"} · ${roleText}`;
     logoutBtnEl.classList.remove("hidden");
     await refreshUsage();
+    renderAdminDiagnostics(null);
     return Boolean(currentUser);
   } catch {
     currentUser = null;
+    renderAdminDiagnostics(null);
     return false;
   }
 }
@@ -2052,6 +2102,7 @@ function applyArticleData(data) {
   if (data && data.usage) {
     renderUsage(data.usage);
   }
+  renderAdminDiagnostics(data?.adminDiagnostics || null);
   currentFavoriteId = String(data.id || "").trim();
 
   const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
@@ -2144,6 +2195,7 @@ generateBtn.addEventListener("click", async () => {
   resultSection.classList.add("hidden");
   glossaryPanelEl.classList.add("hidden");
   missingWordsEl.textContent = "";
+  renderAdminDiagnostics(null);
   const qualityLabel = generationQuality === "advanced" ? "高级生成（消耗5次）" : "普通生成（消耗1次）";
   statusEl.textContent = quickMode ? `${qualityLabel} + 快速模式生成中...` : `AI 正在${qualityLabel}，请稍等（大约10-15秒）...`;
 

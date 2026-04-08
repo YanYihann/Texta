@@ -2,6 +2,7 @@
 const path = require("path");
 const dotenv = require("dotenv");
 const crypto = require("crypto");
+const { AsyncLocalStorage } = require("async_hooks");
 const { PrismaClient } = require("@prisma/client");
 dotenv.config();
 
@@ -51,6 +52,7 @@ const LEXICON_CHUNK_SIZE = Math.max(8, Number(process.env.LEXICON_CHUNK_SIZE || 
 const LEXICON_CHUNK_CONCURRENCY = Math.max(1, Math.min(4, Number(process.env.LEXICON_CHUNK_CONCURRENCY || 2)));
 
 const lexiconCache = new Map();
+const modelTraceStorage = new AsyncLocalStorage();
 
 function compactWordsKey(words) {
   return (Array.isArray(words) ? words : [])
@@ -92,6 +94,80 @@ function setToTimedCache(cache, key, value, ttlMs, maxSize) {
     value,
     expiresAt: Date.now() + Math.max(1000, Number(ttlMs || 0))
   });
+}
+
+function extractUsageFromOpenAIResponse(data) {
+  const usage = data?.usage || {};
+  const inputTokens = Number(usage.input_tokens ?? usage.prompt_tokens ?? 0);
+  const outputTokens = Number(usage.output_tokens ?? usage.completion_tokens ?? 0);
+  const totalTokens = Number(usage.total_tokens ?? inputTokens + outputTokens);
+  if (!Number.isFinite(inputTokens) && !Number.isFinite(outputTokens) && !Number.isFinite(totalTokens)) {
+    return null;
+  }
+  return {
+    inputTokens: Number.isFinite(inputTokens) ? inputTokens : 0,
+    outputTokens: Number.isFinite(outputTokens) ? outputTokens : 0,
+    totalTokens: Number.isFinite(totalTokens) ? totalTokens : 0
+  };
+}
+
+function recordModelTrace(entry) {
+  const store = modelTraceStorage.getStore();
+  if (!store || !Array.isArray(store.calls)) return;
+  store.calls.push(entry);
+}
+
+function buildAdminModelDiagnostics(traceStore) {
+  const calls = Array.isArray(traceStore?.calls) ? traceStore.calls : [];
+  const byStepMap = new Map();
+  let totalDurationMs = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let totalTokens = 0;
+  let successful = 0;
+
+  for (const call of calls) {
+    const step = String(call?.step || "unknown");
+    const durationMs = Number(call?.durationMs || 0);
+    const usage = call?.usage || null;
+    totalDurationMs += durationMs;
+    if (call?.status === "ok") {
+      successful += 1;
+    }
+    if (usage) {
+      totalInputTokens += Number(usage.inputTokens || 0);
+      totalOutputTokens += Number(usage.outputTokens || 0);
+      totalTokens += Number(usage.totalTokens || 0);
+    }
+
+    if (!byStepMap.has(step)) {
+      byStepMap.set(step, {
+        step,
+        requests: 0,
+        successes: 0,
+        durationMs: 0
+      });
+    }
+    const row = byStepMap.get(step);
+    row.requests += 1;
+    row.durationMs += durationMs;
+    if (call?.status === "ok") {
+      row.successes += 1;
+    }
+  }
+
+  const byStep = Array.from(byStepMap.values()).sort((a, b) => b.requests - a.requests);
+  return {
+    totalRequests: calls.length,
+    successfulRequests: successful,
+    failedRequests: Math.max(0, calls.length - successful),
+    totalDurationMs: Math.round(totalDurationMs),
+    totalInputTokens,
+    totalOutputTokens,
+    totalTokens,
+    byStep,
+    calls: calls.slice(0, 120)
+  };
 }
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -956,10 +1032,12 @@ async function callOpenAIText(prompt, options = {}) {
   const endpoint = useChat ? `${base}/chat/completions` : `${base}/responses`;
   const maxTokens = Number.isFinite(options.maxTokens) ? options.maxTokens : undefined;
   const model = String(options.model || OPENAI_MODEL_NORMAL).trim() || OPENAI_MODEL_NORMAL;
+  const step = String(options.step || "unknown");
 
   for (let attempt = 1; attempt <= OPENAI_RETRY_COUNT + 1; attempt += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+    const startedAt = Date.now();
 
     try {
       const response = await fetch(endpoint, {
@@ -994,11 +1072,31 @@ async function callOpenAIText(prompt, options = {}) {
       if (!text) {
         throw new Error("Empty text returned by provider. Try switching OPENAI_API_MODE=chat or change model.");
       }
+      recordModelTrace({
+        step,
+        model,
+        mode: useChat ? "chat" : "responses",
+        maxTokens: maxTokens || 0,
+        attempt,
+        status: "ok",
+        durationMs: Date.now() - startedAt,
+        usage: extractUsageFromOpenAIResponse(data)
+      });
       return text;
     } catch (error) {
       const isTimeout = error?.name === "AbortError";
       const retryable = isTimeout || isRetryableNetworkError(error);
       const hasNext = attempt <= OPENAI_RETRY_COUNT;
+      recordModelTrace({
+        step,
+        model,
+        mode: useChat ? "chat" : "responses",
+        maxTokens: maxTokens || 0,
+        attempt,
+        status: retryable && hasNext ? "retry" : "error",
+        durationMs: Date.now() - startedAt,
+        error: String(error?.message || "unknown error")
+      });
 
       if (retryable && hasNext) {
         await sleep(600 * attempt);
@@ -1053,7 +1151,7 @@ async function generateLexicon(words, quickMode, model) {
       `Words: ${chunkWords.join(", ")}`
     ].join("\n");
 
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 650 : 1300, model });
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 650 : 1300, model, step: "lexicon" });
     let parsed = extractJsonArray(text);
 
     if (!Array.isArray(parsed)) {
@@ -1063,7 +1161,7 @@ async function generateLexicon(words, quickMode, model) {
         "Keep same order as input words.",
         `Words: ${chunkWords.join(", ")}`
       ].join("\n");
-      const retryText = await callOpenAIText(retryPrompt, { maxTokens: quickMode ? 650 : 1300, model });
+      const retryText = await callOpenAIText(retryPrompt, { maxTokens: quickMode ? 650 : 1300, model, step: "lexicon_retry" });
       parsed = extractJsonArray(retryText);
     }
 
@@ -1093,7 +1191,7 @@ async function generateLexicon(words, quickMode, model) {
         "If a word is misspelled, infer the most likely intended word and still provide useful meanings for the given spelling.",
         `Words: ${c.join(", ")}`
       ].join("\n");
-      const fallbackText = await callOpenAIText(fallbackPrompt, { maxTokens: quickMode ? 700 : 1400, model });
+      const fallbackText = await callOpenAIText(fallbackPrompt, { maxTokens: quickMode ? 700 : 1400, model, step: "lexicon_fallback" });
       const fallbackParsed = extractJsonArray(fallbackText);
       recoveredAll = recoveredAll.concat(normalizeLexicon(c, fallbackParsed));
     }
@@ -1189,7 +1287,7 @@ async function generateArticlePackage(
     .join("\n");
 
   const maxTokens = quickMode ? 420 : words.length > 16 ? 1200 : 820;
-  const text = await callOpenAIText(prompt, { maxTokens, model });
+  const text = await callOpenAIText(prompt, { maxTokens, model, step: "article" });
   const parsed = extractJsonObject(text);
 
   if (parsed && typeof parsed.title === "string" && typeof parsed.article === "string") {
@@ -1530,7 +1628,7 @@ async function refineMixedLexiconByContext(words, lexicon, article, quickMode, m
   ].join("\n");
 
   try {
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 420 : 820, model });
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 420 : 820, model, step: "refine_context" });
     const parsed = extractJsonArray(text);
     if (!Array.isArray(parsed)) {
       return vocab;
@@ -1605,7 +1703,7 @@ async function generateMissingWordsRewrite(missingWords, lexicon, generationMode
       ].join("\n");
 
   try {
-    const rewritten = await callOpenAIText(prompt, { maxTokens: quickMode ? 220 : 420, model });
+    const rewritten = await callOpenAIText(prompt, { maxTokens: quickMode ? 220 : 420, model, step: "rewrite_missing" });
     const cleaned = isMixedMode ? cleanMixedArtifactText(rewritten) : String(rewritten || "").trim();
     if (cleaned) {
       return cleaned;
@@ -1640,7 +1738,7 @@ async function generateParagraphTranslations(paragraphs, lexicon, quickMode, mod
     JSON.stringify(paragraphs)
   ].join("\n");
 
-  const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 520 : 980, model });
+  const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 520 : 980, model, step: "translate_paragraphs" });
   const parsed = extractJsonArray(text);
 
   if (!Array.isArray(parsed)) {
@@ -1844,7 +1942,7 @@ async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, qui
   ].join("\n");
 
   try {
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 680 : 1200, model });
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 680 : 1200, model, step: "alignment" });
     const parsedObj = extractJsonObject(text);
     if (parsedObj) {
       return normalizeAlignment(words, lexicon, parsedObj, paragraphsEn, paragraphsZh);
@@ -2462,91 +2560,103 @@ app.post("/api/generate", async (req, res) => {
     }
 
     const selectedModel = generationProfile.model;
+    const isAdmin = String(authedUser?.role || "").toLowerCase() === "admin";
+    const traceStore = { calls: [] };
 
-    let lexicon = await generateLexicon(words, quickMode, selectedModel);
-    let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode, "", selectedModel);
-    if (generationMode === "mixed") {
-      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-    }
-    articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-    let missing = findMissingWords(articlePack.article, words);
-    let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
-
-    const retryCount = generationMode === "mixed" ? (quickMode ? 2 : 4) : quickMode ? 1 : 2;
-    for (let i = 0; i < retryCount && (missing.length > 0 || overused.length > 0); i += 1) {
-      articlePack = await generateArticlePackage(
-        words,
-        level,
-        quickMode,
-        lexicon,
-        generationMode,
-        [
-          `Important fix (round ${i + 1}): ALL target words must be included.`,
-          `Missing words: ${missing.join(", ")}.`,
-          overused.length > 0
-            ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
-            : "",
-          "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
-          "Mixed mode must look compact: most sentences include one target word and avoid long Chinese-only lines."
-        ].join(" "),
-        selectedModel
-      );
+    const generateContent = async () => {
+      let lexicon = await generateLexicon(words, quickMode, selectedModel);
+      let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode, "", selectedModel);
       if (generationMode === "mixed") {
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
       }
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-      missing = findMissingWords(articlePack.article, words);
-      overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
-    }
+      let missing = findMissingWords(articlePack.article, words);
+      let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
 
-    if (generationMode === "mixed") {
-      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-      missing = findMissingWords(articlePack.article, words);
-    }
-
-    if (missing.length > 0) {
-      if (generationMode !== "mixed") {
-        articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-        missing = findMissingWords(articlePack.article, words);
-      } else {
-        const missingBeforeRewrite = missing.slice();
-        const rewriteNotice = `提示：主文章仍有 ${missingBeforeRewrite.length} 个词未命中：${missingBeforeRewrite.join(", ")}。以下为补充重写短句：`;
-        const rewritten = await generateMissingWordsRewrite(
-          missingBeforeRewrite,
+      const retryCount = generationMode === "mixed" ? (quickMode ? 2 : 4) : quickMode ? 1 : 2;
+      for (let i = 0; i < retryCount && (missing.length > 0 || overused.length > 0); i += 1) {
+        articlePack = await generateArticlePackage(
+          words,
+          level,
+          quickMode,
           lexicon,
           generationMode,
-          quickMode,
+          [
+            `Important fix (round ${i + 1}): ALL target words must be included.`,
+            `Missing words: ${missing.join(", ")}.`,
+            overused.length > 0
+              ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
+              : "",
+            "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
+            "Mixed mode must look compact: most sentences include one target word and avoid long Chinese-only lines."
+          ].join(" "),
           selectedModel
         );
-        articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewriteNotice}\n${rewritten}`.trim();
+        if (generationMode === "mixed") {
+          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+        }
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        missing = findMissingWords(articlePack.article, words);
+        overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
+      }
+
+      if (generationMode === "mixed") {
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
         articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
         missing = findMissingWords(articlePack.article, words);
+      }
 
-        if (missing.length > 0) {
-          const fallbackRewrite = buildMissingRewriteFallback(missing, lexicon, generationMode);
-          articlePack.article = `${String(articlePack.article || "").trim()}\n${fallbackRewrite}`.trim();
+      if (missing.length > 0) {
+        if (generationMode !== "mixed") {
+          articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
+          articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+          missing = findMissingWords(articlePack.article, words);
+        } else {
+          const missingBeforeRewrite = missing.slice();
+          const rewriteNotice = `提示：主文章仍有 ${missingBeforeRewrite.length} 个词未命中：${missingBeforeRewrite.join(", ")}。以下为补充重写短句：`;
+          const rewritten = await generateMissingWordsRewrite(
+            missingBeforeRewrite,
+            lexicon,
+            generationMode,
+            quickMode,
+            selectedModel
+          );
+          articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewriteNotice}\n${rewritten}`.trim();
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
           missing = findMissingWords(articlePack.article, words);
+
+          if (missing.length > 0) {
+            const fallbackRewrite = buildMissingRewriteFallback(missing, lexicon, generationMode);
+            articlePack.article = `${String(articlePack.article || "").trim()}\n${fallbackRewrite}`.trim();
+            articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+            articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+            missing = findMissingWords(articlePack.article, words);
+          }
         }
       }
-    }
 
-    if (generationMode === "mixed" && shouldRunContextRefine(words, lexicon)) {
-      lexicon = await refineMixedLexiconByContext(words, lexicon, articlePack.article, quickMode, selectedModel);
-      articlePack.article = String(articlePack.article || "").replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
-      articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-      missing = findMissingWords(articlePack.article, words);
-    }
+      if (generationMode === "mixed" && shouldRunContextRefine(words, lexicon)) {
+        lexicon = await refineMixedLexiconByContext(words, lexicon, articlePack.article, quickMode, selectedModel);
+        articlePack.article = String(articlePack.article || "").replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
+        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        missing = findMissingWords(articlePack.article, words);
+      }
 
-    const paragraphsEn = splitParagraphs(articlePack.article);
-    const paragraphsZh = generationMode === "mixed" ? [] : await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
-    const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel, generationMode);
-    const defaultTitle = defaultTitleByDate(words.length);
+      const paragraphsEn = splitParagraphs(articlePack.article);
+      const paragraphsZh = generationMode === "mixed" ? [] : await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
+      const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel, generationMode);
+      const defaultTitle = defaultTitleByDate(words.length);
+
+      return { lexicon, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle };
+    };
+
+    const generated = isAdmin
+      ? await modelTraceStorage.run(traceStore, generateContent)
+      : await generateContent();
+
+    const { lexicon, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle } = generated;
 
     const storeAfter = await readAuthStore();
     bumpUsage(storeAfter, authedUser, getShanghaiDateKey(), generationProfile.usageCost);
@@ -2557,6 +2667,8 @@ app.post("/api/generate", async (req, res) => {
       console.error("Failed to write usage log:", usageLogError);
     }
     const usage = getUsageSnapshot(storeAfter, authedUser);
+
+    const adminDiagnostics = isAdmin ? buildAdminModelDiagnostics(traceStore) : null;
 
     res.json({
       title: articlePack.title || defaultTitle,
@@ -2571,7 +2683,8 @@ app.post("/api/generate", async (req, res) => {
       paragraphsEn,
       paragraphsZh,
       alignment,
-      usage
+      usage,
+      ...(isAdmin ? { adminDiagnostics } : {})
     });
   } catch (error) {
     console.error(error);

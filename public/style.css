@@ -1139,6 +1139,74 @@ button:disabled {
   line-height: 1.5;
 }
 
+.admin-diag-panel {
+  margin: 10px 2px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+}
+
+.admin-diag-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-diag-head h3 {
+  margin: 0;
+  font-size: 12px;
+  color: #1e40af;
+}
+
+.admin-diag-summary {
+  font-size: 11px;
+  color: #334155;
+}
+
+.admin-diag-bars {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-diag-row {
+  display: grid;
+  grid-template-columns: 88px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #334155;
+}
+
+.admin-diag-step {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-diag-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.admin-diag-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #1d4ed8);
+}
+
+.admin-diag-count {
+  min-width: 34px;
+  text-align: right;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
 .fav-title {
   margin-top: 18px;
   font-size: 15px;
