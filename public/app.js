@@ -407,6 +407,28 @@ function normalizeGenerationQualityValue(raw) {
   return String(raw || "").toLowerCase() === "advanced" ? "advanced" : "normal";
 }
 
+function normalizePosTagLabel(raw) {
+  const source = String(raw || "").trim();
+  if (!source) return "";
+  const lower = source.toLowerCase();
+
+  if (/^(n|noun)\.?$/.test(lower) || /名词/.test(source)) return "n.";
+  if (/^(v|verb)\.?$/.test(lower) || /动词/.test(source)) return "v.";
+  if (/^(adj|adjective)\.?$/.test(lower) || /形容词/.test(source)) return "adj.";
+  if (/^(adv|adverb)\.?$/.test(lower) || /副词/.test(source)) return "adv.";
+  if (/^(prep|preposition)\.?$/.test(lower) || /介词/.test(source)) return "prep.";
+  if (/^(pron|pronoun)\.?$/.test(lower) || /代词/.test(source)) return "pron.";
+  if (/^(conj|conjunction)\.?$/.test(lower) || /连词/.test(source)) return "conj.";
+  if (/^(num|number|numeral)\.?$/.test(lower) || /数词/.test(source)) return "num.";
+  if (/^(det|determiner|article)\.?$/.test(lower) || /限定词|冠词/.test(source)) return "det.";
+  if (/^(int|interjection)\.?$/.test(lower) || /感叹词/.test(source)) return "int.";
+
+  if (/^[a-z]{1,8}\.?$/.test(lower)) {
+    return lower.endsWith(".") ? lower : `${lower}.`;
+  }
+  return source;
+}
+
 function normalizeFavorite(item) {
   const nowIso = new Date().toISOString();
   const id = String(item?.id || "").trim() || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -443,7 +465,7 @@ function normalizeNotebookEntry(item) {
     id: String(item?.id || "").trim() || `nb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     key,
     word: word || key,
-    pos: String(item?.pos || ""),
+    pos: normalizePosTagLabel(item?.pos),
     senses: Array.isArray(item?.senses) ? item.senses : [],
     collocations: Array.isArray(item?.collocations) ? item.collocations : [],
     synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
@@ -665,7 +687,7 @@ function upsertNotebookEntry(item) {
   const entry = {
     key,
     word,
-    pos: String(item?.pos || ""),
+    pos: normalizePosTagLabel(item?.pos),
     senses: Array.isArray(item?.senses) ? item.senses : [],
     collocations: Array.isArray(item?.collocations) ? item.collocations : [],
     synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
@@ -1252,20 +1274,7 @@ function buildMixedLexiconNoteMap(lexicon) {
   for (const item of Array.isArray(lexicon) ? lexicon : []) {
     const key = keyifyWord(item?.word || "");
     if (!key) continue;
-    const rawPos = String(item?.pos || "").trim();
-    const pos = /^(n|v|adj|adv)\.?$/i.test(rawPos)
-      ? rawPos.toLowerCase().endsWith(".")
-        ? rawPos.toLowerCase()
-        : `${rawPos.toLowerCase()}.`
-      : /noun/i.test(rawPos)
-        ? "n."
-        : /verb/i.test(rawPos)
-          ? "v."
-          : /adjective/i.test(rawPos)
-            ? "adj."
-            : /adverb/i.test(rawPos)
-              ? "adv."
-              : rawPos;
+    const pos = normalizePosTagLabel(item?.pos);
     const senses = Array.isArray(item?.senses) ? item.senses : [];
     const byMarker = new Map();
     let defaultNote = "";
@@ -1739,7 +1748,7 @@ function buildStudyControls(item) {
 function renderLexiconCard(item, terms = []) {
   const word = escapeHtml(item?.word || "");
   const key = keyifyWord(item?.word || item?.key || "");
-  const pos = escapeHtml(item?.pos || "");
+  const pos = escapeHtml(normalizePosTagLabel(item?.pos) || "");
   const senses = Array.isArray(item?.senses) ? item.senses : [];
   const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
   const synonyms = Array.isArray(item?.synonyms) ? item.synonyms : [];

@@ -804,6 +804,28 @@ function toCircledNumber(n) {
   return map[n] || `${n}`;
 }
 
+function normalizePosTag(raw) {
+  const source = String(raw || "").trim();
+  if (!source) return "";
+  const lower = source.toLowerCase();
+
+  if (/^(n|noun)\.?$/.test(lower) || /名词/.test(source)) return "n.";
+  if (/^(v|verb)\.?$/.test(lower) || /动词/.test(source)) return "v.";
+  if (/^(adj|adjective)\.?$/.test(lower) || /形容词/.test(source)) return "adj.";
+  if (/^(adv|adverb)\.?$/.test(lower) || /副词/.test(source)) return "adv.";
+  if (/^(prep|preposition)\.?$/.test(lower) || /介词/.test(source)) return "prep.";
+  if (/^(pron|pronoun)\.?$/.test(lower) || /代词/.test(source)) return "pron.";
+  if (/^(conj|conjunction)\.?$/.test(lower) || /连词/.test(source)) return "conj.";
+  if (/^(num|number|numeral)\.?$/.test(lower) || /数词/.test(source)) return "num.";
+  if (/^(det|determiner|article)\.?$/.test(lower) || /限定词|冠词/.test(source)) return "det.";
+  if (/^(int|interjection)\.?$/.test(lower) || /感叹词/.test(source)) return "int.";
+
+  if (/^[a-z]{1,8}\.?$/.test(lower)) {
+    return lower.endsWith(".") ? lower : `${lower}.`;
+  }
+  return source;
+}
+
 function normalizeLexicon(words, rawItems) {
   const itemMap = new Map();
   if (Array.isArray(rawItems)) {
@@ -816,7 +838,7 @@ function normalizeLexicon(words, rawItems) {
         continue;
       }
 
-      const pos = typeof item.pos === "string" ? item.pos.trim() : "";
+      const pos = normalizePosTag(item?.pos);
       const meaningsRaw = Array.isArray(item.meanings) ? item.meanings : [];
       const meanings = meaningsRaw
         .map((m) => String(m || "").trim())
@@ -842,7 +864,7 @@ function normalizeLexicon(words, rawItems) {
 
   return words.map((word) => {
     const found = itemMap.get(word.toLowerCase());
-    const pos = found?.pos || "";
+    const pos = normalizePosTag(found?.pos || "");
     const meanings = found?.meanings?.length ? found.meanings : ["常考义待完善"];
     const senses = meanings.map((meaning, idx) => ({
       marker: toCircledNumber(idx + 1),
@@ -1326,7 +1348,7 @@ function mergeLexiconWithContextMeanings(lexicon, contextRows) {
     const word = String(row?.word || "").trim().toLowerCase();
     if (!word || contextMap.has(word)) continue;
     const meaning = String(row?.meaning || "").trim();
-    const pos = String(row?.pos || "").trim();
+    const pos = normalizePosTag(row?.pos);
     contextMap.set(word, { meaning, pos });
   }
 
@@ -1340,7 +1362,7 @@ function mergeLexiconWithContextMeanings(lexicon, contextRows) {
     const fallbackMeaning =
       oldSenses.map((s) => String(s?.meaning || "").trim()).find((x) => /[\u4e00-\u9fff]/.test(x)) || "词义待补充";
     const primaryMeaning = /[\u4e00-\u9fff]/.test(ctx.meaning) ? ctx.meaning : fallbackMeaning;
-    const primaryPos = ctx.pos || String(item?.pos || "");
+    const primaryPos = normalizePosTag(ctx.pos || item?.pos || "");
 
     const senseMeanings = [primaryMeaning];
     for (const sense of oldSenses) {
@@ -1357,7 +1379,7 @@ function mergeLexiconWithContextMeanings(lexicon, contextRows) {
 
     return {
       ...item,
-      pos: primaryPos || item?.pos || "",
+      pos: primaryPos || normalizePosTag(item?.pos || ""),
       senses
     };
   });
@@ -1384,6 +1406,7 @@ async function refineMixedLexiconByContext(words, lexicon, article, quickMode, m
     "You are refining Chinese glosses for an IELTS mixed Chinese-English cloze article.",
     "Return ONLY JSON array in same order as input words.",
     "Each item format: {\"word\": string, \"pos\": string, \"meaning\": string}.",
+    "pos must be an English POS tag like n., v., adj., adv., prep., pron., conj., num., det., int.",
     "meaning must match the article context exactly and be concise Chinese (2-8 chars).",
     "Prioritize the most common IELTS exam sense in this context.",
     "Avoid rare/archaic senses and avoid literal dictionary noise.",
