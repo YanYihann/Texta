@@ -947,12 +947,14 @@ async function generateLexicon(words, quickMode, model) {
       "Rules:",
       "1) Keep same order as input words.",
       "2) pos should be concise (e.g. n., v., adj., adv.).",
-      "3) meanings should be concise Chinese meanings, 1-3 items.",
-      "4) Prefer IELTS high-frequency exam meanings, avoid rare/archaic niche senses.",
-      "5) Prioritize meanings useful for reading/listening/writing tasks.",
-      "6) collocations should be common IELTS-friendly phrase combinations (English phrase + concise Chinese).",
-      "7) word_formation should include root/prefix/suffix notes when useful.",
-      "8) synonyms/antonyms should be common high-frequency exam words.",
+      "3) meanings should be concise Chinese meanings, 1-3 items, ordered by IELTS frequency.",
+      "4) meanings[0] MUST be the single most common IELTS exam sense.",
+      "5) Avoid rare/archaic niche senses unless absolutely necessary.",
+      "6) Prioritize meanings useful for reading/listening/writing tasks.",
+      "7) collocations should be common IELTS-friendly phrase combinations (English phrase + concise Chinese).",
+      "8) word_formation should include root/prefix/suffix notes when useful.",
+      "9) synonyms/antonyms should be common high-frequency exam words.",
+      "10) Keep definitions practical and exam-usable; avoid overly technical senses.",
       `Words: ${chunkWords.join(", ")}`
     ].join("\n");
 
@@ -993,6 +995,8 @@ async function generateLexicon(words, quickMode, model) {
         "Return ONLY JSON array.",
         "For each word provide practical IELTS meanings and basic word data.",
         "Output format: {\"word\": string, \"pos\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
+        "meanings[0] MUST be the most common IELTS sense.",
+        "Order meanings by IELTS frequency descending.",
         "If a word is misspelled, infer the most likely intended word and still provide useful meanings for the given spelling.",
         `Words: ${c.join(", ")}`
       ].join("\n");
@@ -1035,8 +1039,16 @@ async function generateArticlePackage(
 
   const vocabGuide = (lexicon || [])
     .map((item) => {
-      const sensesText = item.senses.map((s) => `${s.marker} ${s.meaning}`).join("; ");
-      return `${item.word} (${item.pos || "-"}): ${sensesText}`;
+      const senses = Array.isArray(item?.senses) ? item.senses : [];
+      const primary = senses[0];
+      const primaryText = primary ? `PRIMARY ${primary.marker} ${primary.meaning}` : "PRIMARY ① 常考义待完善";
+      const alternates = senses
+        .slice(1, 3)
+        .map((s) => `${s.marker} ${s.meaning}`)
+        .join("; ");
+      return alternates
+        ? `${item.word} (${item.pos || "-"}): ${primaryText}; secondary: ${alternates}`
+        : `${item.word} (${item.pos || "-"}): ${primaryText}`;
     })
     .join("\n");
 
@@ -1066,9 +1078,10 @@ async function generateArticlePackage(
     paragraphRule,
     "Article must be plain text paragraphs separated by blank lines.",
     "Every target word must appear at least once.",
-    "If a word has multiple senses in the guide, try to use at least 2 different senses across the article when natural.",
+    "Use the most common IELTS meaning by default for each word (PRIMARY marker ①).",
+    "Only use secondary meanings (②+) when absolutely necessary for coherence.",
     "Whenever a target word appears, append one marker immediately after it, like drain①.",
-    "Choose marker based on intended meaning from the guide.",
+    "Marker should match the chosen meaning, and prioritize ① whenever possible.",
     "Make title concise and natural.",
     "Vocabulary guide:",
     vocabGuide,
