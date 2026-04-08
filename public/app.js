@@ -1328,18 +1328,28 @@ function buildMixedLexiconNoteMap(lexicon) {
     if (!key) continue;
     const pos = normalizePosTagLabel(item?.pos);
     const senses = Array.isArray(item?.senses) ? item.senses : [];
+    const normalizedSenses = senses.map((sense) => {
+      const marker = String(sense?.marker || "").trim();
+      const meaning = String(sense?.meaning || "")
+        .replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, " ")
+        .replace(/^(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?\s*/i, "")
+        .trim();
+      return { marker, meaning };
+    });
+    const firstChineseMeaning = normalizedSenses.map((s) => s.meaning).find((m) => /[\u4e00-\u9fff]/.test(m)) || "";
+    const firstAnyMeaning = normalizedSenses.map((s) => s.meaning).find(Boolean) || "";
+    const fallbackMeaning = firstChineseMeaning || firstAnyMeaning || "词义待补充";
     const byMarker = new Map();
     let defaultNote = "";
-    for (const sense of senses) {
+    for (const sense of normalizedSenses) {
       const marker = String(sense?.marker || "").trim();
-      const zhMeaning = String(sense?.meaning || "").trim();
-      if (!/[\u4e00-\u9fff]/.test(zhMeaning)) continue;
-      const note = [pos, zhMeaning].filter(Boolean).join(" ").trim() || "中文释义待补充";
+      const meaning = String(sense?.meaning || "").trim() || fallbackMeaning;
+      const note = [pos, meaning].filter(Boolean).join(" ").trim() || "词义待补充";
       if (!defaultNote) defaultNote = note;
       if (marker) byMarker.set(marker, note);
     }
     map.set(key, {
-      defaultNote: defaultNote || "中文释义待补充",
+      defaultNote: defaultNote || [pos, fallbackMeaning].filter(Boolean).join(" ").trim() || "词义待补充",
       byMarker
     });
   }
