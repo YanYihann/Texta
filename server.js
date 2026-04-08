@@ -1063,6 +1063,8 @@ async function generateArticlePackage(
         "Most sentences should contain exactly one target word.",
         "Keep Chinese background concise; avoid long explanatory paragraphs.",
         "Do NOT use glossary parentheses style such as 中文（word） or 中文（word + meaning）.",
+        "Do NOT output Chinese gloss + English word pairs such as 板球 cricket / 无菌 sterility.",
+        "When Chinese characters directly connect with a target word, keep compact form like 打cricket / 的sterility (no extra spaces).",
         "Do NOT output keyword list sections such as '片段1：补充关键词 ...'.",
         "Do NOT output standalone dictionary lines such as 'n. xxx' in the body.",
         "If it is hard to connect all words in one coherent story, split into several short fragments/sections, but all target words must be covered."
@@ -1246,20 +1248,20 @@ function stripInlineChineseGlossAroundWords(article, lexicon) {
     const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     for (const term of zhTerms) {
       const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const zhBeforeEn = new RegExp(`(^|[^\\u4e00-\\u9fff])${escapedTerm}\\s*(${escapedWord})([①②③④⑤⑥⑦⑧⑨⑩]?)`, "gi");
-      const enBeforeZh = new RegExp(`(^|[^A-Za-z])(${escapedWord})([①②③④⑤⑥⑦⑧⑨⑩]?)\\s*${escapedTerm}`, "gi");
-      text = text.replace(zhBeforeEn, (_m, prefix, enWord, marker) => `${prefix}${enWord}${marker}`);
-      text = text.replace(enBeforeZh, (_m, prefix, enWord, marker) => `${prefix}${enWord}${marker}`);
+      const zhBeforeEn = new RegExp(`${escapedTerm}\\s*(${escapedWord})([①②③④⑤⑥⑦⑧⑨⑩]?)`, "gi");
+      const enBeforeZh = new RegExp(`(${escapedWord})([①②③④⑤⑥⑦⑧⑨⑩]?)\\s*${escapedTerm}`, "gi");
+      text = text.replace(zhBeforeEn, (_m, enWord, marker) => `${enWord}${marker}`);
+      text = text.replace(enBeforeZh, (_m, enWord, marker) => `${enWord}${marker}`);
     }
   }
   return text;
 }
 
-function normalizeMixedCnEnSpacing(article) {
+function normalizeMixedCnEnCompact(article) {
   let text = String(article || "");
-  // Ensure Chinese-English boundaries have spacing for cleaner mixed-text layout.
-  text = text.replace(/([\u4e00-\u9fff])([A-Za-z][A-Za-z-]{0,63}(?:[①②③④⑤⑥⑦⑧⑨⑩])?)/g, "$1 $2");
-  text = text.replace(/([A-Za-z][A-Za-z-]{0,63}(?:[①②③④⑤⑥⑦⑧⑨⑩])?)([\u4e00-\u9fff])/g, "$1 $2");
+  // Keep Chinese-English boundaries compact: 打cricket / 的sterility
+  text = text.replace(/([\u4e00-\u9fff])\s+([A-Za-z][A-Za-z-]{0,63}(?:[①②③④⑤⑥⑦⑧⑨⑩])?)/g, "$1$2");
+  text = text.replace(/([A-Za-z][A-Za-z-]{0,63}(?:[①②③④⑤⑥⑦⑧⑨⑩])?)\s+([\u4e00-\u9fff])/g, "$1$2");
   return text;
 }
 
@@ -1268,7 +1270,7 @@ function normalizeMixedArticleStyle(article, words, lexicon = []) {
   text = cleanMixedArtifactText(text);
   text = normalizeMixedParenthesisGloss(text, words);
   text = stripInlineChineseGlossAroundWords(text, lexicon);
-  text = normalizeMixedCnEnSpacing(text);
+  text = normalizeMixedCnEnCompact(text);
   text = stripStandaloneGlossLines(text, words);
   text = text.replace(/[ ]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   return text;
@@ -1315,6 +1317,8 @@ async function generateMissingWordsRewrite(missingWords, lexicon, generationMode
         "Write concise Chinese sentences.",
         "Each sentence must include exactly one target English word in original form.",
         "Each target word must appear exactly once across the whole output.",
+        "Do NOT output Chinese gloss + English word pairs such as 板球 cricket / 无菌 sterility.",
+        "When Chinese characters directly connect with a target word, keep compact form like 打cricket / 的sterility (no extra spaces).",
         "Do NOT use parentheses style like 中文（word）.",
         "Do NOT output standalone dictionary lines such as 'n. xxx'.",
         "Words:",
