@@ -1478,19 +1478,26 @@ function normalizeMixedCnEnCompact(article) {
   return text;
 }
 
-function stripAdjectiveDeAfterWords(article, lexicon) {
+function stripModifierParticleAfterWords(article, lexicon) {
   let text = String(article || "");
-  const adjectives = (Array.isArray(lexicon) ? lexicon : [])
+  const entries = (Array.isArray(lexicon) ? lexicon : [])
     .map((item) => ({
       word: String(item?.word || "").trim(),
       pos: String(item?.pos || "").trim().toLowerCase()
     }))
-    .filter((item) => item.word && /^(adj|adjective)\.?$/.test(item.pos));
+    .filter((item) => item.word);
 
-  for (const item of adjectives) {
+  for (const item of entries) {
+    let particle = "";
+    if (/^(adj|adjective)\.?$/.test(item.pos)) {
+      particle = "的";
+    } else if (/^(adv|adverb)\.?$/.test(item.pos)) {
+      particle = "地";
+    }
+    if (!particle) continue;
     const escapedWord = escapeRegex(item.word);
-    // Mixed mode style target: fundamental的概念 -> fundamental概念
-    const pattern = new RegExp(`\\b(${escapedWord})\\b([①②③④⑤⑥⑦⑧⑨⑩]?)\\s*的`, "gi");
+    // Mixed mode style target: fundamental的概念 -> fundamental概念 / quickly地处理 -> quickly处理
+    const pattern = new RegExp(`\\b(${escapedWord})\\b([①②③④⑤⑥⑦⑧⑨⑩]?)\\s*${particle}`, "gi");
     text = text.replace(pattern, "$1$2");
   }
   return text;
@@ -1502,7 +1509,7 @@ function normalizeMixedArticleStyle(article, words, lexicon = []) {
   text = normalizeMixedParenthesisGloss(text, words);
   text = stripInlineChineseGlossAroundWords(text, lexicon);
   text = normalizeMixedCnEnCompact(text);
-  text = stripAdjectiveDeAfterWords(text, lexicon);
+  text = stripModifierParticleAfterWords(text, lexicon);
   text = stripStandaloneGlossLines(text, words);
   text = text.replace(/[ ]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   return text;

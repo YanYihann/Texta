@@ -481,10 +481,6 @@ function normalizePosTagLabel(raw) {
   return source;
 }
 
-function isAdjectivePosTag(pos) {
-  return /^adj\.?$/i.test(String(pos || "").trim());
-}
-
 function normalizeFavorite(item) {
   const nowIso = new Date().toISOString();
   const id = String(item?.id || "").trim() || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1331,7 +1327,6 @@ function buildMixedLexiconNoteMap(lexicon) {
     const key = keyifyWord(item?.word || "");
     if (!key) continue;
     const pos = normalizePosTagLabel(item?.pos);
-    const adjectiveOnly = isAdjectivePosTag(pos);
     const senses = Array.isArray(item?.senses) ? item.senses : [];
     const byMarker = new Map();
     let defaultNote = "";
@@ -1339,14 +1334,12 @@ function buildMixedLexiconNoteMap(lexicon) {
       const marker = String(sense?.marker || "").trim();
       const zhMeaning = String(sense?.meaning || "").trim();
       if (!/[\u4e00-\u9fff]/.test(zhMeaning)) continue;
-      const note = adjectiveOnly
-        ? (pos || "adj.")
-        : ([pos, zhMeaning].filter(Boolean).join(" ").trim() || "中文释义待补充");
+      const note = [pos, zhMeaning].filter(Boolean).join(" ").trim() || "中文释义待补充";
       if (!defaultNote) defaultNote = note;
       if (marker) byMarker.set(marker, note);
     }
     map.set(key, {
-      defaultNote: defaultNote || (adjectiveOnly ? (pos || "adj.") : "中文释义待补充"),
+      defaultNote: defaultNote || "中文释义待补充",
       byMarker
     });
   }
