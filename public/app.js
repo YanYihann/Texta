@@ -1267,22 +1267,47 @@ function buildMixedLexiconNoteMap(lexicon) {
               ? "adv."
               : rawPos;
     const senses = Array.isArray(item?.senses) ? item.senses : [];
-    const zhMeaning =
-      senses.map((s) => String(s?.meaning || "").trim()).find((text) => /[\u4e00-\u9fff]/.test(text)) ||
-      "中文释义待补充";
-    const note = [pos, zhMeaning].filter(Boolean).join(" ").trim();
-    map.set(key, note || "中文释义待补充");
+    const byMarker = new Map();
+    let defaultNote = "";
+    for (const sense of senses) {
+      const marker = String(sense?.marker || "").trim();
+      const zhMeaning = String(sense?.meaning || "").trim();
+      if (!/[\u4e00-\u9fff]/.test(zhMeaning)) continue;
+      const note = [pos, zhMeaning].filter(Boolean).join(" ").trim() || "中文释义待补充";
+      if (!defaultNote) defaultNote = note;
+      if (marker) byMarker.set(marker, note);
+    }
+    map.set(key, {
+      defaultNote: defaultNote || "中文释义待补充",
+      byMarker
+    });
   }
   return map;
+}
+
+function resolveMixedNote(noteMap, key, marker, fallbackMarker) {
+  const info = noteMap.get(key);
+  if (!info) return "词义待补充";
+  const direct = String(marker || "").trim();
+  const fallback = String(fallbackMarker || "").trim();
+  if (direct && info.byMarker?.has?.(direct)) {
+    return info.byMarker.get(direct) || info.defaultNote || "词义待补充";
+  }
+  if (fallback && info.byMarker?.has?.(fallback)) {
+    return info.byMarker.get(fallback) || info.defaultNote || "词义待补充";
+  }
+  return info.defaultNote || "词义待补充";
 }
 
 function highlightMixedEnglishWithNotes(text, words, alignment, lexicon) {
   const rows = Array.isArray(alignment) ? alignment : [];
   const formToKey = new Map();
+  const markerByKey = new Map();
 
   for (const row of rows) {
     const key = keyifyWord(row?.word || "");
     if (!key) continue;
+    markerByKey.set(key, String(row?.marker || "").trim());
     const forms = Array.isArray(row?.english_forms) ? row.english_forms : [];
     const merged = [String(row?.word || ""), ...forms].map((x) => String(x || "").trim()).filter(Boolean);
     for (const form of merged) {
@@ -1298,16 +1323,19 @@ function highlightMixedEnglishWithNotes(text, words, alignment, lexicon) {
 
   const forms = Array.from(formToKey.keys()).sort((a, b) => b.length - a.length).map((f) => escapeRegExp(f));
   const noteMap = buildMixedLexiconNoteMap(lexicon);
-  let normalized = normalizeSenseMarkerSpacing(String(text || "")).replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
+  const markerSet = "①②③④⑤⑥⑦⑧⑨⑩";
+  let normalized = normalizeSenseMarkerSpacing(String(text || ""));
   let html = escapeHtml(normalized);
   if (forms.length > 0) {
-    const combined = new RegExp(`\\b(${forms.join("|")})\\b`, "gi");
-    html = html.replace(combined, (m) => {
-      const key = formToKey.get(String(m).toLowerCase()) || resolveWordKeyByToken(m, words) || keyifyWord(m);
-      const note = escapeHtml(noteMap.get(key) || "词义待补充");
-      return `<span class=\"mixed-vocab\" data-word-key=\"${key}\"><mark class=\"vocab-en\" data-word-key=\"${key}\">${m}</mark><span class=\"mixed-note\">${note}</span></span>`;
+    const combined = new RegExp(`\\b(${forms.join("|")})\\b([${markerSet}]?)`, "gi");
+    html = html.replace(combined, (_full, token, marker) => {
+      const word = String(token || "");
+      const key = formToKey.get(word.toLowerCase()) || resolveWordKeyByToken(word, words) || keyifyWord(word);
+      const note = escapeHtml(resolveMixedNote(noteMap, key, marker, markerByKey.get(key) || ""));
+      return `<span class=\"mixed-vocab\" data-word-key=\"${key}\"><mark class=\"vocab-en\" data-word-key=\"${key}\">${word}</mark><span class=\"mixed-note\">${note}</span></span>`;
     });
   }
+  html = html.replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
   return html;
 }
 
