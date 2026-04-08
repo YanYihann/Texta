@@ -1392,6 +1392,20 @@ function highlightMixedEnglishWithNotes(text, words, alignment, lexicon) {
     formToKey.set(String(w).toLowerCase(), key);
   }
 
+  // Fallback for older synced/favorite payloads where words/alignment can be incomplete on some clients.
+  for (const item of Array.isArray(lexicon) ? lexicon : []) {
+    const word = String(item?.word || "").trim();
+    const key = keyifyWord(word);
+    if (!word || !key) continue;
+    if (!formToKey.has(word.toLowerCase())) {
+      formToKey.set(word.toLowerCase(), key);
+    }
+    if (!markerByKey.has(key)) {
+      const firstMarker = String(item?.senses?.[0]?.marker || "").trim();
+      if (firstMarker) markerByKey.set(key, firstMarker);
+    }
+  }
+
   const forms = Array.from(formToKey.keys()).sort((a, b) => b.length - a.length).map((f) => escapeRegExp(f));
   const noteMap = buildMixedLexiconNoteMap(lexicon);
   const markerSet = "①②③④⑤⑥⑦⑧⑨⑩";
