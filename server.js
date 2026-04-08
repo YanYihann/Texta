@@ -45,6 +45,54 @@ const AUTH_TOKEN_TTL_MS = Number(process.env.AUTH_TOKEN_TTL_MS || 1000 * 60 * 60
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const ADMIN_NAME = String(process.env.ADMIN_NAME || "Admin").trim();
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "").trim();
+const LEXICON_CACHE_TTL_MS = Math.max(60 * 1000, Number(process.env.LEXICON_CACHE_TTL_MS || 30 * 60 * 1000));
+const LEXICON_CACHE_MAX = Math.max(50, Number(process.env.LEXICON_CACHE_MAX || 800));
+const LEXICON_CHUNK_SIZE = Math.max(8, Number(process.env.LEXICON_CHUNK_SIZE || 12));
+const LEXICON_CHUNK_CONCURRENCY = Math.max(1, Math.min(4, Number(process.env.LEXICON_CHUNK_CONCURRENCY || 2)));
+
+const lexiconCache = new Map();
+
+function compactWordsKey(words) {
+  return (Array.isArray(words) ? words : [])
+    .map((w) => String(w || "").trim().toLowerCase())
+    .filter(Boolean)
+    .join("|");
+}
+
+function makeLexiconCacheKey(words, quickMode, model) {
+  const raw = `lexicon::${compactWordsKey(words)}::quick=${quickMode ? 1 : 0}::model=${String(model || "").trim().toLowerCase()}`;
+  return crypto.createHash("sha1").update(raw).digest("hex");
+}
+
+function getFromTimedCache(cache, key) {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  if (Number(hit.expiresAt || 0) <= Date.now()) {
+    cache.delete(key);
+    return null;
+  }
+  return hit.value;
+}
+
+function setToTimedCache(cache, key, value, ttlMs, maxSize) {
+  if (cache.size >= maxSize) {
+    const now = Date.now();
+    for (const [k, v] of cache.entries()) {
+      if (Number(v?.expiresAt || 0) <= now) {
+        cache.delete(k);
+      }
+    }
+    while (cache.size >= maxSize) {
+      const first = cache.keys().next();
+      if (first.done) break;
+      cache.delete(first.value);
+    }
+  }
+  cache.set(key, {
+    value,
+    expiresAt: Date.now() + Math.max(1000, Number(ttlMs || 0))
+  });
+}
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use((req, res, next) => {
@@ -636,6 +684,25 @@ function chunkArray(arr, size) {
   return out;
 }
 
+async function runWithConcurrency(items, concurrency, worker) {
+  const source = Array.isArray(items) ? items : [];
+  if (source.length === 0) return [];
+  const out = new Array(source.length);
+  const limit = Math.max(1, Math.min(Number(concurrency || 1), source.length));
+  let cursor = 0;
+
+  const runners = Array.from({ length: limit }, async () => {
+    while (cursor < source.length) {
+      const idx = cursor;
+      cursor += 1;
+      out[idx] = await worker(source[idx], idx);
+    }
+  });
+
+  await Promise.all(runners);
+  return out;
+}
+
 function findMissingWords(article, words) {
   const text = String(article || "").toLowerCase();
   return words.filter((w) => !text.includes(w.toLowerCase()));
@@ -960,6 +1027,12 @@ async function callOpenAIText(prompt, options = {}) {
 }
 
 async function generateLexicon(words, quickMode, model) {
+  const cacheKey = makeLexiconCacheKey(words, quickMode, model);
+  const cached = getFromTimedCache(lexiconCache, cacheKey);
+  if (cached) {
+    return cloneJsonSafe(cached, []);
+  }
+
   const generateLexiconChunk = async (chunkWords) => {
     const prompt = [
       "You are an IELTS vocabulary assistant.",
@@ -997,12 +1070,10 @@ async function generateLexicon(words, quickMode, model) {
     return normalizeLexicon(chunkWords, parsed);
   };
 
-  const chunks = chunkArray(words, words.length > 12 ? 8 : words.length);
-  let lexicon = [];
-  for (const chunk of chunks) {
-    const part = await generateLexiconChunk(chunk);
-    lexicon = lexicon.concat(part);
-  }
+  const chunkSize = words.length > LEXICON_CHUNK_SIZE ? LEXICON_CHUNK_SIZE : words.length;
+  const chunks = chunkArray(words, chunkSize);
+  const chunkResults = await runWithConcurrency(chunks, LEXICON_CHUNK_CONCURRENCY, (chunk) => generateLexiconChunk(chunk));
+  let lexicon = chunkResults.flat();
 
   const failedWords = lexicon
     .filter((x) => (x?.senses || []).some((s) => String(s?.meaning || "").includes("待完善")))
@@ -1030,7 +1101,9 @@ async function generateLexicon(words, quickMode, model) {
     lexicon = lexicon.map((item) => recoveredMap.get(item.word.toLowerCase()) || item);
   }
 
-  return lexicon;
+  const finalLexicon = cloneJsonSafe(lexicon, []);
+  setToTimedCache(lexiconCache, cacheKey, finalLexicon, LEXICON_CACHE_TTL_MS, LEXICON_CACHE_MAX);
+  return cloneJsonSafe(finalLexicon, []);
 }
 
 async function generateArticlePackage(
@@ -1385,6 +1458,44 @@ function mergeLexiconWithContextMeanings(lexicon, contextRows) {
   });
 }
 
+function shouldRunContextRefine(words, lexicon) {
+  const sourceWords = Array.isArray(words) ? words : [];
+  const sourceLexicon = Array.isArray(lexicon) ? lexicon : [];
+  if (sourceWords.length === 0 || sourceLexicon.length === 0) return false;
+
+  const sensitiveWords = new Set([
+    "sterility",
+    "bristle",
+    "derive",
+    "cricket",
+    "plume",
+    "cruel",
+    "drain",
+    "collapse",
+    "standard",
+    "process",
+    "attitude"
+  ]);
+
+  let ambiguousCount = 0;
+  let hasSensitive = false;
+  for (const item of sourceLexicon) {
+    const word = String(item?.word || "").trim().toLowerCase();
+    if (sensitiveWords.has(word)) {
+      hasSensitive = true;
+    }
+    const sensesCount = Array.isArray(item?.senses) ? item.senses.filter((s) => String(s?.meaning || "").trim()).length : 0;
+    if (sensesCount > 1) {
+      ambiguousCount += 1;
+    }
+  }
+
+  if (hasSensitive) return true;
+  if (ambiguousCount === 0) return false;
+  if (sourceWords.length <= 8) return ambiguousCount >= 4;
+  return ambiguousCount >= Math.max(7, Math.ceil(sourceWords.length * 0.6));
+}
+
 async function refineMixedLexiconByContext(words, lexicon, article, quickMode, model) {
   const vocab = Array.isArray(lexicon) ? lexicon : [];
   if (!Array.isArray(words) || words.length === 0 || vocab.length === 0) {
@@ -1609,6 +1720,7 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
   const allowed = new Set((words || []).map((w) => String(w || "").toLowerCase()));
   const lexMap = new Map((lexicon || []).map((x) => [String(x.word || "").toLowerCase(), x]));
   const items = Array.isArray(raw?.items) ? raw.items : Array.isArray(raw) ? raw : [];
+  const enTextRaw = (paragraphsEn || []).join("\n");
   const enText = (paragraphsEn || []).join("\n").toLowerCase();
   const zhText = (paragraphsZh || []).join("\n");
   const output = [];
@@ -1622,6 +1734,19 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
   const appearsInZh = (x) => {
     const v = String(x || "").trim();
     return v ? zhText.includes(v) : false;
+  };
+  const detectMarkerFromForms = (forms) => {
+    const list = Array.from(
+      new Set((Array.isArray(forms) ? forms : []).map((x) => String(x || "").trim()).filter(Boolean))
+    ).sort((a, b) => b.length - a.length);
+    for (const form of list) {
+      const regex = new RegExp(`\\b${escapeRegex(form)}\\b\\s*([①②③④⑤⑥⑦⑧⑨⑩])`, "i");
+      const matched = enTextRaw.match(regex);
+      if (matched && matched[1]) {
+        return matched[1];
+      }
+    }
+    return "";
   };
 
   for (const item of items) {
@@ -1643,9 +1768,10 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
     const inferredForms = inferFormsFromArticle(word, paragraphsEn).map(stripMarkers).filter(appearsInEn);
     englishForms = Array.from(new Set([...englishForms, ...inferredForms]));
     if (englishForms.length === 0 && appearsInEn(word)) englishForms = [word];
+    const markerFromArticle = detectMarkerFromForms([word, ...englishForms, ...inferredForms]);
     output.push({
       word: lex?.word || word,
-      marker: String(item?.marker || lex?.senses?.[0]?.marker || "①"),
+      marker: String(markerFromArticle || item?.marker || lex?.senses?.[0]?.marker || "①"),
       zh_terms: zhTerms,
       english_forms: englishForms
     });
@@ -1663,20 +1789,31 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
           .filter(appearsInZh)
       : [];
     const inferredForms = inferFormsFromArticle(w, paragraphsEn).map(stripMarkers).filter(appearsInEn);
+    const finalForms = inferredForms.length > 0 ? inferredForms : appearsInEn(String(w || "")) ? [String(w || "")] : [];
+    const markerFromArticle = detectMarkerFromForms([String(w || ""), ...finalForms]);
     output.push({
       word: String(w || ""),
-      marker: String(lex?.senses?.[0]?.marker || "①"),
+      marker: String(markerFromArticle || lex?.senses?.[0]?.marker || "①"),
       zh_terms: fallbackZh.slice(0, 10),
-      english_forms: inferredForms.length > 0 ? inferredForms : appearsInEn(String(w || "")) ? [String(w || "")] : []
+      english_forms: finalForms
     });
   }
 
   return output;
 }
 
-async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, model) {
+async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, model, generationMode = "standard") {
   if (!Array.isArray(words) || words.length === 0) {
     return [];
+  }
+
+  const localAlignment = normalizeAlignment(words, lexicon, [], paragraphsEn, paragraphsZh);
+  const localCovered = localAlignment.filter((row) => Array.isArray(row?.english_forms) && row.english_forms.length > 0).length;
+  const localCoverage = words.length > 0 ? localCovered / words.length : 1;
+
+  // Mixed mode only needs accurate English-form mapping for click/jump; local rules are usually enough.
+  if (String(generationMode || "").toLowerCase() === "mixed" && localCoverage >= 0.9) {
+    return localAlignment;
   }
 
   const vocabHints = lexicon
@@ -1715,7 +1852,7 @@ async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, qui
     const parsedArr = extractJsonArray(text);
     return normalizeAlignment(words, lexicon, parsedArr, paragraphsEn, paragraphsZh);
   } catch {
-    return normalizeAlignment(words, lexicon, [], paragraphsEn, paragraphsZh);
+    return localAlignment;
   }
 }
 
@@ -2398,7 +2535,7 @@ app.post("/api/generate", async (req, res) => {
       }
     }
 
-    if (generationMode === "mixed") {
+    if (generationMode === "mixed" && shouldRunContextRefine(words, lexicon)) {
       lexicon = await refineMixedLexiconByContext(words, lexicon, articlePack.article, quickMode, selectedModel);
       articlePack.article = String(articlePack.article || "").replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
       articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
@@ -2407,8 +2544,8 @@ app.post("/api/generate", async (req, res) => {
     }
 
     const paragraphsEn = splitParagraphs(articlePack.article);
-    const paragraphsZh = await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
-    const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel);
+    const paragraphsZh = generationMode === "mixed" ? [] : await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
+    const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel, generationMode);
     const defaultTitle = defaultTitleByDate(words.length);
 
     const storeAfter = await readAuthStore();
