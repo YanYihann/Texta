@@ -314,11 +314,13 @@ function renderAdminDiagnostics(data) {
 
   const totalRequests = Number(data.totalRequests || 0);
   const totalDurationMs = Number(data.totalDurationMs || 0);
+  const totalDurationSec = Math.max(0, totalDurationMs / 1000);
+  const totalDurationText = totalDurationSec >= 10 ? totalDurationSec.toFixed(1) : totalDurationSec.toFixed(2);
   const byStep = Array.isArray(data.byStep) ? data.byStep.slice(0, 8) : [];
   const maxCount = byStep.reduce((mx, row) => Math.max(mx, Number(row?.requests || 0)), 0) || 1;
 
   if (adminDiagSummaryEl) {
-    adminDiagSummaryEl.textContent = `${totalRequests} 次请求 · ${Math.round(totalDurationMs)}ms`;
+    adminDiagSummaryEl.textContent = `${totalRequests} 次请求 · ${totalDurationText}s`;
   }
 
   if (adminDiagBarsEl) {
