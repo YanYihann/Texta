@@ -1503,6 +1503,14 @@ button:disabled {
   border-top-color: transparent;
 }
 
+.hide-zh .mixed-note {
+  display: none;
+}
+
+.hide-zh .para-card.mixed-mode .para-en {
+  line-height: 1.72;
+}
+
 .export-area.font-small .para-en,
 .export-area.font-small .para-zh {
   font-size: 14px;
@@ -2066,6 +2074,10 @@ body.reading-mode .app-shell {
 
   .para-card.mixed-mode .para-en {
     line-height: 1.86;
+  }
+
+  .hide-zh .para-card.mixed-mode .para-en {
+    line-height: 1.58;
   }
 
   .mastery-group {

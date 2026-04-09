@@ -1976,6 +1976,7 @@ function buildExportBundle(title, includeChinese) {
 
   if (!includeChinese) {
     articleClone.querySelectorAll(".para-zh").forEach((el) => el.remove());
+    articleClone.querySelectorAll(".mixed-note").forEach((el) => el.remove());
   }
 
   const glossaryClone = glossaryEl.cloneNode(true);
