@@ -2243,9 +2243,16 @@ body:not(.auth-page) h3 {
   letter-spacing: -0.02em;
 }
 
+body:not(.auth-page) .brand {
+  gap: 0;
+}
+
 body:not(.auth-page) .brand h1 {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 34px;
+  line-height: 0.94;
+  font-weight: 800;
+  letter-spacing: -0.065em;
+  color: #131313;
 }
 
 body:not(.auth-page) .subtitle,
