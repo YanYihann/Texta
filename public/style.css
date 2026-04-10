@@ -2186,3 +2186,245 @@ body.reading-mode .app-shell {
     gap: 16px;
   }
 }
+
+/* Notion-style theme layer */
+:root {
+  --bg: #f7f6f3;
+  --panel: #ffffff;
+  --panel-solid: #ffffff;
+  --text: #37352f;
+  --muted: #787774;
+  --line: #e9e9e7;
+  --primary: #0b6bcb;
+  --primary-press: #0a5bab;
+}
+
+body:not(.auth-page) {
+  background: var(--bg) !important;
+  color: var(--text);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+}
+
+body:not(.auth-page) .app-shell {
+  width: min(100%, 1380px);
+  margin: 0 auto;
+  height: auto;
+  min-height: 100vh;
+  padding: 18px;
+  grid-template-columns: 310px minmax(520px, 1fr) 340px;
+  gap: 14px;
+  overflow: visible;
+}
+
+body:not(.auth-page) .panel {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 8px 24px rgba(15, 15, 15, 0.05);
+  backdrop-filter: none;
+}
+
+body:not(.auth-page) .input-panel,
+body:not(.auth-page) .result-panel,
+body:not(.auth-page) .glossary-panel {
+  height: calc(100vh - 36px);
+  padding: 18px 16px;
+}
+
+body:not(.auth-page) .input-panel {
+  position: sticky;
+  top: 18px;
+}
+
+body:not(.auth-page) h1,
+body:not(.auth-page) h2,
+body:not(.auth-page) h3 {
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+body:not(.auth-page) .brand h1 {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+body:not(.auth-page) .subtitle,
+body:not(.auth-page) label,
+body:not(.auth-page) .field-note-label,
+body:not(.auth-page) .usage-text,
+body:not(.auth-page) .upgrade-link,
+body:not(.auth-page) #status {
+  color: var(--muted);
+}
+
+body:not(.auth-page) textarea,
+body:not(.auth-page) select,
+body:not(.auth-page) input[type="text"],
+body:not(.auth-page) input[type="password"] {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  box-shadow: none;
+}
+
+body:not(.auth-page) textarea::placeholder,
+body:not(.auth-page) input::placeholder {
+  color: #9b9a97;
+}
+
+body:not(.auth-page) textarea:focus,
+body:not(.auth-page) select:focus,
+body:not(.auth-page) input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(11, 107, 203, 0.15);
+}
+
+body:not(.auth-page) button,
+body:not(.auth-page) .primary-btn,
+body:not(.auth-page) .ghost-btn,
+body:not(.auth-page) .library-tab {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+body:not(.auth-page) button,
+body:not(.auth-page) .ghost-btn {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--text);
+  box-shadow: none;
+}
+
+body:not(.auth-page) button:hover:not(:disabled),
+body:not(.auth-page) .ghost-btn:hover:not(:disabled) {
+  background: #f6f6f5;
+}
+
+body:not(.auth-page) .primary-btn {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: #fff;
+}
+
+body:not(.auth-page) .primary-btn:hover:not(:disabled) {
+  background: var(--primary-press);
+  border-color: var(--primary-press);
+}
+
+body:not(.auth-page) .user-badge {
+  background: #f6f6f5;
+  border: 1px solid var(--line);
+  color: #4a4946;
+}
+
+body:not(.auth-page) .usage-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfbfa;
+}
+
+body:not(.auth-page) .library-tab {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #6b6a66;
+}
+
+body:not(.auth-page) .library-tab.active {
+  border-color: #d7d7d4;
+  background: #f3f3f2;
+  color: #2f2e2a;
+}
+
+body:not(.auth-page) .actions button {
+  min-height: 34px;
+}
+
+body:not(.auth-page) .actions button.is-active {
+  background: #e9f2ff;
+  border-color: #cde2ff;
+  color: #0b6bcb;
+}
+
+body:not(.auth-page) .article-title {
+  font-size: clamp(26px, 2.6vw, 36px);
+  line-height: 1.15;
+  font-weight: 700;
+  color: #2f2e2a;
+}
+
+body:not(.auth-page) .para-card {
+  border: 1px solid #ececeb;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+}
+
+body:not(.auth-page) .para-en,
+body:not(.auth-page) .para-zh {
+  color: var(--text);
+}
+
+body:not(.auth-page) .glossary {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+body:not(.auth-page) .glossary-item {
+  border-bottom: 1px dashed #ececeb;
+}
+
+body:not(.auth-page) .glossary-word {
+  color: #2f2e2a;
+}
+
+body:not(.auth-page) .glossary-pos {
+  color: #8f8d89;
+}
+
+body:not(.auth-page) .mobile-bottom-nav {
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+body:not(.auth-page) .mobile-nav-btn {
+  border: 1px solid transparent;
+  color: #6b6a66;
+  border-radius: 10px;
+}
+
+body:not(.auth-page) .mobile-nav-btn.active {
+  color: #2f2e2a;
+  background: #f3f3f2;
+}
+
+@media (max-width: 1200px) {
+  body:not(.auth-page) .app-shell {
+    grid-template-columns: 280px 1fr;
+  }
+
+  body:not(.auth-page) .glossary-panel {
+    grid-column: 1 / -1;
+    height: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  body:not(.auth-page) .app-shell {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    min-height: calc(100vh - 96px);
+    padding: 12px 12px 0;
+  }
+
+  body:not(.auth-page) .input-panel,
+  body:not(.auth-page) .result-panel,
+  body:not(.auth-page) .glossary-panel {
+    height: auto !important;
+    min-height: auto;
+    top: 0;
+    padding: 14px 12px 14px;
+  }
+}
