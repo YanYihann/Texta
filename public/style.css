@@ -1492,7 +1492,7 @@ button:disabled {
   max-height: 420px;
   opacity: 1;
   overflow: hidden;
-  transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.2s ease, padding 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .hide-zh .para-zh {

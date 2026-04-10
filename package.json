@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "postinstall": "prisma generate",
+    "ui:audit": "impeccable detect public --fast",
+    "ui:audit:json": "impeccable detect public --fast --json",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
@@ -16,5 +18,8 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "prisma": "^6.13.0"
+  },
+  "devDependencies": {
+    "impeccable": "^2.0.7"
   }
 }
