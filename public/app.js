@@ -94,9 +94,11 @@ const FAVORITES_KEY = "texta_favorites_v1";
 const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
 const NOTEBOOK_KEY = "texta_notebook_v1";
 const GUIDE_FORCE_OPEN_KEY = "texta_guide_force_open";
+const BW_MODE_KEY = "texta_bw_mode";
 let favorites = [];
 let vocabPrefs = {};
 let notebookEntries = [];
+let blackWhiteMode = localStorage.getItem(BW_MODE_KEY) === "1";
 let librarySyncTimer = null;
 let librarySyncInFlight = false;
 let librarySyncPending = false;
@@ -231,6 +233,40 @@ function closeGuideModal(options = {}) {
   guideModalEl.setAttribute("aria-hidden", "true");
 }
 
+function syncBlackWhiteButtonLabel() {
+  const btn = document.getElementById("bwModeBtn");
+  if (!btn) return;
+  btn.textContent = blackWhiteMode ? "彩色" : "黑白";
+  btn.setAttribute("aria-label", blackWhiteMode ? "切换为彩色模式" : "切换为黑白模式");
+  btn.title = blackWhiteMode ? "切换为彩色模式" : "切换为黑白模式";
+}
+
+function applyBlackWhiteMode() {
+  document.body.classList.toggle("bw-mode", blackWhiteMode);
+  syncBlackWhiteButtonLabel();
+}
+
+function ensureBlackWhiteButton(actionsEl) {
+  if (!actionsEl) return null;
+  let bwBtn = document.getElementById("bwModeBtn");
+  if (!bwBtn) {
+    bwBtn = document.createElement("button");
+    bwBtn.id = "bwModeBtn";
+    bwBtn.type = "button";
+    bwBtn.className = "bw-mini-btn";
+    bwBtn.addEventListener("click", () => {
+      blackWhiteMode = !blackWhiteMode;
+      localStorage.setItem(BW_MODE_KEY, blackWhiteMode ? "1" : "0");
+      applyBlackWhiteMode();
+    });
+  }
+  if (bwBtn.parentElement !== actionsEl) {
+    actionsEl.insertBefore(bwBtn, actionsEl.firstChild);
+  }
+  syncBlackWhiteButtonLabel();
+  return bwBtn;
+}
+
 function mountGuideButtonNearUser() {
   if (!openGuideBtn || !userRowEl) return;
 
@@ -256,6 +292,11 @@ function mountGuideButtonNearUser() {
   openGuideBtn.title = "使用说明";
   if (openGuideBtn.parentElement !== actionsEl) {
     actionsEl.insertBefore(openGuideBtn, actionsEl.firstChild);
+  }
+
+  const bwBtn = ensureBlackWhiteButton(actionsEl);
+  if (bwBtn && bwBtn.nextSibling !== openGuideBtn) {
+    actionsEl.insertBefore(bwBtn, openGuideBtn);
   }
 }
 
@@ -2555,6 +2596,7 @@ logoutBtnEl.addEventListener("click", async () => {
 
 async function init() {
   mountGuideButtonNearUser();
+  applyBlackWhiteMode();
   const ok = await loadMe();
   if (!ok) {
     location.href = "./index.html";

@@ -554,6 +554,28 @@ h3 {
   box-shadow: none;
 }
 
+.bw-mini-btn {
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid #dbe2ea;
+  box-shadow: none;
+}
+
+.bw-mini-btn:hover {
+  background: #e5ebf2;
+}
+
+body.bw-mode .bw-mini-btn {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
 .guide-card-head {
   display: flex;
   align-items: center;
@@ -2405,6 +2427,10 @@ body:not(.auth-page) .mobile-nav-btn {
 body:not(.auth-page) .mobile-nav-btn.active {
   color: #2f2e2a;
   background: #f3f3f2;
+}
+
+body:not(.auth-page).bw-mode {
+  filter: saturate(0);
 }
 
 @media (max-width: 1200px) {
