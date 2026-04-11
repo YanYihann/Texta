@@ -2634,6 +2634,10 @@ body:not(.auth-page).theme-dark .glossary .extra-line .extra-label {
   color: #ffffff;
 }
 
+body:not(.auth-page).theme-dark .glossary-item.active {
+  background: #2f2f2f;
+}
+
 body:not(.auth-page).theme-dark .theme-toggle-mini {
   border-color: #3b3b3b;
   background: #262626;
