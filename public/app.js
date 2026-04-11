@@ -97,6 +97,8 @@ let notebookSearchTerm = "";
 let notebookPosFilter = "all";
 const vocabDetailCache = new Map();
 const vocabDetailInFlight = new Map();
+const vocabDetailErrorTipByKey = new Map();
+const DEBUG_DISABLE_VOCAB_DETAIL_CACHE = true;
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
@@ -1801,6 +1803,7 @@ function renderMixedWordRun(run) {
   const key = keyifyWord(run?.word || wordText);
   const posText = normalizePosTagLabel(run?.pos || "");
   const rawMeaning = sanitizeGlossTextForUi(run?.displayMeaning, 160);
+  console.log("[article-run]", run?.word, run?.pos, run?.displayMeaning);
   const note = /[\u4e00-\u9fff]/.test(rawMeaning) ? rawMeaning : "词义待补充";
 
   const wrap = document.createElement("span");
@@ -2371,8 +2374,10 @@ function mergeDetailedEntryIntoState(entry) {
     ...sanitized,
     baseMeanings
   };
+  console.log("[detail] merging into state =", mergedEntry);
   const key = keyifyWord(mergedEntry?.word || "");
   if (!key) return;
+  vocabDetailErrorTipByKey.delete(key);
 
   latestLexicon = upsertWordEntryByKey(latestLexicon, key, mergedEntry);
   latestBaseLexicon = upsertWordEntryByKey(latestBaseLexicon, key, mergedEntry);
@@ -2384,14 +2389,16 @@ async function fetchVocabDetailEntry(word) {
   const normalizedWord = sanitizeGlossTextForUi(word, 80);
   const key = keyifyWord(normalizedWord);
   if (!key) return null;
-  if (vocabDetailCache.has(key)) {
+  const useCache = !DEBUG_DISABLE_VOCAB_DETAIL_CACHE;
+  if (useCache && vocabDetailCache.has(key)) {
     return vocabDetailCache.get(key);
   }
-  if (vocabDetailInFlight.has(key)) {
+  if (useCache && vocabDetailInFlight.has(key)) {
     return vocabDetailInFlight.get(key);
   }
 
   const requestPromise = (async () => {
+    console.log("[detail] request word =", normalizedWord);
     const response = await apiFetch("/api/vocab/detail", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2401,6 +2408,7 @@ async function fetchVocabDetailEntry(word) {
       })
     });
     const data = await response.json().catch(() => ({}));
+    console.log("[detail] response =", data);
     if (response.status === 401) {
       setAuthToken("");
       currentUser = null;
@@ -2417,18 +2425,33 @@ async function fetchVocabDetailEntry(word) {
       ...sanitizeLexiconItemForUi(data.entry),
       baseMeanings: sanitizeTextListForUi(data.entry?.baseMeanings, 200, 5)
     };
-    vocabDetailCache.set(key, sanitized);
+    console.log("[detail] merged entry =", sanitized);
+    if (useCache) {
+      vocabDetailCache.set(key, sanitized);
+    }
+    vocabDetailErrorTipByKey.delete(key);
     return sanitized;
   })()
     .catch((error) => {
       console.warn("Failed to hydrate vocab detail:", error);
+      vocabDetailErrorTipByKey.set(key, "详细词典加载失败");
+      setTimeout(() => {
+        if (vocabDetailErrorTipByKey.get(key) === "详细词典加载失败") {
+          vocabDetailErrorTipByKey.delete(key);
+          refreshVocabularySurfaces();
+        }
+      }, 5000);
       return null;
     })
     .finally(() => {
-      vocabDetailInFlight.delete(key);
+      if (useCache) {
+        vocabDetailInFlight.delete(key);
+      }
     });
 
-  vocabDetailInFlight.set(key, requestPromise);
+  if (useCache) {
+    vocabDetailInFlight.set(key, requestPromise);
+  }
   return requestPromise;
 }
 
@@ -2436,12 +2459,20 @@ async function ensureVocabDetailForKey(key) {
   const normalizedKey = keyifyWord(key || "");
   if (!normalizedKey) return;
   const current = findLexiconItemByKey(normalizedKey);
-  if (!current || !needsDetailHydration(current)) return;
+  if (!current) return;
   const word = String(current?.word || "").trim();
+  console.log("[detail] clicked word =", word);
+  const shouldHydrate = needsDetailHydration(current);
+  console.log("[detail] needs hydration =", shouldHydrate);
+  if (!shouldHydrate) return;
   if (!word) return;
 
   const detail = await fetchVocabDetailEntry(word);
-  if (!detail) return;
+  if (!detail) {
+    refreshVocabularySurfaces();
+    updateGlossaryFollow([normalizedKey]);
+    return;
+  }
   mergeDetailedEntryIntoState(detail);
   refreshVocabularySurfaces();
   updateGlossaryFollow([normalizedKey]);
@@ -2594,6 +2625,14 @@ function renderLexiconCard(item) {
 
   appendExtraLabel("反义词:");
   appendExtraTextLine(antonyms.length > 0 ? antonyms.join(", ") : "(暂无)");
+
+  const detailErrorTip = vocabDetailErrorTipByKey.get(key);
+  if (detailErrorTip) {
+    const tipLine = document.createElement("div");
+    tipLine.className = "extra-line";
+    tipLine.textContent = detailErrorTip;
+    card.appendChild(tipLine);
+  }
 
   card.appendChild(buildStudyControls(item));
   return card;
@@ -3037,6 +3076,9 @@ articleBlocksEl.addEventListener("click", (event) => {
   const mark = target.closest("mark.vocab-en[data-word-key]");
   if (mark) {
     const key = mark.getAttribute("data-word-key");
+    const currentEntry = findLexiconItemByKey(key || "");
+    console.log("[detail] clicked word =", String(currentEntry?.word || key || ""));
+    console.log("[detail] needs hydration =", needsDetailHydration(currentEntry));
     jumpToGlossaryKey(key || "");
     return;
   }
@@ -3048,6 +3090,9 @@ articleBlocksEl.addEventListener("click", (event) => {
     .map((x) => x.trim())
     .filter(Boolean);
   if (keys.length > 0) {
+    const currentEntry = findLexiconItemByKey(keys[0]);
+    console.log("[detail] clicked word =", String(currentEntry?.word || keys[0] || ""));
+    console.log("[detail] needs hydration =", needsDetailHydration(currentEntry));
     jumpToGlossaryKey(keys[0]);
   }
 });
@@ -3059,6 +3104,9 @@ glossaryEl.addEventListener("click", (event) => {
   if (glossaryItem) {
     const itemKey = glossaryItem.getAttribute("data-word-key") || "";
     if (itemKey) {
+      const currentEntry = findLexiconItemByKey(itemKey);
+      console.log("[detail] clicked word =", String(currentEntry?.word || itemKey || ""));
+      console.log("[detail] needs hydration =", needsDetailHydration(currentEntry));
       void ensureVocabDetailForKey(itemKey);
     }
   }
@@ -3086,6 +3134,9 @@ notebookEntriesEl?.addEventListener("click", (event) => {
   if (notebookItem) {
     const itemKey = notebookItem.getAttribute("data-word-key") || "";
     if (itemKey) {
+      const currentEntry = findLexiconItemByKey(itemKey);
+      console.log("[detail] clicked word =", String(currentEntry?.word || itemKey || ""));
+      console.log("[detail] needs hydration =", needsDetailHydration(currentEntry));
       void ensureVocabDetailForKey(itemKey);
     }
   }

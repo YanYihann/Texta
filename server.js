@@ -3538,9 +3538,12 @@ app.post("/api/vocab/detail", async (req, res) => {
     const generationProfile = getGenerationProfile(generationQuality);
     const selectedModel = generationProfile.model;
     const quickMode = Boolean(req.body?.quickMode);
+    console.log("[api/vocab/detail] word =", word);
     const fullLexicon = await generateLexicon([word], quickMode, selectedModel, "full");
+    console.log("[api/vocab/detail] full lexicon =", fullLexicon);
     const baseLexicon = buildBaseLexiconForResponse(fullLexicon);
     const entry = Array.isArray(baseLexicon) && baseLexicon.length > 0 ? baseLexicon[0] : null;
+    console.log("[api/vocab/detail] entry =", entry);
     if (!entry) {
       return res.status(404).json({ error: "Word detail not found." });
     }
