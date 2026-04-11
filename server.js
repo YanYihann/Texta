@@ -1317,14 +1317,14 @@ async function generateArticlePackage(
   const promptLevel = levelToPromptText(level);
   const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
   const lengthRule = isMixedMode
-    ? `Use compact output with ${words.length}-${Math.max(words.length + 2, Math.ceil(words.length * 1.15))} short sentences.`
+    ? "Keep it compact and easy to read, with short natural sentences."
     : quickMode
       ? "Length: 120-180 words."
       : words.length > 16
         ? "Length: 320-450 words."
         : "Length: 220-320 words.";
   const paragraphRule = isMixedMode
-    ? "Break into short blocks (about 3-5 sentences per paragraph) with blank lines."
+    ? "Use 2-4 short paragraphs separated by blank lines."
     : quickMode
       ? "Use 2-3 short paragraphs separated by blank lines."
       : words.length > 16
@@ -1348,23 +1348,27 @@ async function generateArticlePackage(
 
   const modeRules = isMixedMode
     ? [
-        "Write a Chinese-first mixed-language article.",
-        "The main body must be short and natural Chinese sentences.",
-        "Insert target words in English only, do not translate target words into Chinese.",
-        "Never place Chinese gloss directly adjacent to target words (avoid patterns like 水water / 排水drain / water水).",
+        "Write a Chinese-first mixed-language passage, not a formal article.",
+        "The tone must be natural, conversational, and everyday-life based.",
+        "It should feel like a real person talking, sharing, complaining, reflecting, or reacting in daily life.",
+        "The main body should be fluent natural Chinese, with target words inserted in English only.",
+        "Insert target words as part of sentence rhythm, not as explanations or glossary items.",
         "For each target word, use exactly the original input form (no plural/past/ing).",
         "Each target word should appear once if possible, and never more than twice.",
-        "Most sentences should contain exactly one target word.",
-        "Keep Chinese background concise; avoid long explanatory paragraphs.",
+        "Prefer one target word per short clause, but allow multiple target words in one sentence when natural.",
+        "Do not break sentences awkwardly just to isolate target words.",
+        "Keep Chinese background concise, but do not make it sound like a drill or exercise.",
         "Do NOT use glossary parentheses style such as 中文（word） or 中文（word + meaning）.",
         "Do NOT output Chinese gloss + English word pairs such as 板球 cricket / 无菌 sterility.",
         "When Chinese characters directly connect with a target word, keep compact form like 打cricket / 的sterility (no extra spaces).",
         "Avoid duplicate Chinese+English semantics around the same blank: use 非常cruel, not 非常残忍cruel.",
         "Do NOT output keyword list sections such as '片段1：补充关键词 ...'.",
         "Do NOT output standalone dictionary lines such as 'n. xxx' in the body.",
-        "If it is hard to connect all words in one coherent story, split into several short fragments/sections, but all target words must be covered."
+        "If one single story feels forced, you may write a sequence of small daily-life moments, but the voice must stay natural and consistent.",
+        "Naturalness and spoken flow are more important than showing off difficult writing."
       ]
     : ["Write an English IELTS-style article."];
+  const bodyLabel = isMixedMode ? "Passage" : "Article";
 
   const prompt = [
     ...modeRules,
@@ -1373,12 +1377,14 @@ async function generateArticlePackage(
     `Level: ${promptLevel}.`,
     lengthRule,
     paragraphRule,
-    "Article must be plain text paragraphs separated by blank lines.",
+    `${bodyLabel} must be plain text paragraphs separated by blank lines.`,
     "Every target word must appear at least once.",
     "Use the most common IELTS meaning by default for each word (PRIMARY marker ①).",
     "Only use secondary meanings (②+) when absolutely necessary for coherence.",
     "Whenever a target word appears, append one marker immediately after it, like drain①.",
+    "The passage should still read naturally even with markers attached.",
     "Marker should match the chosen meaning, and prioritize ① whenever possible.",
+    "The output should read smoothly even for someone who ignores the vocabulary-learning purpose.",
     "Make title concise and natural.",
     "Vocabulary guide:",
     vocabGuide,
@@ -1746,6 +1752,9 @@ async function refineMixedLexiconByContext(words, lexicon, article, quickMode, m
     "Each item format: {\"word\": string, \"pos\": string, \"meaning\": string}.",
     "pos must be an English POS tag like n., v., adj., adv., prep., pron., conj., num., det., int.",
     "meaning must match the article context exactly and be concise Chinese (2-8 chars).",
+    "meaning should be suitable for direct visual display under the word.",
+    "Keep meaning short, natural, and learner-friendly.",
+    "Avoid dictionary-style wording, abstract phrasing, or overly literal glosses.",
     "Prioritize the most common IELTS exam sense in this context.",
     "Avoid rare/archaic senses and avoid literal dictionary noise.",
     "When context is lab cleanliness, sterility should be 无菌 (not 不育).",
@@ -1778,7 +1787,7 @@ function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mi
     const marker = markerMap.get(String(word).toLowerCase()) || "①";
     const token = `${word}${marker}`;
     if (isMixedMode) {
-      return `补写句${index + 1}：这个场景里我重新记住了 ${token}。`;
+      return `后来想想，这个细节让我记住了 ${token}。`;
     }
     return `Supplement ${index + 1}: The key point in this line is ${token}.`;
   });
@@ -1808,12 +1817,14 @@ async function generateMissingWordsRewrite(missingWords, lexicon, generationMode
         "You are rewriting missing vocabulary content for a mixed Chinese-English learning passage.",
         "Return plain text only. No JSON, no markdown, no list bullets.",
         "Write concise Chinese sentences.",
-        "Each sentence must include exactly one target English word in original form.",
+        "Each sentence should include one target English word in original form.",
         "Each target word must appear exactly once across the whole output.",
         "Do NOT output Chinese gloss + English word pairs such as 板球 cricket / 无菌 sterility.",
         "When Chinese characters directly connect with a target word, keep compact form like 打cricket / 的sterility (no extra spaces).",
         "Do NOT use parentheses style like 中文（word）.",
         "Do NOT output standalone dictionary lines such as 'n. xxx'.",
+        "Make each added sentence sound like a natural continuation of the same voice.",
+        "Do not sound like a repair patch or vocabulary exercise.",
         "Words:",
         words.join(", "),
         "Vocabulary guide:",
@@ -2717,7 +2728,7 @@ app.post("/api/generate", async (req, res) => {
               ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
               : "",
             "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
-            "Mixed mode must look compact: most sentences include one target word and avoid long Chinese-only lines."
+            "Mixed mode should stay compact and natural, avoid long Chinese-only blocks."
           ].join(" "),
           selectedModel
         );
@@ -2742,7 +2753,6 @@ app.post("/api/generate", async (req, res) => {
           missing = findMissingWords(articlePack.article, words);
         } else {
           const missingBeforeRewrite = missing.slice();
-          const rewriteNotice = `提示：主文章仍有 ${missingBeforeRewrite.length} 个词未命中：${missingBeforeRewrite.join(", ")}。以下为补充重写短句：`;
           const rewritten = await generateMissingWordsRewrite(
             missingBeforeRewrite,
             lexicon,
@@ -2750,7 +2760,7 @@ app.post("/api/generate", async (req, res) => {
             quickMode,
             selectedModel
           );
-          articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewriteNotice}\n${rewritten}`.trim();
+          articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewritten}`.trim();
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
           missing = findMissingWords(articlePack.article, words);
