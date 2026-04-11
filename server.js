@@ -997,6 +997,53 @@ function toCircledNumber(n) {
   return map[n] || `${n}`;
 }
 
+function normalizeIpaText(raw) {
+  const source = String(raw || "").trim();
+  if (!source) return "";
+  const core = source.replace(/^[/[\]()\s]+|[/[\]()\s]+$/g, "").trim();
+  if (!core) return "";
+  return `/${core}/`;
+}
+
+function pickLexiconIpa(item, accent) {
+  const source = item && typeof item === "object" ? item : {};
+  const candidates =
+    accent === "uk"
+      ? [
+          source.uk_ipa,
+          source.ukIpa,
+          source.ipa_uk,
+          source.ipaUk,
+          source.ipaUK,
+          source.ukIPA,
+          source.pronunciation?.uk,
+          source.pronunciation?.ukIpa,
+          source.phonetic_uk,
+          source.phoneticUk,
+          source.phoneticUK
+        ]
+      : [
+          source.us_ipa,
+          source.usIpa,
+          source.ipa_us,
+          source.ipaUs,
+          source.ipaUS,
+          source.usIPA,
+          source.pronunciation?.us,
+          source.pronunciation?.usIpa,
+          source.phonetic_us,
+          source.phoneticUs,
+          source.phoneticUS
+        ];
+
+  for (const raw of candidates) {
+    const ipa = normalizeIpaText(raw);
+    if (ipa) return ipa;
+  }
+
+  return "";
+}
+
 function normalizePosTag(raw) {
   const source = String(raw || "").trim();
   if (!source) return "";
@@ -1051,7 +1098,9 @@ function normalizeLexicon(words, rawItems) {
         ? item.antonyms.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 6)
         : [];
 
-      itemMap.set(key, { pos, meanings, collocations, wordFormation, synonyms, antonyms });
+      const usIpa = pickLexiconIpa(item, "us");
+      const ukIpa = pickLexiconIpa(item, "uk");
+      itemMap.set(key, { pos, meanings, collocations, wordFormation, synonyms, antonyms, usIpa, ukIpa });
     }
   }
 
@@ -1067,6 +1116,8 @@ function normalizeLexicon(words, rawItems) {
     return {
       word,
       pos,
+      usIpa: found?.usIpa || "",
+      ukIpa: found?.ukIpa || "",
       senses,
       collocations: found?.collocations?.length ? found.collocations : ["(暂无)"],
       wordFormation: found?.wordFormation || "(暂无)",
@@ -1186,7 +1237,7 @@ async function generateLexicon(words, quickMode, model) {
       "You are an IELTS vocabulary assistant.",
       "Return ONLY JSON array.",
       "Each item format:",
-      "{\"word\": string, \"pos\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
+      "{\"word\": string, \"pos\": string, \"us_ipa\": string, \"uk_ipa\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
       "Rules:",
       "1) Keep same order as input words.",
       "2) pos should be concise (e.g. n., v., adj., adv.).",
@@ -1207,7 +1258,7 @@ async function generateLexicon(words, quickMode, model) {
     if (!Array.isArray(parsed)) {
       const retryPrompt = [
         "Return ONLY JSON array, no markdown, no explanation.",
-        "Each item keys must be exactly: word,pos,meanings,collocations,word_formation,synonyms,antonyms.",
+        "Each item keys must be exactly: word,pos,us_ipa,uk_ipa,meanings,collocations,word_formation,synonyms,antonyms.",
         "Keep same order as input words.",
         `Words: ${chunkWords.join(", ")}`
       ].join("\n");
@@ -1235,7 +1286,7 @@ async function generateLexicon(words, quickMode, model) {
         "You are an IELTS vocabulary assistant.",
         "Return ONLY JSON array.",
         "For each word provide practical IELTS meanings and basic word data.",
-        "Output format: {\"word\": string, \"pos\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
+        "Output format: {\"word\": string, \"pos\": string, \"us_ipa\": string, \"uk_ipa\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
         "meanings[0] MUST be the most common IELTS sense.",
         "Order meanings by IELTS frequency descending.",
         "If a word is misspelled, infer the most likely intended word and still provide useful meanings for the given spelling.",

@@ -81,6 +81,7 @@ let spellTimer = null;
 let spellState = [];
 let lastActiveGlossaryKey = "";
 let pronunciationMap = new Map();
+let speechVoices = [];
 let currentFavoriteId = "";
 let authToken = localStorage.getItem("texta_auth_token") || "";
 let currentUser = null;
@@ -106,6 +107,11 @@ let librarySyncPending = false;
 let librarySyncPaused = false;
 const LIBRARY_SYNC_DELAY_MS = 800;
 const themeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+if ("speechSynthesis" in window && typeof window.speechSynthesis?.addEventListener === "function") {
+  window.speechSynthesis.addEventListener("voiceschanged", () => {
+    speechVoices = window.speechSynthesis.getVoices() || [];
+  });
+}
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
@@ -583,6 +589,53 @@ function normalizePosTagLabel(raw) {
   return source;
 }
 
+function normalizeIpaLabel(raw) {
+  const source = String(raw || "").trim();
+  if (!source) return "";
+  const core = source.replace(/^[/[\]()\s]+|[/[\]()\s]+$/g, "").trim();
+  if (!core) return "";
+  return `/${core}/`;
+}
+
+function resolveIpaFromItem(item, accent) {
+  const source = item && typeof item === "object" ? item : {};
+  const candidates =
+    accent === "uk"
+      ? [
+          source.ukIpa,
+          source.uk_ipa,
+          source.ipaUk,
+          source.ipa_uk,
+          source.ipaUK,
+          source.ukIPA,
+          source.pronunciation?.uk,
+          source.pronunciation?.ukIpa,
+          source.phoneticUk,
+          source.phonetic_uk,
+          source.phoneticUK
+        ]
+      : [
+          source.usIpa,
+          source.us_ipa,
+          source.ipaUs,
+          source.ipa_us,
+          source.ipaUS,
+          source.usIPA,
+          source.pronunciation?.us,
+          source.pronunciation?.usIpa,
+          source.phoneticUs,
+          source.phonetic_us,
+          source.phoneticUS
+        ];
+
+  for (const raw of candidates) {
+    const ipa = normalizeIpaLabel(raw);
+    if (ipa) return ipa;
+  }
+
+  return "";
+}
+
 function normalizeFavorite(item) {
   const nowIso = new Date().toISOString();
   const id = String(item?.id || "").trim() || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -620,6 +673,8 @@ function normalizeNotebookEntry(item) {
     key,
     word: word || key,
     pos: normalizePosTagLabel(item?.pos),
+    usIpa: resolveIpaFromItem(item, "us"),
+    ukIpa: resolveIpaFromItem(item, "uk"),
     senses: Array.isArray(item?.senses) ? item.senses : [],
     collocations: Array.isArray(item?.collocations) ? item.collocations : [],
     synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
@@ -842,6 +897,8 @@ function upsertNotebookEntry(item) {
     key,
     word,
     pos: normalizePosTagLabel(item?.pos),
+    usIpa: resolveIpaFromItem(item, "us"),
+    ukIpa: resolveIpaFromItem(item, "uk"),
     senses: Array.isArray(item?.senses) ? item.senses : [],
     collocations: Array.isArray(item?.collocations) ? item.collocations : [],
     synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
@@ -1905,17 +1962,53 @@ function speakGlossaryByKey(key) {
   speakGlossaryByKeyWithAccent(key, "us");
 }
 
+function getSpeechVoices() {
+  if (!("speechSynthesis" in window)) return [];
+  const voices = window.speechSynthesis.getVoices() || [];
+  if (voices.length > 0) {
+    speechVoices = voices;
+  }
+  return speechVoices;
+}
+
+function pickVoiceForAccent(accent) {
+  const voices = getSpeechVoices();
+  if (!voices.length) return null;
+  const normalized = accent === "uk" ? "en-gb" : "en-us";
+  const exact = voices.find((v) => String(v?.lang || "").toLowerCase() === normalized);
+  if (exact) return exact;
+
+  const pref = voices.find((v) => String(v?.lang || "").toLowerCase().startsWith(normalized));
+  if (pref) return pref;
+
+  const nameRegex = accent === "uk" ? /(british|uk|england)/i : /(american|us|united states)/i;
+  const byName = voices.find((v) => nameRegex.test(String(v?.name || "")));
+  if (byName) return byName;
+
+  return voices.find((v) => /^en([-_]|$)/i.test(String(v?.lang || ""))) || voices[0] || null;
+}
+
 function speakGlossaryByKeyWithAccent(key, accent) {
-  const word = pronunciationMap.get(key);
+  const source = pronunciationMap.get(key);
+  const word = typeof source === "string" ? source : String(source?.word || "").trim();
   if (!word) return;
   if (!("speechSynthesis" in window)) {
     statusEl.textContent = "当前浏览器不支持语音功能。";
     return;
   }
+
+  const selectedVoice = pickVoiceForAccent(accent);
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(word);
-  u.lang = accent === "uk" ? "en-GB" : "en-US";
+  u.lang = selectedVoice?.lang || (accent === "uk" ? "en-GB" : "en-US");
+  if (selectedVoice) {
+    u.voice = selectedVoice;
+  }
   u.rate = 1;
+  u.pitch = 1;
+  if (window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
+  }
   window.speechSynthesis.speak(u);
 }
 
@@ -1968,13 +2061,19 @@ function renderLexiconCard(item, terms = []) {
   const word = escapeHtml(item?.word || "");
   const key = keyifyWord(item?.word || item?.key || "");
   const pos = escapeHtml(normalizePosTagLabel(item?.pos) || "");
+  const usIpa = escapeHtml(resolveIpaFromItem(item, "us") || "/-/");
+  const ukIpa = escapeHtml(resolveIpaFromItem(item, "uk") || "/-/");
   const senses = Array.isArray(item?.senses) ? item.senses : [];
   const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
   const synonyms = Array.isArray(item?.synonyms) ? item.synonyms : [];
   const antonyms = Array.isArray(item?.antonyms) ? item.antonyms : [];
   const wordFormation = String(item?.wordFormation || "");
 
-  pronunciationMap.set(key, String(item?.word || ""));
+  pronunciationMap.set(key, {
+    word: String(item?.word || "").trim(),
+    usIpa: resolveIpaFromItem(item, "us"),
+    ukIpa: resolveIpaFromItem(item, "uk")
+  });
 
   const senseHtml = senses
     .map((s) => {
@@ -2004,8 +2103,8 @@ function renderLexiconCard(item, terms = []) {
           <span class=\"glossary-pos\">${pos}</span>
         </div>
         <div class=\"head-actions\">
-          <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"us\">美音</button>
-          <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"uk\">英音</button>
+          <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"us\"><span class=\"speak-label\">美音</span><span class=\"speak-ipa\">${usIpa}</span></button>
+          <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"uk\"><span class=\"speak-label\">英音</span><span class=\"speak-ipa\">${ukIpa}</span></button>
         </div>
       </div>
       ${senseHtml}
