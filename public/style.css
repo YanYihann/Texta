@@ -2392,6 +2392,11 @@ body:not(.auth-page) .usage-card {
   background: #fbfbfa;
 }
 
+body:not(.auth-page) .usage-card .usage-text,
+body:not(.auth-page) .usage-card .upgrade-link {
+  color: #111111;
+}
+
 body:not(.auth-page) .library-tab {
   border: 1px solid var(--line);
   background: #fff;
@@ -2528,6 +2533,11 @@ body:not(.auth-page).theme-dark .glossary,
 body:not(.auth-page).theme-dark .para-card {
   background: #222;
   border-color: #333;
+}
+
+body:not(.auth-page).theme-dark .usage-card .usage-text,
+body:not(.auth-page).theme-dark .usage-card .upgrade-link {
+  color: #ffffff;
 }
 
 body:not(.auth-page).theme-dark .user-badge,
