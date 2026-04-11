@@ -2527,6 +2527,12 @@ body:not(.auth-page).theme-dark #generateBtn.primary-btn:hover:not(:disabled) {
   border-color: #ededed;
 }
 
+body:not(.auth-page).theme-dark button:not(#logoutBtn):hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #111111;
+}
+
 body:not(.auth-page).theme-dark .usage-card,
 body:not(.auth-page).theme-dark .user-badge,
 body:not(.auth-page).theme-dark .glossary,
