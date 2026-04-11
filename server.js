@@ -50,6 +50,7 @@ const LEXICON_CACHE_TTL_MS = Math.max(60 * 1000, Number(process.env.LEXICON_CACH
 const LEXICON_CACHE_MAX = Math.max(50, Number(process.env.LEXICON_CACHE_MAX || 800));
 const LEXICON_CHUNK_SIZE = Math.max(8, Number(process.env.LEXICON_CHUNK_SIZE || 12));
 const LEXICON_CHUNK_CONCURRENCY = Math.max(1, Math.min(4, Number(process.env.LEXICON_CHUNK_CONCURRENCY || 2)));
+const MIXED_HARD_WORDS = new Set(["derive", "sterility", "collapse", "process", "standard"]);
 
 const lexiconCache = new Map();
 const modelTraceStorage = new AsyncLocalStorage();
@@ -1305,6 +1306,86 @@ async function generateLexicon(words, quickMode, model) {
   return cloneJsonSafe(finalLexicon, []);
 }
 
+async function planMixedUsage(words, lexicon, quickMode, model) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  if (sourceWords.length === 0) return [];
+
+  const lexGuide = (Array.isArray(lexicon) ? lexicon : [])
+    .map((item) => {
+      const word = String(item?.word || "").trim();
+      if (!word) return "";
+      const senses = Array.isArray(item?.senses) ? item.senses : [];
+      const primary = senses[0];
+      const primaryText = primary ? `${primary.meaning}` : "词义待补充";
+      const alt = senses
+        .slice(1, 3)
+        .map((s) => s.meaning)
+        .join("; ");
+      const tail = alt ? ` | secondary: ${alt}` : "";
+      return `${word} (${item?.pos || "-"}) => ${primaryText}${tail}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  const prompt = [
+    "You are planning natural usage for a Chinese-first mixed-language passage.",
+    "Return ONLY JSON array in the same order as input words.",
+    "Each item format:",
+    '{"word": string, "pos": string, "meaning": string, "scene": string, "allowed_pattern": string, "avoid": string}',
+    "Rules:",
+    "1) meaning should be the most natural context-appropriate Chinese meaning for daily-life usage, not just dictionary default.",
+    "2) scene should be a short label like park, coffee-chat, home, reflection.",
+    "3) allowed_pattern should be concise and practical.",
+    "4) avoid should mention awkward/collocation mistakes to prevent forced usage.",
+    "5) For hard words (e.g. derive/sterility/process/standard/collapse), prefer separate micro-scene or reflective short clause.",
+    `Words: ${sourceWords.join(", ")}`,
+    "Lexicon candidates:",
+    lexGuide
+  ].join("\n");
+
+  try {
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 420 : 900, model, step: "mixed_plan" });
+    const parsed = extractJsonArray(text);
+    return normalizeMixedUsagePlan(parsed, sourceWords, lexicon);
+  } catch (error) {
+    console.error("Failed to plan mixed usage:", error.message);
+    return buildFallbackMixedUsagePlan(sourceWords, lexicon);
+  }
+}
+
+async function generateMixedArticleByScenes(words, level, quickMode, lexicon, extraConstraint, model, usagePlan) {
+  const groups = splitWordsForMixedScenes(words, usagePlan);
+  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  if (groups.length <= 1) {
+    return generateArticlePackage(words, level, quickMode, lexicon, "mixed", extraConstraint, model, usagePlan);
+  }
+
+  const parts = [];
+  let title = "";
+  for (let i = 0; i < groups.length; i += 1) {
+    const groupWords = groups[i];
+    const groupSet = new Set(groupWords.map((w) => String(w || "").toLowerCase()));
+    const groupLexicon = groupWords.map((w) => lexMap.get(String(w || "").toLowerCase())).filter(Boolean);
+    const groupPlan = (Array.isArray(usagePlan) ? usagePlan : []).filter((item) => groupSet.has(String(item?.word || "").toLowerCase()));
+    const sceneConstraint = [
+      `Micro-scene ${i + 1}/${groups.length}.`,
+      `Only focus on these target words in this part: ${groupWords.join(", ")}.`,
+      "Do not intentionally use target words that are assigned to other micro-scenes."
+    ].join(" ");
+    const finalConstraint = [extraConstraint, sceneConstraint].filter(Boolean).join(" ");
+    const pack = await generateArticlePackage(groupWords, level, quickMode, groupLexicon, "mixed", finalConstraint, model, groupPlan);
+    if (!title) {
+      title = String(pack?.title || "").trim();
+    }
+    parts.push(String(pack?.article || "").trim());
+  }
+
+  return {
+    title: title || defaultTitleByDate(words.length),
+    article: parts.filter(Boolean).join("\n\n")
+  };
+}
+
 async function generateArticlePackage(
   words,
   level,
@@ -1312,7 +1393,8 @@ async function generateArticlePackage(
   lexicon,
   generationMode = "standard",
   extraConstraint = "",
-  model
+  model,
+  usagePlan = []
 ) {
   const promptLevel = levelToPromptText(level);
   const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
@@ -1335,16 +1417,17 @@ async function generateArticlePackage(
     .map((item) => {
       const senses = Array.isArray(item?.senses) ? item.senses : [];
       const primary = senses[0];
-      const primaryText = primary ? `PRIMARY ${primary.marker} ${primary.meaning}` : "PRIMARY ① 常考义待完善";
+      const primaryText = primary ? `preferred: ${primary.meaning}` : "preferred: 常考义待完善";
       const alternates = senses
         .slice(1, 3)
-        .map((s) => `${s.marker} ${s.meaning}`)
+        .map((s) => s.meaning)
         .join("; ");
       return alternates
-        ? `${item.word} (${item.pos || "-"}): ${primaryText}; secondary: ${alternates}`
+        ? `${item.word} (${item.pos || "-"}): ${primaryText}; alternatives: ${alternates}`
         : `${item.word} (${item.pos || "-"}): ${primaryText}`;
     })
     .join("\n");
+  const usagePlanGuide = isMixedMode ? buildMixedUsagePlanGuide(usagePlan, words) : "";
 
   const modeRules = isMixedMode
     ? [
@@ -1379,15 +1462,17 @@ async function generateArticlePackage(
     paragraphRule,
     `${bodyLabel} must be plain text paragraphs separated by blank lines.`,
     "Every target word must appear at least once.",
-    "Use the most common IELTS meaning by default for each word (PRIMARY marker ①).",
-    "Only use secondary meanings (②+) when absolutely necessary for coherence.",
-    "Whenever a target word appears, append one marker immediately after it, like drain①.",
-    "The passage should still read naturally even with markers attached.",
-    "Marker should match the chosen meaning, and prioritize ① whenever possible.",
+    "Use the most natural context-appropriate meaning for each word in the exact scene.",
+    "Naturalness is more important than using default dictionary sense.",
+    "Do not force a target word into an unnatural sentence just for coverage.",
+    "If a word is difficult to place naturally, put it in a separate short micro-scene.",
+    "Do not include sense markers in the article body.",
     "The output should read smoothly even for someone who ignores the vocabulary-learning purpose.",
     "Make title concise and natural.",
     "Vocabulary guide:",
     vocabGuide,
+    isMixedMode ? "Usage planning hints:" : "",
+    isMixedMode ? usagePlanGuide : "",
     extraConstraint
   ]
     .filter(Boolean)
@@ -1448,6 +1533,112 @@ function levelToPromptText(level) {
     return "advanced";
   }
   return "intermediate";
+}
+
+function buildFallbackMixedUsagePlan(words, lexicon) {
+  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  return (Array.isArray(words) ? words : []).map((word) => {
+    const key = String(word || "").toLowerCase();
+    const item = lexMap.get(key);
+    const primaryMeaning =
+      Array.isArray(item?.senses) && item.senses.length > 0 ? String(item.senses[0]?.meaning || "").trim() : "词义待补充";
+    return {
+      word: String(word || "").trim(),
+      pos: normalizePosTag(item?.pos || ""),
+      meaning: primaryMeaning || "词义待补充",
+      scene: MIXED_HARD_WORDS.has(key) ? "brief-reflection" : "daily-life",
+      allowedPattern: MIXED_HARD_WORDS.has(key) ? "keep this word in a short reflective clause" : "everyday-life natural clause",
+      avoid: MIXED_HARD_WORDS.has(key) ? "forcing this word into casual small talk" : ""
+    };
+  });
+}
+
+function normalizeMixedUsagePlan(rows, words, lexicon) {
+  const fallback = buildFallbackMixedUsagePlan(words, lexicon);
+  if (!Array.isArray(rows)) return fallback;
+  const byWord = new Map();
+  for (const row of rows) {
+    const word = String(row?.word || "").trim().toLowerCase();
+    if (!word || byWord.has(word)) continue;
+    byWord.set(word, row);
+  }
+
+  return fallback.map((base) => {
+    const hit = byWord.get(String(base.word || "").toLowerCase()) || {};
+    const meaning = String(hit?.meaning || "").trim() || base.meaning;
+    return {
+      word: base.word,
+      pos: normalizePosTag(hit?.pos || base.pos || ""),
+      meaning: meaning.slice(0, 48),
+      scene: String(hit?.scene || base.scene || "daily-life").trim().slice(0, 40),
+      allowedPattern: String(hit?.allowed_pattern || hit?.allowedPattern || base.allowedPattern || "")
+        .trim()
+        .slice(0, 120),
+      avoid: String(hit?.avoid || "").trim().slice(0, 120)
+    };
+  });
+}
+
+function buildMixedUsagePlanGuide(usagePlan, wordsFilter) {
+  const plan = Array.isArray(usagePlan) ? usagePlan : [];
+  const filterSet =
+    Array.isArray(wordsFilter) && wordsFilter.length > 0
+      ? new Set(wordsFilter.map((w) => String(w || "").toLowerCase()))
+      : null;
+
+  const lines = plan
+    .filter((item) => {
+      if (!filterSet) return true;
+      return filterSet.has(String(item?.word || "").toLowerCase());
+    })
+    .map((item) => {
+      const word = String(item?.word || "").trim();
+      const pos = String(item?.pos || "").trim() || "-";
+      const meaning = String(item?.meaning || "").trim() || "词义待补充";
+      const scene = String(item?.scene || "").trim() || "daily-life";
+      const allowedPattern = String(item?.allowedPattern || "").trim();
+      const avoid = String(item?.avoid || "").trim();
+      const tail = [allowedPattern ? `allowed: ${allowedPattern}` : "", avoid ? `avoid: ${avoid}` : ""]
+        .filter(Boolean)
+        .join(" | ");
+      return `${word} (${pos}) => ${meaning}; scene: ${scene}${tail ? `; ${tail}` : ""}`;
+    });
+
+  return lines.join("\n");
+}
+
+function splitWordsForMixedScenes(words, usagePlan) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  if (sourceWords.length <= 3) return [sourceWords];
+
+  const hardGroup = [];
+  const easyGroup = [];
+  for (const word of sourceWords) {
+    if (MIXED_HARD_WORDS.has(word.toLowerCase())) {
+      hardGroup.push(word);
+    } else {
+      easyGroup.push(word);
+    }
+  }
+  if (hardGroup.length > 0 && easyGroup.length > 0 && sourceWords.length >= 4) {
+    return [easyGroup, hardGroup];
+  }
+  if (sourceWords.length <= 6) return [sourceWords];
+
+  const plan = Array.isArray(usagePlan) ? usagePlan : [];
+  const sceneMap = new Map();
+  const wordScene = new Map(plan.map((item) => [String(item?.word || "").toLowerCase(), String(item?.scene || "").trim()]));
+  for (const word of sourceWords) {
+    const scene = wordScene.get(word.toLowerCase()) || "daily-life";
+    const bucket = sceneMap.get(scene) || [];
+    bucket.push(word);
+    sceneMap.set(scene, bucket);
+  }
+  const groups = Array.from(sceneMap.values()).filter((arr) => arr.length > 0);
+  if (groups.length >= 2) {
+    return groups.slice(0, 3);
+  }
+  return [sourceWords];
 }
 
 function countWordOccurrences(text, word) {
@@ -1778,6 +1969,140 @@ async function refineMixedLexiconByContext(words, lexicon, article, quickMode, m
   }
 }
 
+function normalizeMixedSemanticReview(rows, words) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  const fallback = sourceWords.map((word) => ({
+    word,
+    natural: true,
+    meaningOk: true,
+    reason: "",
+    suggestion: ""
+  }));
+  if (!Array.isArray(rows) || sourceWords.length === 0) return fallback;
+
+  const byWord = new Map();
+  for (const row of rows) {
+    const key = String(row?.word || "").trim().toLowerCase();
+    if (!key || byWord.has(key)) continue;
+    byWord.set(key, row);
+  }
+
+  const toBool = (value, defaultValue) => {
+    if (typeof value === "boolean") return value;
+    const s = String(value || "").trim().toLowerCase();
+    if (!s) return defaultValue;
+    if (["true", "1", "yes", "y", "是"].includes(s)) return true;
+    if (["false", "0", "no", "n", "否"].includes(s)) return false;
+    return defaultValue;
+  };
+
+  return fallback.map((base) => {
+    const hit = byWord.get(String(base.word || "").toLowerCase()) || {};
+    return {
+      word: base.word,
+      natural: toBool(hit?.natural, true),
+      meaningOk: toBool(hit?.meaning_ok ?? hit?.meaningOk, true),
+      reason: String(hit?.reason || "").trim().slice(0, 160),
+      suggestion: String(hit?.suggestion || "").trim().slice(0, 160)
+    };
+  });
+}
+
+async function reviewMixedSemantics(words, lexicon, article, quickMode, model) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  if (sourceWords.length === 0) return [];
+
+  const contextMap = buildWordContextSnippetMap(article, sourceWords);
+  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  const reviewGuide = sourceWords
+    .map((word) => {
+      const item = lexMap.get(String(word || "").toLowerCase());
+      const pos = normalizePosTag(item?.pos || "");
+      const primaryMeaning =
+        Array.isArray(item?.senses) && item.senses.length > 0 ? String(item.senses[0]?.meaning || "").trim() : "词义待补充";
+      const ctx = contextMap.get(String(word || "").toLowerCase()) || "(no hit)";
+      return `${word} (${pos || "-"}) => ${primaryMeaning}; context: ${ctx}`;
+    })
+    .join("\n");
+
+  const prompt = [
+    "You are reviewing semantic naturalness for a Chinese-first mixed-language passage.",
+    "Return ONLY JSON array in the same order as input words.",
+    "Each item format:",
+    '{"word": string, "natural": boolean, "meaning_ok": boolean, "reason": string, "suggestion": string}',
+    "Rules:",
+    "1) natural=false when the sentence sounds forced, collocation is odd, or native-like Chinese mixed speech would not say it this way.",
+    "2) meaning_ok=false when the displayed Chinese meaning does not match the sentence context.",
+    "3) reason/suggestion should be concise Chinese, no markdown.",
+    "4) Be strict and practical; do not mark everything true.",
+    `Words: ${sourceWords.join(", ")}`,
+    "Word guide:",
+    reviewGuide,
+    "Passage:",
+    String(article || "")
+  ].join("\n");
+
+  try {
+    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 420 : 900, model, step: "review_semantics" });
+    const parsed = extractJsonArray(text);
+    return normalizeMixedSemanticReview(parsed, sourceWords);
+  } catch (error) {
+    console.error("Failed to review mixed semantics:", error.message);
+    return normalizeMixedSemanticReview([], sourceWords);
+  }
+}
+
+async function rewriteAwkwardMixedClauses(article, reviewRows, lexicon, quickMode, model) {
+  const source = String(article || "").trim();
+  if (!source) return source;
+  const issues = (Array.isArray(reviewRows) ? reviewRows : [])
+    .filter((row) => !row?.natural || !row?.meaningOk)
+    .map((row) => ({
+      word: String(row?.word || "").trim(),
+      reason: String(row?.reason || "").trim(),
+      suggestion: String(row?.suggestion || "").trim()
+    }))
+    .filter((row) => row.word);
+  if (issues.length === 0) return source;
+
+  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  const issueGuide = issues
+    .map((issue) => {
+      const item = lexMap.get(String(issue.word || "").toLowerCase());
+      const pos = normalizePosTag(item?.pos || "");
+      const primaryMeaning =
+        Array.isArray(item?.senses) && item.senses.length > 0 ? String(item.senses[0]?.meaning || "").trim() : "词义待补充";
+      return `${issue.word} (${pos || "-"}) => ${primaryMeaning}`;
+    })
+    .join("\n");
+
+  const prompt = [
+    "You are revising awkward lines in a Chinese-first mixed-language passage.",
+    "Return ONLY the fully revised passage text, no JSON, no markdown.",
+    "Keep the same overall voice and paragraph rhythm.",
+    "Only rewrite clauses/sentences that are semantically awkward or collocation-wrong.",
+    "Do not add glossary sections, keyword lists, or dictionary-style lines.",
+    "Do not output Chinese gloss + English word duplicates (e.g., 残忍cruel / 无菌sterility with direct duplicate meaning).",
+    "Keep target words in their original form.",
+    "If one word is hard to place naturally, move it to a short separate micro-scene.",
+    "Problem words and notes JSON:",
+    JSON.stringify(issues, null, 2),
+    "Vocabulary guide:",
+    issueGuide,
+    "Original passage:",
+    source
+  ].join("\n");
+
+  try {
+    const revised = await callOpenAIText(prompt, { maxTokens: quickMode ? 520 : 980, model, step: "rewrite_awkward" });
+    const cleaned = cleanMixedArtifactText(revised);
+    return cleaned || source;
+  } catch (error) {
+    console.error("Failed to rewrite awkward mixed clauses:", error.message);
+    return source;
+  }
+}
+
 function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mixed") {
   const markerMap = new Map(
     (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
@@ -1785,7 +2110,7 @@ function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mi
   const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
   const lines = (missingWords || []).map((word, index) => {
     const marker = markerMap.get(String(word).toLowerCase()) || "①";
-    const token = `${word}${marker}`;
+    const token = isMixedMode ? String(word) : `${word}${marker}`;
     if (isMixedMode) {
       return `后来想想，这个细节让我记住了 ${token}。`;
     }
@@ -2705,22 +3030,33 @@ app.post("/api/generate", async (req, res) => {
 
     const generateContent = async () => {
       let lexicon = await generateLexicon(words, quickMode, selectedModel);
-      let articlePack = await generateArticlePackage(words, level, quickMode, lexicon, generationMode, "", selectedModel);
+      let mixedUsagePlan =
+        generationMode === "mixed" ? await planMixedUsage(words, lexicon, quickMode, selectedModel) : [];
+      const generateMainArticle = async (extraConstraint = "") => {
+        if (generationMode === "mixed") {
+          return generateMixedArticleByScenes(
+            words,
+            level,
+            quickMode,
+            lexicon,
+            extraConstraint,
+            selectedModel,
+            mixedUsagePlan
+          );
+        }
+        return generateArticlePackage(words, level, quickMode, lexicon, generationMode, extraConstraint, selectedModel, []);
+      };
+
+      let articlePack = await generateMainArticle("");
       if (generationMode === "mixed") {
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
       }
-      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       let missing = findMissingWords(articlePack.article, words);
       let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
 
       const retryCount = generationMode === "mixed" ? (quickMode ? 2 : 4) : quickMode ? 1 : 2;
       for (let i = 0; i < retryCount && (missing.length > 0 || overused.length > 0); i += 1) {
-        articlePack = await generateArticlePackage(
-          words,
-          level,
-          quickMode,
-          lexicon,
-          generationMode,
+        articlePack = await generateMainArticle(
           [
             `Important fix (round ${i + 1}): ALL target words must be included.`,
             `Missing words: ${missing.join(", ")}.`,
@@ -2729,27 +3065,37 @@ app.post("/api/generate", async (req, res) => {
               : "",
             "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
             "Mixed mode should stay compact and natural, avoid long Chinese-only blocks."
-          ].join(" "),
-          selectedModel
+          ].join(" ")
         );
         if (generationMode === "mixed") {
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
         }
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
         missing = findMissingWords(articlePack.article, words);
         overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
       }
 
+      let mixedSemanticRows = [];
       if (generationMode === "mixed") {
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        mixedSemanticRows = await reviewMixedSemantics(words, lexicon, articlePack.article, quickMode, selectedModel);
+        const awkwardRows = mixedSemanticRows.filter((row) => !row?.natural || !row?.meaningOk);
+        if (awkwardRows.length > 0) {
+          articlePack.article = await rewriteAwkwardMixedClauses(
+            articlePack.article,
+            awkwardRows,
+            lexicon,
+            quickMode,
+            selectedModel
+          );
+          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+        }
         missing = findMissingWords(articlePack.article, words);
       }
 
+      let ranMixedRewrite = false;
       if (missing.length > 0) {
         if (generationMode !== "mixed") {
           articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
-          articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
           missing = findMissingWords(articlePack.article, words);
         } else {
           const missingBeforeRewrite = missing.slice();
@@ -2762,14 +3108,14 @@ app.post("/api/generate", async (req, res) => {
           );
           articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewritten}`.trim();
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-          articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+          ranMixedRewrite = true;
           missing = findMissingWords(articlePack.article, words);
 
           if (missing.length > 0) {
             const fallbackRewrite = buildMissingRewriteFallback(missing, lexicon, generationMode);
             articlePack.article = `${String(articlePack.article || "").trim()}\n${fallbackRewrite}`.trim();
             articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-            articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+            ranMixedRewrite = true;
             missing = findMissingWords(articlePack.article, words);
           }
         }
@@ -2777,11 +3123,29 @@ app.post("/api/generate", async (req, res) => {
 
       if (generationMode === "mixed" && shouldRunContextRefine(words, lexicon)) {
         lexicon = await refineMixedLexiconByContext(words, lexicon, articlePack.article, quickMode, selectedModel);
-        articlePack.article = String(articlePack.article || "").replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-        missing = findMissingWords(articlePack.article, words);
       }
+
+      if (generationMode === "mixed" && ranMixedRewrite) {
+        mixedSemanticRows = await reviewMixedSemantics(words, lexicon, articlePack.article, quickMode, selectedModel);
+        const awkwardRows = mixedSemanticRows.filter((row) => !row?.natural || !row?.meaningOk);
+        if (awkwardRows.length > 0) {
+          articlePack.article = await rewriteAwkwardMixedClauses(
+            articlePack.article,
+            awkwardRows,
+            lexicon,
+            quickMode,
+            selectedModel
+          );
+          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+        }
+      }
+
+      if (generationMode === "mixed") {
+        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+      }
+      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+      missing = findMissingWords(articlePack.article, words);
 
       const paragraphsEn = splitParagraphs(articlePack.article);
       const paragraphsZh = generationMode === "mixed" ? [] : await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
