@@ -98,7 +98,7 @@ let notebookPosFilter = "all";
 const vocabDetailCache = new Map();
 const vocabDetailInFlight = new Map();
 const vocabDetailErrorTipByKey = new Map();
-const DEBUG_DISABLE_VOCAB_DETAIL_CACHE = true;
+const DEBUG_DISABLE_VOCAB_DETAIL_CACHE = false;
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
@@ -2478,6 +2478,43 @@ async function ensureVocabDetailForKey(key) {
   updateGlossaryFollow([normalizedKey]);
 }
 
+function collectPendingVocabDetailHydrationTargets() {
+  const source = Array.isArray(latestLexicon) && latestLexicon.length > 0 ? latestLexicon : latestBaseLexicon;
+  const seen = new Set();
+  const targets = [];
+  for (const item of source) {
+    const key = keyifyWord(item?.word || item?.key || "");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const current = findLexiconItemByKey(key) || item;
+    const word = String(current?.word || item?.word || "").trim();
+    if (!word) continue;
+    if (!needsDetailHydration(current)) continue;
+    targets.push({ key, word });
+  }
+  return targets;
+}
+
+async function prefetchVocabDetailEntriesForCurrentArticle() {
+  const targets = collectPendingVocabDetailHydrationTargets();
+  if (targets.length === 0) return;
+
+  console.log("[detail-prefetch] start targets =", targets.map((t) => t.word));
+  const settled = await Promise.all(
+    targets.map(async (target) => {
+      const detail = await fetchVocabDetailEntry(target.word);
+      if (!detail) return false;
+      mergeDetailedEntryIntoState(detail);
+      return true;
+    })
+  );
+  const updated = settled.some(Boolean);
+  if (updated) {
+    refreshVocabularySurfaces();
+  }
+  console.log("[detail-prefetch] done");
+}
+
 function buildStudyControls(item) {
   const key = keyifyWord(item?.word || item?.key || "");
   const pref = getWordPref(key, item?.word || "");
@@ -3041,6 +3078,7 @@ generateBtn.addEventListener("click", async () => {
       }
 
       applyArticleData({ ...data, words: latestWords });
+      void prefetchVocabDetailEntriesForCurrentArticle();
       const usedCost = Number(data?.usageCost || (generationQuality === "advanced" ? 5 : 1));
       statusEl.textContent = `生成完成（本次消耗：${usedCost} 次）。`;
     } catch (error) {
