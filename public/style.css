@@ -2634,6 +2634,24 @@ body:not(.auth-page).theme-dark .glossary .extra-line .extra-label {
   color: #ffffff;
 }
 
+body:not(.auth-page).theme-dark #notebookEntries .glossary-word,
+body:not(.auth-page).theme-dark #notebookEntries .glossary-pos,
+body:not(.auth-page).theme-dark #notebookEntries .extra-label {
+  color: #ffffff;
+}
+
+body:not(.auth-page).theme-dark #notebookEntries .sense-line,
+body:not(.auth-page).theme-dark #notebookEntries .sense-line .sense-marker,
+body:not(.auth-page).theme-dark #notebookEntries .extra-value {
+  color: #39ff14;
+}
+
+body:not(.auth-page).theme-dark #notebookEntries .sense-line .vocab-zh {
+  background: transparent;
+  color: #39ff14;
+  padding: 0;
+}
+
 body:not(.auth-page).theme-dark .glossary-item.active {
   background: #2f2f2f;
 }

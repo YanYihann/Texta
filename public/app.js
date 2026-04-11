@@ -2662,7 +2662,7 @@ function renderLexiconCard(item) {
   };
   const appendExtraTextLine = (text) => {
     const line = document.createElement("div");
-    line.className = "extra-line";
+    line.className = "extra-line extra-value";
     line.textContent = text;
     card.appendChild(line);
   };
@@ -2680,7 +2680,10 @@ function renderLexiconCard(item) {
   formationLabel.className = "extra-label";
   formationLabel.textContent = "词根词缀:";
   formationLine.appendChild(formationLabel);
-  formationLine.appendChild(document.createTextNode(wordFormation || "(暂无)"));
+  const formationValue = document.createElement("span");
+  formationValue.className = "extra-value";
+  formationValue.textContent = wordFormation || "(暂无)";
+  formationLine.appendChild(formationValue);
   card.appendChild(formationLine);
 
   appendExtraLabel("同近义词:");
