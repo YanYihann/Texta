@@ -116,6 +116,8 @@ let librarySyncPaused = false;
 let librarySyncRetryTimer = null;
 let librarySyncRetryCount = 0;
 let librarySyncDirty = false;
+let generationElapsedTimer = null;
+let generationStartAtMs = 0;
 const LIBRARY_SYNC_DELAY_MS = 800;
 const LIBRARY_SYNC_RETRY_BASE_MS = 2500;
 const LIBRARY_SYNC_RETRY_MAX_MS = 60000;
@@ -2170,6 +2172,30 @@ function scheduleSpellcheck() {
   spellTimer = setTimeout(runSpellcheck, 350);
 }
 
+function stopGenerationElapsedTimer() {
+  if (generationElapsedTimer) {
+    clearInterval(generationElapsedTimer);
+    generationElapsedTimer = null;
+  }
+  generationStartAtMs = 0;
+}
+
+function formatElapsedSeconds(ms) {
+  const total = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+  return `${total}秒`;
+}
+
+function startGenerationElapsedTimer(baseText) {
+  stopGenerationElapsedTimer();
+  generationStartAtMs = Date.now();
+  const render = () => {
+    const elapsed = Date.now() - generationStartAtMs;
+    statusEl.textContent = `${baseText}（已思考：${formatElapsedSeconds(elapsed)}）`;
+  };
+  render();
+  generationElapsedTimer = setInterval(render, 1000);
+}
+
 function refreshVocabularySurfaces() {
   renderGlossary(latestLexicon);
   renderNotebookView();
@@ -3045,7 +3071,10 @@ generateBtn.addEventListener("click", async () => {
   missingWordsEl.textContent = "";
   renderAdminDiagnostics(null);
   const qualityLabel = generationQuality === "advanced" ? "高级生成（消耗5次）" : "普通生成（消耗1次）";
-  statusEl.textContent = quickMode ? `${qualityLabel} + 快速模式生成中...` : `AI 正在${qualityLabel}，请稍等（大约10-15秒）...`;
+  const pendingStatus = quickMode
+    ? `${qualityLabel} + 快速模式生成中...`
+    : `AI 正在${qualityLabel}，请稍等（大约10-15秒）...`;
+  startGenerationElapsedTimer(pendingStatus);
 
   try {
     latestWords = splitWords(wordsText);
@@ -3080,10 +3109,15 @@ generateBtn.addEventListener("click", async () => {
       applyArticleData({ ...data, words: latestWords });
       void prefetchVocabDetailEntriesForCurrentArticle();
       const usedCost = Number(data?.usageCost || (generationQuality === "advanced" ? 5 : 1));
-      statusEl.textContent = `生成完成（本次消耗：${usedCost} 次）。`;
+      const elapsedMs = generationStartAtMs ? Date.now() - generationStartAtMs : 0;
+      stopGenerationElapsedTimer();
+      statusEl.textContent = `生成完成（本次消耗：${usedCost} 次，思考耗时：${formatElapsedSeconds(elapsedMs)}）。`;
     } catch (error) {
-      statusEl.textContent = `生成失败：${error.message}`;
+      const elapsedMs = generationStartAtMs ? Date.now() - generationStartAtMs : 0;
+      stopGenerationElapsedTimer();
+      statusEl.textContent = `生成失败：${error.message}（已思考：${formatElapsedSeconds(elapsedMs)}）`;
     } finally {
+      stopGenerationElapsedTimer();
       generateBtn.disabled = false;
   }
 });
