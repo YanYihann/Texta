@@ -94,16 +94,17 @@ const FAVORITES_KEY = "texta_favorites_v1";
 const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
 const NOTEBOOK_KEY = "texta_notebook_v1";
 const GUIDE_FORCE_OPEN_KEY = "texta_guide_force_open";
-const BW_MODE_KEY = "texta_bw_mode";
+const THEME_PREF_KEY = "texta_theme_preference";
 let favorites = [];
 let vocabPrefs = {};
 let notebookEntries = [];
-let blackWhiteMode = localStorage.getItem(BW_MODE_KEY) === "1";
+let themePreference = localStorage.getItem(THEME_PREF_KEY) || "system";
 let librarySyncTimer = null;
 let librarySyncInFlight = false;
 let librarySyncPending = false;
 let librarySyncPaused = false;
 const LIBRARY_SYNC_DELAY_MS = 800;
+const themeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
@@ -233,38 +234,100 @@ function closeGuideModal(options = {}) {
   guideModalEl.setAttribute("aria-hidden", "true");
 }
 
-function syncBlackWhiteButtonLabel() {
-  const btn = document.getElementById("bwModeBtn");
-  if (!btn) return;
-  btn.textContent = blackWhiteMode ? "彩色" : "黑白";
-  btn.setAttribute("aria-label", blackWhiteMode ? "切换为彩色模式" : "切换为黑白模式");
-  btn.title = blackWhiteMode ? "切换为彩色模式" : "切换为黑白模式";
+function themeIconSvg(mode) {
+  if (mode === "system") {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M3.5 6.75A2.25 2.25 0 0 1 5.75 4.5h12.5a2.25 2.25 0 0 1 2.25 2.25v8.5a2.25 2.25 0 0 1-2.25 2.25H13.5l-2 2-2-2H5.75a2.25 2.25 0 0 1-2.25-2.25v-8.5Z"></path>
+        <path d="M8.75 9.5h6.5"></path>
+      </svg>
+    `;
+  }
+  if (mode === "dark") {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M20 14.3A8.2 8.2 0 1 1 9.7 4a6.5 6.5 0 1 0 10.3 10.3Z"></path>
+      </svg>
+    `;
+  }
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="4.2"></circle>
+      <path d="M12 2.8v2.2M12 19v2.2M4.8 12H2.6M21.4 12h-2.2M5.9 5.9l1.6 1.6M16.5 16.5l1.6 1.6M18.1 5.9l-1.6 1.6M7.5 16.5l-1.6 1.6"></path>
+    </svg>
+  `;
 }
 
-function applyBlackWhiteMode() {
-  document.body.classList.toggle("bw-mode", blackWhiteMode);
-  syncBlackWhiteButtonLabel();
+function resolveTheme(preference) {
+  if (preference === "dark") return "dark";
+  if (preference === "light") return "light";
+  return themeMediaQuery?.matches ? "dark" : "light";
 }
 
-function ensureBlackWhiteButton(actionsEl) {
+function syncThemeToggleState() {
+  const wrap = document.getElementById("themeToggle");
+  if (!wrap) return;
+  const nodes = wrap.querySelectorAll(".theme-toggle-btn[data-theme-value]");
+  nodes.forEach((node) => {
+    const value = String(node.getAttribute("data-theme-value") || "");
+    const isActive = value === themePreference;
+    node.classList.toggle("is-active", isActive);
+    node.setAttribute("aria-checked", isActive ? "true" : "false");
+  });
+}
+
+function applyThemePreference() {
+  const resolved = resolveTheme(themePreference);
+  document.body.classList.toggle("theme-dark", resolved === "dark");
+  document.body.classList.toggle("theme-light", resolved !== "dark");
+  syncThemeToggleState();
+}
+
+function ensureThemeToggle(actionsEl) {
   if (!actionsEl) return null;
-  let bwBtn = document.getElementById("bwModeBtn");
-  if (!bwBtn) {
-    bwBtn = document.createElement("button");
-    bwBtn.id = "bwModeBtn";
-    bwBtn.type = "button";
-    bwBtn.className = "bw-mini-btn";
-    bwBtn.addEventListener("click", () => {
-      blackWhiteMode = !blackWhiteMode;
-      localStorage.setItem(BW_MODE_KEY, blackWhiteMode ? "1" : "0");
-      applyBlackWhiteMode();
+  let wrap = document.getElementById("themeToggle");
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.id = "themeToggle";
+    wrap.className = "theme-toggle-mini";
+    wrap.setAttribute("role", "radiogroup");
+    wrap.setAttribute("aria-label", "主题切换");
+    const options = [
+      { value: "system", label: "系统" },
+      { value: "light", label: "浅色" },
+      { value: "dark", label: "深色" }
+    ];
+    wrap.innerHTML = options
+      .map(
+        (item) => `
+          <button
+            type="button"
+            class="theme-toggle-btn"
+            role="radio"
+            aria-checked="false"
+            data-theme-value="${item.value}"
+            aria-label="${item.label}"
+            title="${item.label}"
+          >
+            ${themeIconSvg(item.value)}
+          </button>
+        `
+      )
+      .join("");
+    wrap.addEventListener("click", (event) => {
+      const btn = event.target?.closest?.(".theme-toggle-btn[data-theme-value]");
+      if (!btn) return;
+      const next = String(btn.getAttribute("data-theme-value") || "system");
+      themePreference = next;
+      localStorage.setItem(THEME_PREF_KEY, themePreference);
+      applyThemePreference();
     });
   }
-  if (bwBtn.parentElement !== actionsEl) {
-    actionsEl.insertBefore(bwBtn, actionsEl.firstChild);
+  if (wrap.parentElement !== actionsEl) {
+    actionsEl.insertBefore(wrap, actionsEl.firstChild);
   }
-  syncBlackWhiteButtonLabel();
-  return bwBtn;
+  syncThemeToggleState();
+  return wrap;
 }
 
 function mountGuideButtonNearUser() {
@@ -294,9 +357,9 @@ function mountGuideButtonNearUser() {
     actionsEl.insertBefore(openGuideBtn, actionsEl.firstChild);
   }
 
-  const bwBtn = ensureBlackWhiteButton(actionsEl);
-  if (bwBtn && bwBtn.nextSibling !== openGuideBtn) {
-    actionsEl.insertBefore(bwBtn, openGuideBtn);
+  const themeToggle = ensureThemeToggle(actionsEl);
+  if (themeToggle && themeToggle.nextSibling !== openGuideBtn) {
+    actionsEl.insertBefore(themeToggle, openGuideBtn);
   }
 }
 
@@ -2596,7 +2659,7 @@ logoutBtnEl.addEventListener("click", async () => {
 
 async function init() {
   mountGuideButtonNearUser();
-  applyBlackWhiteMode();
+  applyThemePreference();
   const ok = await loadMe();
   if (!ok) {
     location.href = "./index.html";
@@ -2617,6 +2680,14 @@ async function init() {
   if (shouldAutoOpenGuide(currentUser)) {
     window.setTimeout(() => openGuideModal(true), 120);
   }
+}
+
+if (themeMediaQuery) {
+  themeMediaQuery.addEventListener("change", () => {
+    if (themePreference === "system") {
+      applyThemePreference();
+    }
+  });
 }
 
 init();
