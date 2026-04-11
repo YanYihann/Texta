@@ -1270,7 +1270,7 @@ button:disabled {
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: 10px;
   background: #f3f4f9;
   border: 1px solid #e5e7eb;
 }
@@ -1596,7 +1596,7 @@ mark.vocab-en {
   margin-top: 2px;
   font-size: 12px;
   line-height: 1.1;
-  color: #b91c1c;
+  color: #36f4a4;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -2363,6 +2363,17 @@ body:not(.auth-page) .primary-btn:hover:not(:disabled) {
   border-color: var(--primary-press);
 }
 
+body:not(.auth-page) #generateBtn.primary-btn {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+body:not(.auth-page) #generateBtn.primary-btn:hover:not(:disabled) {
+  background: #232323;
+  border-color: #232323;
+}
+
 body:not(.auth-page) .user-badge {
   background: #f6f6f5;
   border: 1px solid var(--line);
@@ -2494,6 +2505,17 @@ body:not(.auth-page).theme-dark .primary-btn {
   color: #0b111a;
 }
 
+body:not(.auth-page).theme-dark #generateBtn.primary-btn {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #0f0f0f;
+}
+
+body:not(.auth-page).theme-dark #generateBtn.primary-btn:hover:not(:disabled) {
+  background: #ededed;
+  border-color: #ededed;
+}
+
 body:not(.auth-page).theme-dark .usage-card,
 body:not(.auth-page).theme-dark .user-badge,
 body:not(.auth-page).theme-dark .glossary,
@@ -2533,6 +2555,36 @@ body:not(.auth-page).theme-dark .library-tab.active {
   background: #2d2d2d;
   color: #fff;
   border-color: #4a4a4a;
+}
+
+body:not(.auth-page).theme-dark .library-tabs {
+  background: #d1d5db;
+  border-color: #e5e7eb;
+}
+
+body:not(.auth-page).theme-dark .article-title {
+  color: #ffffff;
+}
+
+body:not(.auth-page).theme-dark .glossary .glossary-word,
+body:not(.auth-page).theme-dark .glossary .glossary-pos {
+  color: #ffffff;
+}
+
+body:not(.auth-page).theme-dark .glossary .sense-line,
+body:not(.auth-page).theme-dark .glossary .sense-line .sense-marker {
+  color: #36f4a4;
+}
+
+body:not(.auth-page).theme-dark .glossary .sense-line .vocab-zh {
+  background: transparent;
+  color: #36f4a4;
+  padding: 0;
+}
+
+body:not(.auth-page).theme-dark .glossary .extra-line,
+body:not(.auth-page).theme-dark .glossary .extra-line .extra-label {
+  color: #ffffff;
 }
 
 body:not(.auth-page).theme-dark .theme-toggle-mini {
