@@ -68,6 +68,10 @@ const guideDontShowEl = document.getElementById("guideDontShow");
 let latestArticle = "";
 let latestWords = [];
 let latestLexicon = [];
+let latestBaseLexicon = [];
+let latestContextLexicon = [];
+let latestContextGlosses = [];
+let latestRuns = [];
 let latestParagraphsEn = [];
 let latestParagraphsZh = [];
 let latestAlignment = [];
@@ -652,6 +656,9 @@ function normalizeFavorite(item) {
     words: Array.isArray(item?.words) ? item.words : [],
     article: String(item?.article || ""),
     lexicon: Array.isArray(item?.lexicon) ? item.lexicon : [],
+    baseLexicon: Array.isArray(item?.baseLexicon) ? item.baseLexicon : [],
+    contextGlosses: Array.isArray(item?.contextGlosses) ? item.contextGlosses : [],
+    runs: Array.isArray(item?.runs) ? item.runs : [],
     paragraphsEn: Array.isArray(item?.paragraphsEn) ? item.paragraphsEn : [],
     paragraphsZh: Array.isArray(item?.paragraphsZh) ? item.paragraphsZh : [],
     alignment: Array.isArray(item?.alignment) ? item.alignment : [],
@@ -1619,6 +1626,85 @@ function highlightMixedEnglishWithNotes(text, words, alignment, lexicon) {
   return html;
 }
 
+function buildContextGlossMap(contextGlosses) {
+  const map = new Map();
+  for (const row of Array.isArray(contextGlosses) ? contextGlosses : []) {
+    const key = keyifyWord(row?.word || "");
+    if (!key) continue;
+    const pos = normalizePosTagLabel(row?.pos || "");
+    const meaning = String(row?.contextMeaning || row?.displayMeaning || "").trim();
+    const marker = String(row?.marker || "").trim();
+    map.set(key, { pos, meaning, marker });
+  }
+  return map;
+}
+
+function renderMixedWordRun(run, contextMap, fallbackNoteMap) {
+  const wordText = String(run?.text || run?.word || "").trim();
+  if (!wordText) return "";
+  const key = keyifyWord(run?.word || wordText);
+  const context = contextMap.get(key) || {};
+  const marker = String(run?.marker || context?.marker || "").trim();
+  const pos = normalizePosTagLabel(run?.pos || context?.pos || "");
+  const rawMeaning = String(run?.contextMeaning || run?.displayMeaning || context?.meaning || "").trim();
+  const meaning = /[\u4e00-\u9fff]/.test(rawMeaning) ? rawMeaning : "";
+  const note = [pos, meaning].filter(Boolean).join(" ").trim() || resolveMixedNote(fallbackNoteMap, key, marker, "");
+  return `<span class=\"mixed-vocab\" data-word-key=\"${escapeHtml(key)}\"><mark class=\"vocab-en\" data-word-key=\"${escapeHtml(
+    key
+  )}\">${escapeHtml(wordText)}</mark><span class=\"mixed-note\">${escapeHtml(note)}</span></span>`;
+}
+
+function renderMixedParagraphCardsFromRuns(runs, contextGlosses, fallbackLexicon) {
+  const sourceRuns = Array.isArray(runs) ? runs : [];
+  if (sourceRuns.length === 0) return "";
+
+  const contextMap = buildContextGlossMap(contextGlosses);
+  const fallbackNoteMap = buildMixedLexiconNoteMap(fallbackLexicon);
+  const cards = [];
+  let currentHtml = "";
+
+  const pushCard = () => {
+    const normalized = currentHtml.trim();
+    if (!normalized) {
+      currentHtml = "";
+      return;
+    }
+    cards.push(normalized);
+    currentHtml = "";
+  };
+
+  for (const run of sourceRuns) {
+    if (String(run?.type || "") === "word") {
+      currentHtml += renderMixedWordRun(run, contextMap, fallbackNoteMap);
+      continue;
+    }
+
+    const text = String(run?.text || "");
+    if (!text) continue;
+    const parts = text.split(/\n\s*\n/g);
+    for (let i = 0; i < parts.length; i += 1) {
+      const part = parts[i];
+      if (part) {
+        currentHtml += escapeHtml(part).replace(/\n/g, "<br>");
+      }
+      if (i < parts.length - 1) {
+        pushCard();
+      }
+    }
+  }
+  pushCard();
+
+  return cards
+    .map(
+      (enHtml, i) => `
+        <article class=\"para-card mixed-mode\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
+          <p class=\"para-en\">${enHtml}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function highlightChineseWithKeys(text, termKeyPairs) {
   let html = escapeHtml(normalizeSenseMarkerSpacing(normalizeZhSenseMarkers(text)));
   for (const item of termKeyPairs || []) {
@@ -2012,15 +2098,34 @@ function speakGlossaryByKeyWithAccent(key, accent) {
   window.speechSynthesis.speak(u);
 }
 
-function renderParagraphBlocks(paragraphsEn, paragraphsZh, words, lexicon, alignment, generationMode = "standard") {
+function renderParagraphBlocks(
+  paragraphsEn,
+  paragraphsZh,
+  words,
+  lexicon,
+  alignment,
+  generationMode = "standard",
+  runs = [],
+  contextGlosses = [],
+  contextLexicon = []
+) {
   const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
+  const mixedNoteLexicon = Array.isArray(contextLexicon) && contextLexicon.length > 0 ? contextLexicon : lexicon;
+  if (isMixedMode && Array.isArray(runs) && runs.length > 0) {
+    const rendered = renderMixedParagraphCardsFromRuns(runs, contextGlosses, mixedNoteLexicon);
+    if (rendered) {
+      articleBlocksEl.innerHTML = rendered;
+      applyChineseVisibility();
+      return;
+    }
+  }
   const zhTermKeyPairs = buildChineseTermKeyPairsFromAlignment(alignment, lexicon);
 
   articleBlocksEl.innerHTML = paragraphsEn
     .map((en, i) => {
       const zh = paragraphsZh[i] || "";
       const enHtml = (isMixedMode
-        ? highlightMixedEnglishWithNotes(en, words, alignment, lexicon)
+        ? highlightMixedEnglishWithNotes(en, words, alignment, mixedNoteLexicon)
         : highlightEnglishWithAlignment(en, words, alignment)
       ).replace(/\n/g, "<br>");
       const zhHtml = highlightChineseWithAlignment(zh, zhTermKeyPairs, alignment).replace(/\n/g, "<br>");
@@ -2351,7 +2456,13 @@ async function exportPdfFromPreview() {
 function applyArticleData(data) {
   latestArticle = String(data.article || "");
   latestWords = Array.isArray(data.words) ? data.words : latestWords;
-  latestLexicon = Array.isArray(data.lexicon) ? data.lexicon : [];
+  const incomingLexicon = Array.isArray(data.lexicon) ? data.lexicon : [];
+  const incomingBaseLexicon = Array.isArray(data.baseLexicon) ? data.baseLexicon : [];
+  latestBaseLexicon = incomingBaseLexicon.length > 0 ? incomingBaseLexicon : incomingLexicon;
+  latestContextLexicon = incomingLexicon.length > 0 ? incomingLexicon : latestBaseLexicon;
+  latestLexicon = latestBaseLexicon;
+  latestContextGlosses = Array.isArray(data.contextGlosses) ? data.contextGlosses : [];
+  latestRuns = Array.isArray(data.runs) ? data.runs : [];
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
@@ -2374,7 +2485,17 @@ function applyArticleData(data) {
   exportTitleInput.value = finalTitle || String(data.defaultTitle || defaultTitleByWords(latestWords));
 
   syncNotebookEntriesFromLexicon(latestLexicon);
-  renderParagraphBlocks(latestParagraphsEn, latestParagraphsZh, latestWords, latestLexicon, latestAlignment, latestGenerationMode);
+  renderParagraphBlocks(
+    latestParagraphsEn,
+    latestParagraphsZh,
+    latestWords,
+    latestLexicon,
+    latestAlignment,
+    latestGenerationMode,
+    latestRuns,
+    latestContextGlosses,
+    latestContextLexicon
+  );
   renderGlossary(latestLexicon);
   renderNotebookView();
   syncGlossaryFooterButton();
@@ -2429,7 +2550,10 @@ function favoriteFromCurrent() {
     savedAt: new Date().toLocaleString(),
     words: latestWords,
     article: latestArticle,
-    lexicon: latestLexicon,
+    lexicon: latestContextLexicon.length > 0 ? latestContextLexicon : latestLexicon,
+    baseLexicon: latestBaseLexicon.length > 0 ? latestBaseLexicon : latestLexicon,
+    contextGlosses: latestContextGlosses,
+    runs: latestRuns,
     paragraphsEn: latestParagraphsEn,
     paragraphsZh: latestParagraphsZh,
     alignment: latestAlignment,

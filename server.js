@@ -598,7 +598,10 @@ function parseAlignmentPayload(rawAlignment) {
     return {
       items: rawAlignment,
       generationMode: "standard",
-      generationQuality: "normal"
+      generationQuality: "normal",
+      baseLexicon: [],
+      contextGlosses: [],
+      runs: []
     };
   }
 
@@ -608,24 +611,44 @@ function parseAlignmentPayload(rawAlignment) {
     return {
       items,
       generationMode: normalizeGenerationMode(meta.generationMode),
-      generationQuality: normalizeGenerationQuality(meta.generationQuality)
+      generationQuality: normalizeGenerationQuality(meta.generationQuality),
+      baseLexicon: Array.isArray(meta.baseLexicon) ? meta.baseLexicon : [],
+      contextGlosses: Array.isArray(meta.contextGlosses) ? meta.contextGlosses : [],
+      runs: Array.isArray(meta.runs) ? meta.runs : []
     };
   }
 
   return {
     items: [],
     generationMode: "standard",
-    generationQuality: "normal"
+    generationQuality: "normal",
+    baseLexicon: [],
+    contextGlosses: [],
+    runs: []
   };
 }
 
-function buildAlignmentPayload(rawAlignment, rawGenerationMode, rawGenerationQuality) {
+function buildAlignmentPayload(
+  rawAlignment,
+  rawGenerationMode,
+  rawGenerationQuality,
+  rawBaseLexicon = [],
+  rawContextGlosses = [],
+  rawRuns = []
+) {
   const parsed = parseAlignmentPayload(rawAlignment);
+  const baseLexicon = Array.isArray(rawBaseLexicon) && rawBaseLexicon.length > 0 ? rawBaseLexicon : parsed.baseLexicon;
+  const contextGlosses =
+    Array.isArray(rawContextGlosses) && rawContextGlosses.length > 0 ? rawContextGlosses : parsed.contextGlosses;
+  const runs = Array.isArray(rawRuns) && rawRuns.length > 0 ? rawRuns : parsed.runs;
   return {
     items: cloneJsonSafe(Array.isArray(parsed.items) ? parsed.items.slice(0, 300) : [], []),
     meta: {
       generationMode: normalizeGenerationMode(rawGenerationMode || parsed.generationMode),
-      generationQuality: normalizeGenerationQuality(rawGenerationQuality || parsed.generationQuality)
+      generationQuality: normalizeGenerationQuality(rawGenerationQuality || parsed.generationQuality),
+      baseLexicon: cloneJsonSafe(Array.isArray(baseLexicon) ? baseLexicon.slice(0, 300) : [], []),
+      contextGlosses: cloneJsonSafe(Array.isArray(contextGlosses) ? contextGlosses.slice(0, 300) : [], []),
+      runs: cloneJsonSafe(Array.isArray(runs) ? runs.slice(0, 3000) : [], [])
     }
   };
 }
@@ -652,7 +675,14 @@ function sanitizeFavoritesPayload(rawList) {
       lexicon: cloneJsonSafe(Array.isArray(raw?.lexicon) ? raw.lexicon.slice(0, 300) : [], []),
       paragraphsEn: cloneJsonSafe(Array.isArray(raw?.paragraphsEn) ? raw.paragraphsEn.slice(0, 120) : [], []),
       paragraphsZh: cloneJsonSafe(Array.isArray(raw?.paragraphsZh) ? raw.paragraphsZh.slice(0, 120) : [], []),
-      alignment: buildAlignmentPayload(raw?.alignment, raw?.generationMode, raw?.generationQuality),
+      alignment: buildAlignmentPayload(
+        raw?.alignment,
+        raw?.generationMode,
+        raw?.generationQuality,
+        raw?.baseLexicon,
+        raw?.contextGlosses,
+        raw?.runs
+      ),
       missing: cloneJsonSafe(Array.isArray(raw?.missing) ? raw.missing.slice(0, 120) : [], []),
       createdAt: normalizeIso(raw?.createdAt, now),
       updatedAt: normalizeIso(raw?.updatedAt, now)
@@ -1882,6 +1912,126 @@ function mergeLexiconWithContextMeanings(lexicon, contextRows) {
   });
 }
 
+function hasChineseChars(value) {
+  return /[\u4e00-\u9fff]/.test(String(value || ""));
+}
+
+function buildBaseLexiconForResponse(lexicon) {
+  return (Array.isArray(lexicon) ? lexicon : []).map((item) => {
+    const senses = Array.isArray(item?.senses) ? item.senses : [];
+    const baseMeanings = senses.map((s) => String(s?.meaning || "").trim()).filter(Boolean).slice(0, 5);
+    return {
+      ...item,
+      baseMeanings
+    };
+  });
+}
+
+function buildContextGlosses(words, baseLexicon, contextLexicon, usagePlan, alignment) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  const baseMap = new Map((Array.isArray(baseLexicon) ? baseLexicon : []).map((x) => [String(x?.word || "").toLowerCase(), x]));
+  const contextMap = new Map((Array.isArray(contextLexicon) ? contextLexicon : []).map((x) => [String(x?.word || "").toLowerCase(), x]));
+  const planMap = new Map((Array.isArray(usagePlan) ? usagePlan : []).map((x) => [String(x?.word || "").toLowerCase(), x]));
+  const alignMap = new Map((Array.isArray(alignment) ? alignment : []).map((x) => [String(x?.word || "").toLowerCase(), x]));
+
+  return sourceWords.map((word) => {
+    const key = word.toLowerCase();
+    const base = baseMap.get(key);
+    const context = contextMap.get(key) || base;
+    const plan = planMap.get(key);
+    const align = alignMap.get(key);
+
+    const baseMeanings = (Array.isArray(base?.senses) ? base.senses : [])
+      .map((s) => String(s?.meaning || "").trim())
+      .filter(Boolean)
+      .slice(0, 5);
+    const contextMeaningFromPlan = String(plan?.meaning || "").trim();
+    const contextMeaningFromLexicon = (Array.isArray(context?.senses) ? context.senses : [])
+      .map((s) => String(s?.meaning || "").trim())
+      .find((m) => hasChineseChars(m)) || "";
+    const contextMeaning = hasChineseChars(contextMeaningFromPlan)
+      ? contextMeaningFromPlan
+      : contextMeaningFromLexicon || baseMeanings[0] || "";
+
+    return {
+      word: context?.word || base?.word || word,
+      pos: normalizePosTag(context?.pos || base?.pos || plan?.pos || ""),
+      marker: String(align?.marker || context?.senses?.[0]?.marker || base?.senses?.[0]?.marker || "①"),
+      contextMeaning,
+      baseMeanings,
+      scene: String(plan?.scene || "").trim(),
+      naturalPattern: String(plan?.allowedPattern || "").trim(),
+      avoid: String(plan?.avoid || "").trim(),
+      englishForms: Array.isArray(align?.english_forms) ? align.english_forms : [],
+      zhTerms: Array.isArray(align?.zh_terms) ? align.zh_terms : []
+    };
+  });
+}
+
+function buildArticleRuns(article, words, contextGlosses) {
+  const source = String(article || "");
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  if (sourceWords.length === 0 || !source) {
+    return source ? [{ type: "text", text: source }] : [];
+  }
+
+  const glossMap = new Map((Array.isArray(contextGlosses) ? contextGlosses : []).map((x) => [String(x?.word || "").toLowerCase(), x]));
+  const escaped = sourceWords
+    .map((w) => escapeRegex(w).replace(/\s+/g, "\\s+"))
+    .sort((a, b) => b.length - a.length);
+  if (escaped.length === 0) {
+    return [{ type: "text", text: source }];
+  }
+
+  const markerSet = "①②③④⑤⑥⑦⑧⑨⑩";
+  const pattern = new RegExp(`(^|[^A-Za-z])(${escaped.join("|")})([${markerSet}]?)(?=$|[^A-Za-z])`, "gi");
+  const runs = [];
+  const wordCountByKey = new Map();
+  let cursor = 0;
+  let match;
+
+  while ((match = pattern.exec(source)) !== null) {
+    const prefix = String(match[1] || "");
+    const matchedWord = String(match[2] || "");
+    const marker = String(match[3] || "");
+    const start = match.index + prefix.length;
+    const end = start + matchedWord.length + marker.length;
+    if (start < cursor) continue;
+
+    if (start > cursor) {
+      runs.push({
+        type: "text",
+        text: source.slice(cursor, start)
+      });
+    }
+
+    const key = matchedWord.toLowerCase();
+    const gloss = glossMap.get(key) || {};
+    const occ = Number(wordCountByKey.get(key) || 0) + 1;
+    wordCountByKey.set(key, occ);
+    runs.push({
+      type: "word",
+      word: gloss?.word || matchedWord,
+      text: matchedWord,
+      marker: marker || String(gloss?.marker || "①"),
+      pos: String(gloss?.pos || ""),
+      contextMeaning: String(gloss?.contextMeaning || ""),
+      displayMeaning: String(gloss?.contextMeaning || ""),
+      occurrence: occ
+    });
+    cursor = end;
+  }
+
+  if (cursor < source.length) {
+    runs.push({
+      type: "text",
+      text: source.slice(cursor)
+    });
+  }
+
+  return runs.filter((run) => String(run?.text || run?.word || "").length > 0);
+}
+
 function shouldRunContextRefine(words, lexicon) {
   const sourceWords = Array.isArray(words) ? words : [];
   const sourceLexicon = Array.isArray(lexicon) ? lexicon : [];
@@ -2541,6 +2691,9 @@ app.get("/api/library", async (req, res) => {
         paragraphsEn: Array.isArray(row.paragraphsEn) ? row.paragraphsEn : [],
         paragraphsZh: Array.isArray(row.paragraphsZh) ? row.paragraphsZh : [],
         alignment: alignmentParsed.items,
+        baseLexicon: Array.isArray(alignmentParsed.baseLexicon) ? alignmentParsed.baseLexicon : [],
+        contextGlosses: Array.isArray(alignmentParsed.contextGlosses) ? alignmentParsed.contextGlosses : [],
+        runs: Array.isArray(alignmentParsed.runs) ? alignmentParsed.runs : [],
         generationMode: alignmentParsed.generationMode,
         generationQuality: alignmentParsed.generationQuality,
         missing: Array.isArray(row.missing) ? row.missing : [],
@@ -3030,6 +3183,7 @@ app.post("/api/generate", async (req, res) => {
 
     const generateContent = async () => {
       let lexicon = await generateLexicon(words, quickMode, selectedModel);
+      const baseLexiconRaw = cloneJsonSafe(lexicon, []);
       let mixedUsagePlan =
         generationMode === "mixed" ? await planMixedUsage(words, lexicon, quickMode, selectedModel) : [];
       const generateMainArticle = async (extraConstraint = "") => {
@@ -3150,16 +3304,20 @@ app.post("/api/generate", async (req, res) => {
       const paragraphsEn = splitParagraphs(articlePack.article);
       const paragraphsZh = generationMode === "mixed" ? [] : await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
       const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel, generationMode);
+      const baseLexicon = buildBaseLexiconForResponse(baseLexiconRaw);
+      const contextGlosses =
+        generationMode === "mixed" ? buildContextGlosses(words, baseLexiconRaw, lexicon, mixedUsagePlan, alignment) : [];
+      const runs = generationMode === "mixed" ? buildArticleRuns(articlePack.article, words, contextGlosses) : [];
       const defaultTitle = defaultTitleByDate(words.length);
 
-      return { lexicon, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle };
+      return { lexicon, baseLexicon, contextGlosses, runs, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle };
     };
 
     const generated = isAdmin
       ? await modelTraceStorage.run(traceStore, generateContent)
       : await generateContent();
 
-    const { lexicon, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle } = generated;
+    const { lexicon, baseLexicon, contextGlosses, runs, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle } = generated;
 
     const storeAfter = await readAuthStore();
     bumpUsage(storeAfter, authedUser, getShanghaiDateKey(), generationProfile.usageCost);
@@ -3183,6 +3341,9 @@ app.post("/api/generate", async (req, res) => {
       model: selectedModel,
       missing,
       lexicon,
+      baseLexicon,
+      contextGlosses,
+      runs,
       paragraphsEn,
       paragraphsZh,
       alignment,
