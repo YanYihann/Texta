@@ -2846,3 +2846,11 @@ body.admin-page .result-panel {
     padding: 12px 12px 0;
   }
 }
+
+/* Ensure dark-mode hover is white/black for all buttons except logout. */
+body:not(.auth-page).theme-dark button:not(#logoutBtn):hover:not(:disabled),
+body:not(.auth-page).theme-dark button:not(#logoutBtn).is-active:hover:not(:disabled) {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #111111 !important;
+}
