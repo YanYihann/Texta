@@ -2747,3 +2747,65 @@ body:not(.auth-page).theme-dark #logoutBtn.logout-fx-btn:focus-visible {
     padding: 14px 12px 14px;
   }
 }
+
+body:not(.auth-page):not(.admin-page).reading-mode .input-panel {
+  display: none;
+}
+
+body:not(.auth-page):not(.admin-page).reading-mode .app-shell {
+  grid-template-columns: 310px minmax(520px, 1fr) 340px;
+}
+
+body:not(.auth-page):not(.admin-page).reading-mode .result-panel {
+  grid-column: 1 / 3;
+}
+
+body:not(.auth-page):not(.admin-page).reading-mode .glossary-panel {
+  grid-column: 3 / 4;
+}
+
+body.admin-page .app-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 100vh;
+  height: auto;
+  padding: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  overflow: visible;
+}
+
+body.admin-page .admin-shell,
+body.admin-page .admin-wide-shell,
+body.admin-page .usage-detail-shell {
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+}
+
+body.admin-page .result-panel {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1200px) {
+  body:not(.auth-page):not(.admin-page).reading-mode .result-panel {
+    grid-column: 1 / -1;
+  }
+
+  body:not(.auth-page):not(.admin-page).reading-mode .glossary-panel {
+    grid-column: 1 / -1;
+  }
+
+  body.admin-page .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  body.admin-page .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    min-height: calc(100vh - 96px);
+    padding: 12px 12px 0;
+  }
+}
