@@ -95,6 +95,8 @@ let currentLibraryMode = localStorage.getItem("texta_library_mode") || "favorite
 let currentNotebookFocusKey = "";
 let notebookSearchTerm = "";
 let notebookPosFilter = "all";
+const vocabDetailCache = new Map();
+const vocabDetailInFlight = new Map();
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
@@ -1797,6 +1799,7 @@ function renderMixedWordRun(run) {
   const wordText = sanitizeGlossTextForUi(run?.text || run?.word, 80);
   if (!wordText) return null;
   const key = keyifyWord(run?.word || wordText);
+  const posText = normalizePosTagLabel(run?.pos || "");
   const rawMeaning = sanitizeGlossTextForUi(run?.displayMeaning, 160);
   const note = /[\u4e00-\u9fff]/.test(rawMeaning) ? rawMeaning : "词义待补充";
 
@@ -1811,7 +1814,7 @@ function renderMixedWordRun(run) {
 
   const noteEl = document.createElement("span");
   noteEl.className = "mixed-note";
-  noteEl.textContent = note;
+  noteEl.textContent = posText ? `${posText} ${note}` : note;
 
   wrap.appendChild(mark);
   wrap.appendChild(noteEl);
@@ -2215,6 +2218,7 @@ function updateGlossaryFollow(wordKeys) {
 
 function jumpToGlossaryKey(key) {
   if (!key) return;
+  void ensureVocabDetailForKey(key);
   if (isMobileLayout()) {
     currentMobilePage = "glossary";
     applyMobilePageLayout();
@@ -2326,6 +2330,121 @@ function renderParagraphBlocks(
 
 function findLexiconItemByKey(key) {
   return latestLexicon.find((item) => keyifyWord(item?.word || "") === key) || notebookEntries.find((item) => item.key === key) || null;
+}
+
+function isPlaceholderDetailList(list) {
+  const rows = (Array.isArray(list) ? list : []).map((x) => String(x || "").trim()).filter(Boolean);
+  if (rows.length === 0) return true;
+  return rows.every((row) => row === "(暂无)");
+}
+
+function isPlaceholderDetailText(value) {
+  const text = String(value || "").trim();
+  return !text || text === "(暂无)";
+}
+
+function needsDetailHydration(item) {
+  if (!item || typeof item !== "object") return false;
+  return (
+    isPlaceholderDetailList(item?.collocations) ||
+    isPlaceholderDetailText(item?.wordFormation) ||
+    isPlaceholderDetailList(item?.synonyms) ||
+    isPlaceholderDetailList(item?.antonyms)
+  );
+}
+
+function upsertWordEntryByKey(list, key, nextEntry) {
+  const rows = Array.isArray(list) ? list.slice() : [];
+  const index = rows.findIndex((item) => keyifyWord(item?.word || item?.key || "") === key);
+  if (index >= 0) {
+    rows[index] = { ...rows[index], ...nextEntry };
+  } else {
+    rows.push({ ...nextEntry, key });
+  }
+  return rows;
+}
+
+function mergeDetailedEntryIntoState(entry) {
+  const sanitized = sanitizeLexiconItemForUi(entry);
+  const baseMeanings = sanitizeTextListForUi(entry?.baseMeanings, 200, 5);
+  const mergedEntry = {
+    ...sanitized,
+    baseMeanings
+  };
+  const key = keyifyWord(mergedEntry?.word || "");
+  if (!key) return;
+
+  latestLexicon = upsertWordEntryByKey(latestLexicon, key, mergedEntry);
+  latestBaseLexicon = upsertWordEntryByKey(latestBaseLexicon, key, mergedEntry);
+  latestContextLexicon = upsertWordEntryByKey(latestContextLexicon, key, mergedEntry);
+  notebookEntries = upsertWordEntryByKey(notebookEntries, key, mergedEntry);
+}
+
+async function fetchVocabDetailEntry(word) {
+  const normalizedWord = sanitizeGlossTextForUi(word, 80);
+  const key = keyifyWord(normalizedWord);
+  if (!key) return null;
+  if (vocabDetailCache.has(key)) {
+    return vocabDetailCache.get(key);
+  }
+  if (vocabDetailInFlight.has(key)) {
+    return vocabDetailInFlight.get(key);
+  }
+
+  const requestPromise = (async () => {
+    const response = await apiFetch("/api/vocab/detail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        word: normalizedWord,
+        generationQuality: latestGenerationQuality || "normal"
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      setAuthToken("");
+      currentUser = null;
+      location.href = "./index.html";
+      return null;
+    }
+    if (!response.ok) {
+      throw new Error(data?.error || data?.detail || "Failed to load vocabulary detail.");
+    }
+    if (!data?.entry || typeof data.entry !== "object") {
+      return null;
+    }
+    const sanitized = {
+      ...sanitizeLexiconItemForUi(data.entry),
+      baseMeanings: sanitizeTextListForUi(data.entry?.baseMeanings, 200, 5)
+    };
+    vocabDetailCache.set(key, sanitized);
+    return sanitized;
+  })()
+    .catch((error) => {
+      console.warn("Failed to hydrate vocab detail:", error);
+      return null;
+    })
+    .finally(() => {
+      vocabDetailInFlight.delete(key);
+    });
+
+  vocabDetailInFlight.set(key, requestPromise);
+  return requestPromise;
+}
+
+async function ensureVocabDetailForKey(key) {
+  const normalizedKey = keyifyWord(key || "");
+  if (!normalizedKey) return;
+  const current = findLexiconItemByKey(normalizedKey);
+  if (!current || !needsDetailHydration(current)) return;
+  const word = String(current?.word || "").trim();
+  if (!word) return;
+
+  const detail = await fetchVocabDetailEntry(word);
+  if (!detail) return;
+  mergeDetailedEntryIntoState(detail);
+  refreshVocabularySurfaces();
+  updateGlossaryFollow([normalizedKey]);
 }
 
 function buildStudyControls(item) {
@@ -2936,6 +3055,13 @@ articleBlocksEl.addEventListener("click", (event) => {
 glossaryEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const glossaryItem = target.closest(".glossary-item[data-word-key]");
+  if (glossaryItem) {
+    const itemKey = glossaryItem.getAttribute("data-word-key") || "";
+    if (itemKey) {
+      void ensureVocabDetailForKey(itemKey);
+    }
+  }
   const masteryBtn = target.closest(".mastery-btn[data-word-key][data-mastery]");
   if (masteryBtn) {
     const key = masteryBtn.getAttribute("data-word-key") || "";
@@ -2956,6 +3082,13 @@ glossaryEl.addEventListener("click", (event) => {
 notebookEntriesEl?.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const notebookItem = target.closest(".glossary-item[data-word-key]");
+  if (notebookItem) {
+    const itemKey = notebookItem.getAttribute("data-word-key") || "";
+    if (itemKey) {
+      void ensureVocabDetailForKey(itemKey);
+    }
+  }
   const masteryBtn = target.closest(".mastery-btn[data-word-key][data-mastery]");
   if (masteryBtn) {
     const key = masteryBtn.getAttribute("data-word-key") || "";

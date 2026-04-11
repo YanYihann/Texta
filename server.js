@@ -3520,6 +3520,52 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, service: "texta-api" });
 });
 
+app.post("/api/vocab/detail", async (req, res) => {
+  try {
+    const authedUser = await requireAuth(req, res);
+    if (!authedUser) return;
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ error: "Missing OPENAI_API_KEY in .env" });
+    }
+
+    const rawWord = String(req.body?.word || "");
+    const word = normalizeInputWordToken(rawWord);
+    if (!word) {
+      return res.status(400).json({ error: "Please provide one valid word." });
+    }
+
+    const generationQuality = normalizeGenerationQuality(req.body?.generationQuality || "normal");
+    const generationProfile = getGenerationProfile(generationQuality);
+    const selectedModel = generationProfile.model;
+    const quickMode = Boolean(req.body?.quickMode);
+    const fullLexicon = await generateLexicon([word], quickMode, selectedModel, "full");
+    const baseLexicon = buildBaseLexiconForResponse(fullLexicon);
+    const entry = Array.isArray(baseLexicon) && baseLexicon.length > 0 ? baseLexicon[0] : null;
+    if (!entry) {
+      return res.status(404).json({ error: "Word detail not found." });
+    }
+
+    res.json({
+      ok: true,
+      entry: {
+        word: String(entry?.word || word),
+        pos: String(entry?.pos || ""),
+        usIpa: String(entry?.usIpa || ""),
+        ukIpa: String(entry?.ukIpa || ""),
+        senses: Array.isArray(entry?.senses) ? entry.senses : [],
+        baseMeanings: Array.isArray(entry?.baseMeanings) ? entry.baseMeanings : [],
+        collocations: Array.isArray(entry?.collocations) ? entry.collocations : [],
+        wordFormation: String(entry?.wordFormation || ""),
+        synonyms: Array.isArray(entry?.synonyms) ? entry.synonyms : [],
+        antonyms: Array.isArray(entry?.antonyms) ? entry.antonyms : []
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get vocabulary detail.", detail: error.message });
+  }
+});
+
 app.post("/api/generate", async (req, res) => {
   try {
     const authedUser = await requireAuth(req, res);
