@@ -2468,6 +2468,10 @@ body:not(.auth-page).theme-dark .panel {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
+body:not(.auth-page).theme-dark .brand h1 {
+  color: #ffffff;
+}
+
 body:not(.auth-page).theme-dark textarea,
 body:not(.auth-page).theme-dark select,
 body:not(.auth-page).theme-dark input[type="text"],
@@ -2496,6 +2500,27 @@ body:not(.auth-page).theme-dark .glossary,
 body:not(.auth-page).theme-dark .para-card {
   background: #222;
   border-color: #333;
+}
+
+body:not(.auth-page).theme-dark .user-badge,
+body:not(.auth-page).theme-dark #userBadge {
+  color: #ffffff;
+}
+
+body:not(.auth-page).theme-dark .favorites-list .fav-item {
+  background: #2a2a2a;
+  border: 1px solid #7a7a7a;
+}
+
+body:not(.auth-page).theme-dark .favorites-list .fav-main,
+body:not(.auth-page).theme-dark .favorites-list .fav-meta {
+  color: #ffffff;
+}
+
+body:not(.auth-page).theme-dark .favorites-list .word-state-pill {
+  background: #343434;
+  color: #ffffff;
+  border-color: #8a8a8a;
 }
 
 body:not(.auth-page).theme-dark .library-tab {
