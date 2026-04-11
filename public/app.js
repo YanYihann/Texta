@@ -32,6 +32,7 @@ const usageTextEl = document.getElementById("usageText");
 const upgradeVipBtnEl = document.getElementById("upgradeVipBtn");
 const adminReviewLinkEl = document.getElementById("adminReviewLink");
 const adminUsageLinkEl = document.getElementById("adminUsageLink");
+const brandEl = document.querySelector(".brand");
 const inputPanelEl = document.querySelector(".input-panel");
 const userRowEl = document.querySelector(".user-row");
 const guideCardEl = document.querySelector(".guide-card");
@@ -283,8 +284,8 @@ function applyThemePreference() {
   syncThemeToggleState();
 }
 
-function ensureThemeToggle(actionsEl) {
-  if (!actionsEl) return null;
+function ensureThemeToggle(containerEl) {
+  if (!containerEl) return null;
   let wrap = document.getElementById("themeToggle");
   if (!wrap) {
     wrap = document.createElement("div");
@@ -323,8 +324,8 @@ function ensureThemeToggle(actionsEl) {
       applyThemePreference();
     });
   }
-  if (wrap.parentElement !== actionsEl) {
-    actionsEl.insertBefore(wrap, actionsEl.firstChild);
+  if (wrap.parentElement !== containerEl) {
+    containerEl.appendChild(wrap);
   }
   syncThemeToggleState();
   return wrap;
@@ -357,10 +358,7 @@ function mountGuideButtonNearUser() {
     actionsEl.insertBefore(openGuideBtn, actionsEl.firstChild);
   }
 
-  const themeToggle = ensureThemeToggle(actionsEl);
-  if (themeToggle && themeToggle.nextSibling !== openGuideBtn) {
-    actionsEl.insertBefore(themeToggle, openGuideBtn);
-  }
+  ensureThemeToggle(brandEl);
 }
 
 function renderUsage(usage, user = currentUser) {
