@@ -109,7 +109,12 @@ let librarySyncTimer = null;
 let librarySyncInFlight = false;
 let librarySyncPending = false;
 let librarySyncPaused = false;
+let librarySyncRetryTimer = null;
+let librarySyncRetryCount = 0;
+let librarySyncDirty = false;
 const LIBRARY_SYNC_DELAY_MS = 800;
+const LIBRARY_SYNC_RETRY_BASE_MS = 2500;
+const LIBRARY_SYNC_RETRY_MAX_MS = 60000;
 const themeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 if ("speechSynthesis" in window && typeof window.speechSynthesis?.addEventListener === "function") {
   window.speechSynthesis.addEventListener("voiceschanged", () => {
@@ -199,6 +204,18 @@ function setAuthToken(token) {
     localStorage.setItem("texta_auth_token", authToken);
   } else {
     localStorage.removeItem("texta_auth_token");
+    if (librarySyncTimer) {
+      clearTimeout(librarySyncTimer);
+      librarySyncTimer = null;
+    }
+    if (librarySyncRetryTimer) {
+      clearTimeout(librarySyncRetryTimer);
+      librarySyncRetryTimer = null;
+    }
+    librarySyncPending = false;
+    librarySyncInFlight = false;
+    librarySyncRetryCount = 0;
+    librarySyncDirty = false;
   }
 }
 
@@ -508,8 +525,12 @@ function loadFavorites() {
   }
 }
 
-function saveFavorites() {
+function saveFavorites(options = {}) {
+  const markDirty = options?.markDirty !== false;
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.slice(0, 50)));
+  if (markDirty) {
+    librarySyncDirty = true;
+  }
   scheduleLibrarySync();
 }
 
@@ -523,8 +544,12 @@ function loadVocabPrefs() {
   }
 }
 
-function saveVocabPrefs() {
+function saveVocabPrefs(options = {}) {
+  const markDirty = options?.markDirty !== false;
   localStorage.setItem(VOCAB_PREFS_KEY, JSON.stringify(vocabPrefs));
+  if (markDirty) {
+    librarySyncDirty = true;
+  }
   scheduleLibrarySync();
 }
 
@@ -532,14 +557,18 @@ function loadNotebookEntries() {
   try {
     const raw = localStorage.getItem(NOTEBOOK_KEY);
     const parsed = JSON.parse(raw || "[]");
-    notebookEntries = Array.isArray(parsed) ? parsed : [];
+    notebookEntries = Array.isArray(parsed) ? parsed.map(normalizeNotebookEntry).filter(Boolean) : [];
   } catch {
     notebookEntries = [];
   }
 }
 
-function saveNotebookEntries() {
+function saveNotebookEntries(options = {}) {
+  const markDirty = options?.markDirty !== false;
   localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(notebookEntries.slice(0, 500)));
+  if (markDirty) {
+    librarySyncDirty = true;
+  }
   scheduleLibrarySync();
 }
 
@@ -601,6 +630,94 @@ function normalizeIpaLabel(raw) {
   return `/${core}/`;
 }
 
+function sanitizeGlossTextForUi(raw, maxLen = 240) {
+  let text = String(raw || "");
+  if (!text) return "";
+  const entityMap = {
+    "&nbsp;": " ",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'"
+  };
+  text = text.replace(/&nbsp;|&lt;|&gt;|&quot;|&#39;/gi, (m) => entityMap[m.toLowerCase()] || m);
+  text = text
+    .replace(/<\/?(?:mark|span|sup)\b[^>]*>/gi, " ")
+    .replace(/\b(?:class|ass)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)\s*>?/gi, " ")
+    .replace(/\bvocab-zh(?:-inline)?\b/gi, " ")
+    .replace(/\bclass\s*=\s*["'][^"']*["']/gi, " ")
+    .replace(/["']?\s*>/g, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.slice(0, maxLen);
+}
+
+function sanitizeSenseRowsForUi(rawSenses) {
+  return (Array.isArray(rawSenses) ? rawSenses : [])
+    .map((sense, index) => {
+      const markerRaw = String(sense?.marker || "").trim();
+      const fallbackMarkers = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
+      const marker = markerRaw || fallbackMarkers[index] || "①";
+      const meaning = sanitizeGlossTextForUi(sense?.meaning, 220);
+      if (!meaning) return null;
+      return { marker, meaning };
+    })
+    .filter(Boolean);
+}
+
+function sanitizeTextListForUi(rawList, maxLen = 220, maxItems = 20) {
+  return (Array.isArray(rawList) ? rawList : [])
+    .map((item) => sanitizeGlossTextForUi(item, maxLen))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function sanitizeLexiconItemForUi(item) {
+  const source = item && typeof item === "object" ? item : {};
+  return {
+    ...source,
+    word: sanitizeGlossTextForUi(source.word, 80) || String(source.word || "").trim(),
+    pos: normalizePosTagLabel(source.pos),
+    senses: sanitizeSenseRowsForUi(source.senses),
+    collocations: sanitizeTextListForUi(source.collocations, 220, 20),
+    synonyms: sanitizeTextListForUi(source.synonyms, 120, 30),
+    antonyms: sanitizeTextListForUi(source.antonyms, 120, 30),
+    wordFormation: sanitizeGlossTextForUi(source.wordFormation, 500)
+  };
+}
+
+function sanitizeContextGlossesForUi(rows) {
+  return (Array.isArray(rows) ? rows : []).map((row) => ({
+    ...row,
+    word: sanitizeGlossTextForUi(row?.word, 80),
+    pos: normalizePosTagLabel(row?.pos),
+    marker: String(row?.marker || "").trim(),
+    contextMeaning: sanitizeGlossTextForUi(row?.contextMeaning, 160),
+    naturalPattern: sanitizeGlossTextForUi(row?.naturalPattern, 160),
+    avoid: sanitizeGlossTextForUi(row?.avoid, 160)
+  }));
+}
+
+function sanitizeRunsForUi(rows) {
+  return (Array.isArray(rows) ? rows : []).map((run) => {
+    if (String(run?.type || "") === "word") {
+      return {
+        ...run,
+        word: sanitizeGlossTextForUi(run?.word, 80),
+        text: sanitizeGlossTextForUi(run?.text, 80),
+        pos: normalizePosTagLabel(run?.pos),
+        marker: String(run?.marker || "").trim(),
+        displayMeaning: sanitizeGlossTextForUi(run?.displayMeaning, 160)
+      };
+    }
+    return {
+      ...run,
+      text: String(run?.text || "")
+    };
+  });
+}
+
 function resolveIpaFromItem(item, accent) {
   const source = item && typeof item === "object" ? item : {};
   const candidates =
@@ -651,14 +768,14 @@ function normalizeFavorite(item) {
   const generationQuality = normalizeGenerationQualityValue(item?.generationQuality);
   return {
     id,
-    title: String(item?.title || "未命名文章"),
+    title: sanitizeGlossTextForUi(item?.title, 200) || "未命名文章",
     savedAt,
-    words: Array.isArray(item?.words) ? item.words : [],
+    words: Array.isArray(item?.words) ? item.words.map((w) => sanitizeGlossTextForUi(w, 80)).filter(Boolean) : [],
     article: String(item?.article || ""),
-    lexicon: Array.isArray(item?.lexicon) ? item.lexicon : [],
-    baseLexicon: Array.isArray(item?.baseLexicon) ? item.baseLexicon : [],
-    contextGlosses: Array.isArray(item?.contextGlosses) ? item.contextGlosses : [],
-    runs: Array.isArray(item?.runs) ? item.runs : [],
+    lexicon: (Array.isArray(item?.lexicon) ? item.lexicon : []).map(sanitizeLexiconItemForUi),
+    baseLexicon: (Array.isArray(item?.baseLexicon) ? item.baseLexicon : []).map(sanitizeLexiconItemForUi),
+    contextGlosses: sanitizeContextGlossesForUi(item?.contextGlosses),
+    runs: sanitizeRunsForUi(item?.runs),
     paragraphsEn: Array.isArray(item?.paragraphsEn) ? item.paragraphsEn : [],
     paragraphsZh: Array.isArray(item?.paragraphsZh) ? item.paragraphsZh : [],
     alignment: Array.isArray(item?.alignment) ? item.alignment : [],
@@ -678,15 +795,15 @@ function normalizeNotebookEntry(item) {
   return {
     id: String(item?.id || "").trim() || `nb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     key,
-    word: word || key,
+    word: sanitizeGlossTextForUi(word || key, 80) || key,
     pos: normalizePosTagLabel(item?.pos),
     usIpa: resolveIpaFromItem(item, "us"),
     ukIpa: resolveIpaFromItem(item, "uk"),
-    senses: Array.isArray(item?.senses) ? item.senses : [],
-    collocations: Array.isArray(item?.collocations) ? item.collocations : [],
-    synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
-    antonyms: Array.isArray(item?.antonyms) ? item.antonyms : [],
-    wordFormation: String(item?.wordFormation || ""),
+    senses: sanitizeSenseRowsForUi(item?.senses),
+    collocations: sanitizeTextListForUi(item?.collocations, 220, 20),
+    synonyms: sanitizeTextListForUi(item?.synonyms, 120, 30),
+    antonyms: sanitizeTextListForUi(item?.antonyms, 120, 30),
+    wordFormation: sanitizeGlossTextForUi(item?.wordFormation, 500),
     createdAt: normalizeIsoDate(item?.createdAt, nowIso),
     updatedAt: normalizeIsoDate(item?.updatedAt || item?.createdAt, nowIso)
   };
@@ -729,9 +846,9 @@ function applyLibraryState({ favorites: incomingFavorites, notebookEntries: inco
   favorites = normalizedFavorites;
   notebookEntries = normalizedNotebook;
   vocabPrefs = normalizedVocab;
-  saveFavorites();
-  saveNotebookEntries();
-  saveVocabPrefs();
+  saveFavorites({ markDirty: false });
+  saveNotebookEntries({ markDirty: false });
+  saveVocabPrefs({ markDirty: false });
   librarySyncPaused = false;
 }
 
@@ -815,11 +932,44 @@ async function syncLibraryNow() {
       body: JSON.stringify(librarySnapshot())
     });
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        const authError = new Error(`library sync auth failed (${response.status})`);
+        authError.code = "AUTH_EXPIRED";
+        throw authError;
+      }
       throw new Error(`library sync failed (${response.status})`);
+    }
+    librarySyncRetryCount = 0;
+    librarySyncDirty = false;
+    if (librarySyncRetryTimer) {
+      clearTimeout(librarySyncRetryTimer);
+      librarySyncRetryTimer = null;
+    }
+    if (statusEl && String(statusEl.textContent || "").includes("云端同步暂时失败")) {
+      statusEl.textContent = "";
     }
   } catch (error) {
     console.warn("Library sync failed:", error);
-    if (statusEl) {
+    if (error?.code === "AUTH_EXPIRED") {
+      setAuthToken("");
+      if (statusEl) {
+        statusEl.textContent = "登录已过期，请重新登录后继续云端同步。";
+      }
+      window.setTimeout(() => {
+        location.href = "./index.html";
+      }, 300);
+      return;
+    }
+    librarySyncRetryCount += 1;
+    if (librarySyncRetryTimer) {
+      clearTimeout(librarySyncRetryTimer);
+    }
+    const backoffMs = Math.min(LIBRARY_SYNC_RETRY_MAX_MS, LIBRARY_SYNC_RETRY_BASE_MS * 2 ** Math.min(librarySyncRetryCount - 1, 5));
+    librarySyncRetryTimer = setTimeout(() => {
+      librarySyncRetryTimer = null;
+      scheduleLibrarySync(true);
+    }, backoffMs);
+    if (librarySyncDirty && statusEl) {
       statusEl.textContent = "云端同步暂时失败，已保存在本地，稍后会自动重试。";
     }
   } finally {
@@ -833,6 +983,10 @@ async function syncLibraryNow() {
 
 function scheduleLibrarySync(immediate = false) {
   if (!authToken || librarySyncPaused) return;
+  if (librarySyncRetryTimer) {
+    clearTimeout(librarySyncRetryTimer);
+    librarySyncRetryTimer = null;
+  }
   if (librarySyncTimer) {
     clearTimeout(librarySyncTimer);
   }
@@ -896,7 +1050,7 @@ function removeNotebookEntry(key) {
 }
 
 function upsertNotebookEntry(item) {
-  const word = String(item?.word || "").trim();
+  const word = sanitizeGlossTextForUi(item?.word, 80) || String(item?.word || "").trim();
   const key = keyifyWord(word);
   if (!key || !word) return;
 
@@ -906,11 +1060,11 @@ function upsertNotebookEntry(item) {
     pos: normalizePosTagLabel(item?.pos),
     usIpa: resolveIpaFromItem(item, "us"),
     ukIpa: resolveIpaFromItem(item, "uk"),
-    senses: Array.isArray(item?.senses) ? item.senses : [],
-    collocations: Array.isArray(item?.collocations) ? item.collocations : [],
-    synonyms: Array.isArray(item?.synonyms) ? item.synonyms : [],
-    antonyms: Array.isArray(item?.antonyms) ? item.antonyms : [],
-    wordFormation: String(item?.wordFormation || ""),
+    senses: sanitizeSenseRowsForUi(item?.senses),
+    collocations: sanitizeTextListForUi(item?.collocations, 220, 20),
+    synonyms: sanitizeTextListForUi(item?.synonyms, 120, 30),
+    antonyms: sanitizeTextListForUi(item?.antonyms, 120, 30),
+    wordFormation: sanitizeGlossTextForUi(item?.wordFormation, 500),
     updatedAt: new Date().toISOString()
   };
 
@@ -961,7 +1115,7 @@ function getNotebookEntriesSorted() {
 }
 
 function buildNotebookSearchText(item) {
-  const senses = Array.isArray(item?.senses) ? item.senses.map((sense) => String(sense?.meaning || "").trim()) : [];
+  const senses = Array.isArray(item?.senses) ? item.senses.map((sense) => sanitizeGlossTextForUi(sense?.meaning, 220)) : [];
   const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
   return [item?.word || "", item?.pos || "", ...senses, ...collocations].join(" ").toLowerCase();
 }
@@ -1639,43 +1793,75 @@ function buildContextGlossMap(contextGlosses) {
   return map;
 }
 
-function renderMixedWordRun(run, contextMap, fallbackNoteMap) {
-  const wordText = String(run?.text || run?.word || "").trim();
-  if (!wordText) return "";
+function renderMixedWordRun(run) {
+  const wordText = sanitizeGlossTextForUi(run?.text || run?.word, 80);
+  if (!wordText) return null;
   const key = keyifyWord(run?.word || wordText);
-  const context = contextMap.get(key) || {};
-  const marker = String(run?.marker || context?.marker || "").trim();
-  const pos = normalizePosTagLabel(run?.pos || context?.pos || "");
-  const rawMeaning = String(run?.contextMeaning || run?.displayMeaning || context?.meaning || "").trim();
-  const meaning = /[\u4e00-\u9fff]/.test(rawMeaning) ? rawMeaning : "";
-  const note = [pos, meaning].filter(Boolean).join(" ").trim() || resolveMixedNote(fallbackNoteMap, key, marker, "");
-  return `<span class=\"mixed-vocab\" data-word-key=\"${escapeHtml(key)}\"><mark class=\"vocab-en\" data-word-key=\"${escapeHtml(
-    key
-  )}\">${escapeHtml(wordText)}</mark><span class=\"mixed-note\">${escapeHtml(note)}</span></span>`;
+  const rawMeaning = sanitizeGlossTextForUi(run?.displayMeaning, 160);
+  const note = /[\u4e00-\u9fff]/.test(rawMeaning) ? rawMeaning : "词义待补充";
+
+  const wrap = document.createElement("span");
+  wrap.className = "mixed-vocab";
+  wrap.setAttribute("data-word-key", key);
+
+  const mark = document.createElement("mark");
+  mark.className = "vocab-en";
+  mark.setAttribute("data-word-key", key);
+  mark.textContent = wordText;
+
+  const noteEl = document.createElement("span");
+  noteEl.className = "mixed-note";
+  noteEl.textContent = note;
+
+  wrap.appendChild(mark);
+  wrap.appendChild(noteEl);
+  return wrap;
 }
 
-function renderMixedParagraphCardsFromRuns(runs, contextGlosses, fallbackLexicon) {
-  const sourceRuns = Array.isArray(runs) ? runs : [];
-  if (sourceRuns.length === 0) return "";
+function appendTextWithBreaks(parent, text) {
+  const lines = String(text || "").split("\n");
+  lines.forEach((line, index) => {
+    if (line) {
+      parent.appendChild(document.createTextNode(line));
+    }
+    if (index < lines.length - 1) {
+      parent.appendChild(document.createElement("br"));
+    }
+  });
+}
 
-  const contextMap = buildContextGlossMap(contextGlosses);
-  const fallbackNoteMap = buildMixedLexiconNoteMap(fallbackLexicon);
+function renderMixedParagraphCardsFromRuns(runs) {
+  const sourceRuns = Array.isArray(runs) ? runs : [];
+  if (sourceRuns.length === 0) return [];
   const cards = [];
-  let currentHtml = "";
+  let currentParagraphEl = document.createElement("p");
+  currentParagraphEl.className = "para-en";
+  let hasContent = false;
 
   const pushCard = () => {
-    const normalized = currentHtml.trim();
-    if (!normalized) {
-      currentHtml = "";
+    if (!hasContent) {
+      currentParagraphEl = document.createElement("p");
+      currentParagraphEl.className = "para-en";
       return;
     }
-    cards.push(normalized);
-    currentHtml = "";
+    const card = document.createElement("article");
+    card.className = "para-card mixed-mode";
+    card.setAttribute("data-idx", String(cards.length));
+    card.style.animationDelay = `${Math.min(cards.length * 40, 220)}ms`;
+    card.appendChild(currentParagraphEl);
+    cards.push(card);
+    currentParagraphEl = document.createElement("p");
+    currentParagraphEl.className = "para-en";
+    hasContent = false;
   };
 
   for (const run of sourceRuns) {
     if (String(run?.type || "") === "word") {
-      currentHtml += renderMixedWordRun(run, contextMap, fallbackNoteMap);
+      const node = renderMixedWordRun(run);
+      if (node) {
+        currentParagraphEl.appendChild(node);
+        hasContent = true;
+      }
       continue;
     }
 
@@ -1685,7 +1871,10 @@ function renderMixedParagraphCardsFromRuns(runs, contextGlosses, fallbackLexicon
     for (let i = 0; i < parts.length; i += 1) {
       const part = parts[i];
       if (part) {
-        currentHtml += escapeHtml(part).replace(/\n/g, "<br>");
+        appendTextWithBreaks(currentParagraphEl, part);
+        if (/\S/.test(part)) {
+          hasContent = true;
+        }
       }
       if (i < parts.length - 1) {
         pushCard();
@@ -1694,15 +1883,7 @@ function renderMixedParagraphCardsFromRuns(runs, contextGlosses, fallbackLexicon
   }
   pushCard();
 
-  return cards
-    .map(
-      (enHtml, i) => `
-        <article class=\"para-card mixed-mode\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
-          <p class=\"para-en\">${enHtml}</p>
-        </article>
-      `
-    )
-    .join("");
+  return cards;
 }
 
 function highlightChineseWithKeys(text, termKeyPairs) {
@@ -2110,30 +2291,31 @@ function renderParagraphBlocks(
   contextLexicon = []
 ) {
   const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
-  const mixedNoteLexicon = Array.isArray(contextLexicon) && contextLexicon.length > 0 ? contextLexicon : lexicon;
-  if (isMixedMode && Array.isArray(runs) && runs.length > 0) {
-    const rendered = renderMixedParagraphCardsFromRuns(runs, contextGlosses, mixedNoteLexicon);
-    if (rendered) {
-      articleBlocksEl.innerHTML = rendered;
-      applyChineseVisibility();
-      return;
+  if (isMixedMode) {
+    const fallbackText = Array.isArray(paragraphsEn) ? paragraphsEn.join("\n\n") : "";
+    const sourceRuns = Array.isArray(runs) && runs.length > 0 ? runs : [{ type: "text", text: fallbackText }];
+    const cards = renderMixedParagraphCardsFromRuns(sourceRuns);
+    articleBlocksEl.replaceChildren();
+    if (cards.length > 0) {
+      const frag = document.createDocumentFragment();
+      cards.forEach((card) => frag.appendChild(card));
+      articleBlocksEl.appendChild(frag);
     }
+    applyChineseVisibility();
+    return;
   }
   const zhTermKeyPairs = buildChineseTermKeyPairsFromAlignment(alignment, lexicon);
 
   articleBlocksEl.innerHTML = paragraphsEn
     .map((en, i) => {
       const zh = paragraphsZh[i] || "";
-      const enHtml = (isMixedMode
-        ? highlightMixedEnglishWithNotes(en, words, alignment, mixedNoteLexicon)
-        : highlightEnglishWithAlignment(en, words, alignment)
-      ).replace(/\n/g, "<br>");
+      const enHtml = highlightEnglishWithAlignment(en, words, alignment).replace(/\n/g, "<br>");
       const zhHtml = highlightChineseWithAlignment(zh, zhTermKeyPairs, alignment).replace(/\n/g, "<br>");
 
       return `
-        <article class=\"para-card${isMixedMode ? " mixed-mode" : ""}\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
+        <article class=\"para-card\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
           <p class=\"para-en\">${enHtml}</p>
-          ${isMixedMode ? "" : `<p class=\"para-zh\">${zhHtml || "(该段翻译生成失败，请重试)"}</p>`}
+          <p class=\"para-zh\">${zhHtml || "(该段翻译生成失败，请重试)"}</p>
         </article>
       `;
     })
@@ -2152,22 +2334,42 @@ function buildStudyControls(item) {
   const isMastered = pref.mastery === "mastered";
   const isUnknown = pref.mastery === "unknown";
 
-  return `
-    <div class="study-controls" data-word-key="${escapeHtml(key)}">
-      <div class="mastery-group" aria-label="单词掌握状态">
-        <button type="button" class="mastery-btn${isMastered ? " active" : ""}" data-action="mastery" data-word-key="${escapeHtml(key)}" data-mastery="mastered">已掌握</button>
-        <button type="button" class="mastery-btn${isUnknown ? " active" : ""}" data-action="mastery" data-word-key="${escapeHtml(key)}" data-mastery="unknown">陌生</button>
-      </div>
-    </div>
-  `;
+  const wrap = document.createElement("div");
+  wrap.className = "study-controls";
+  wrap.setAttribute("data-word-key", key);
+
+  const group = document.createElement("div");
+  group.className = "mastery-group";
+  group.setAttribute("aria-label", "单词掌握状态");
+
+  const masteredBtn = document.createElement("button");
+  masteredBtn.type = "button";
+  masteredBtn.className = `mastery-btn${isMastered ? " active" : ""}`;
+  masteredBtn.setAttribute("data-action", "mastery");
+  masteredBtn.setAttribute("data-word-key", key);
+  masteredBtn.setAttribute("data-mastery", "mastered");
+  masteredBtn.textContent = "已掌握";
+
+  const unknownBtn = document.createElement("button");
+  unknownBtn.type = "button";
+  unknownBtn.className = `mastery-btn${isUnknown ? " active" : ""}`;
+  unknownBtn.setAttribute("data-action", "mastery");
+  unknownBtn.setAttribute("data-word-key", key);
+  unknownBtn.setAttribute("data-mastery", "unknown");
+  unknownBtn.textContent = "陌生";
+
+  group.appendChild(masteredBtn);
+  group.appendChild(unknownBtn);
+  wrap.appendChild(group);
+  return wrap;
 }
 
-function renderLexiconCard(item, terms = []) {
-  const word = escapeHtml(item?.word || "");
+function renderLexiconCard(item) {
+  const word = String(item?.word || "").trim();
   const key = keyifyWord(item?.word || item?.key || "");
-  const pos = escapeHtml(normalizePosTagLabel(item?.pos) || "");
-  const usIpa = escapeHtml(resolveIpaFromItem(item, "us") || "/-/");
-  const ukIpa = escapeHtml(resolveIpaFromItem(item, "uk") || "/-/");
+  const pos = normalizePosTagLabel(item?.pos) || "";
+  const usIpa = resolveIpaFromItem(item, "us") || "/-/";
+  const ukIpa = resolveIpaFromItem(item, "uk") || "/-/";
   const senses = Array.isArray(item?.senses) ? item.senses : [];
   const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
   const synonyms = Array.isArray(item?.synonyms) ? item.synonyms : [];
@@ -2180,60 +2382,116 @@ function renderLexiconCard(item, terms = []) {
     ukIpa: resolveIpaFromItem(item, "uk")
   });
 
-  const senseHtml = senses
-    .map((s) => {
-      const marker = renderSenseSuperscript(escapeHtml(s?.marker || ""));
-      const meaning = highlightText(s?.meaning || "", terms, "vocab-zh", false);
-      return `<div class=\"sense-line\">${marker} ${meaning}</div>`;
-    })
-    .join("");
+  const card = document.createElement("div");
+  card.className = "glossary-item";
+  card.setAttribute("data-word-key", key);
 
-  const collocationHtml = collocations.length
-    ? collocations.map((c) => `<div class=\"extra-line\">• ${escapeHtml(c)}</div>`).join("")
-    : "<div class=\"extra-line\">(暂无)</div>";
+  const head = document.createElement("div");
+  head.className = "glossary-head";
+  const headLeft = document.createElement("div");
+  headLeft.className = "head-left";
+  const wordEl = document.createElement("span");
+  wordEl.className = "glossary-word";
+  wordEl.textContent = word;
+  const posEl = document.createElement("span");
+  posEl.className = "glossary-pos";
+  posEl.textContent = pos;
+  headLeft.appendChild(wordEl);
+  headLeft.appendChild(posEl);
 
-  const synonymHtml = synonyms.length
-    ? `<div class=\"extra-line\">${escapeHtml(synonyms.join(", "))}</div>`
-    : "<div class=\"extra-line\">(暂无)</div>";
+  const headActions = document.createElement("div");
+  headActions.className = "head-actions";
+  const createSpeakButton = (accent, label, ipa) => {
+    const btn = document.createElement("button");
+    btn.className = "speak-btn";
+    btn.type = "button";
+    btn.setAttribute("data-word-key", key);
+    btn.setAttribute("data-accent", accent);
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "speak-label";
+    labelSpan.textContent = label;
+    const ipaSpan = document.createElement("span");
+    ipaSpan.className = "speak-ipa";
+    ipaSpan.textContent = ipa;
+    btn.appendChild(labelSpan);
+    btn.appendChild(ipaSpan);
+    return btn;
+  };
+  headActions.appendChild(createSpeakButton("us", "美音", usIpa));
+  headActions.appendChild(createSpeakButton("uk", "英音", ukIpa));
+  head.appendChild(headLeft);
+  head.appendChild(headActions);
+  card.appendChild(head);
 
-  const antonymHtml = antonyms.length
-    ? `<div class=\"extra-line\">${escapeHtml(antonyms.join(", "))}</div>`
-    : "<div class=\"extra-line\">(暂无)</div>";
+  senses.forEach((sense) => {
+    const line = document.createElement("div");
+    line.className = "sense-line";
+    const marker = String(sense?.marker || "").trim();
+    if (marker) {
+      const markerEl = document.createElement("sup");
+      markerEl.className = "sense-marker";
+      markerEl.textContent = marker;
+      line.appendChild(markerEl);
+      line.appendChild(document.createTextNode(" "));
+    }
+    line.appendChild(document.createTextNode(sanitizeGlossTextForUi(sense?.meaning, 220) || "词义待补充"));
+    card.appendChild(line);
+  });
 
-  return `
-    <div class=\"glossary-item\" data-word-key=\"${key}\">
-      <div class=\"glossary-head\">
-        <div class=\"head-left\">
-          <span class=\"glossary-word\">${word}</span>
-          <span class=\"glossary-pos\">${pos}</span>
-        </div>
-        <div class=\"head-actions\">
-          <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"us\"><span class=\"speak-label\">美音</span><span class=\"speak-ipa\">${usIpa}</span></button>
-          <button class=\"speak-btn\" type=\"button\" data-word-key=\"${key}\" data-accent=\"uk\"><span class=\"speak-label\">英音</span><span class=\"speak-ipa\">${ukIpa}</span></button>
-        </div>
-      </div>
-      ${senseHtml}
-      <div class=\"extra-line\"><span class=\"extra-label\">短语搭配:</span></div>
-      ${collocationHtml}
-      <div class=\"extra-line\"><span class=\"extra-label\">词根词缀:</span>${escapeHtml(wordFormation || "(暂无)")}</div>
-      <div class=\"extra-line\"><span class=\"extra-label\">同近义词:</span></div>
-      ${synonymHtml}
-      <div class=\"extra-line\"><span class=\"extra-label\">反义词:</span></div>
-      ${antonymHtml}
-      ${buildStudyControls(item)}
-    </div>
-  `;
+  const appendExtraLabel = (label) => {
+    const line = document.createElement("div");
+    line.className = "extra-line";
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "extra-label";
+    labelSpan.textContent = label;
+    line.appendChild(labelSpan);
+    card.appendChild(line);
+  };
+  const appendExtraTextLine = (text) => {
+    const line = document.createElement("div");
+    line.className = "extra-line";
+    line.textContent = text;
+    card.appendChild(line);
+  };
+
+  appendExtraLabel("短语搭配:");
+  if (collocations.length > 0) {
+    collocations.forEach((c) => appendExtraTextLine(`• ${String(c || "").trim()}`));
+  } else {
+    appendExtraTextLine("(暂无)");
+  }
+
+  const formationLine = document.createElement("div");
+  formationLine.className = "extra-line";
+  const formationLabel = document.createElement("span");
+  formationLabel.className = "extra-label";
+  formationLabel.textContent = "词根词缀:";
+  formationLine.appendChild(formationLabel);
+  formationLine.appendChild(document.createTextNode(wordFormation || "(暂无)"));
+  card.appendChild(formationLine);
+
+  appendExtraLabel("同近义词:");
+  appendExtraTextLine(synonyms.length > 0 ? synonyms.join(", ") : "(暂无)");
+
+  appendExtraLabel("反义词:");
+  appendExtraTextLine(antonyms.length > 0 ? antonyms.join(", ") : "(暂无)");
+
+  card.appendChild(buildStudyControls(item));
+  return card;
 }
 
 function renderGlossary(lexicon) {
   if (!Array.isArray(lexicon) || lexicon.length === 0) {
-    glossaryEl.innerHTML = "<p>生成后显示词汇扩展内容。</p>";
+    const empty = document.createElement("p");
+    empty.textContent = "生成后显示词汇扩展内容。";
+    glossaryEl.replaceChildren(empty);
     return;
   }
 
-  const zhTerms = collectChineseTerms(lexicon);
   pronunciationMap = new Map();
-  glossaryEl.innerHTML = lexicon.map((item) => renderLexiconCard(item, zhTerms)).join("");
+  const frag = document.createDocumentFragment();
+  lexicon.forEach((item) => frag.appendChild(renderLexiconCard(item)));
+  glossaryEl.replaceChildren(frag);
   lastActiveGlossaryKey = "";
 }
 
@@ -2245,17 +2503,24 @@ function renderNotebookView() {
   notebookCountEl.textContent = filteredRows.length === rows.length ? `${rows.length} 个单词` : `显示 ${filteredRows.length} / ${rows.length} 个单词`;
 
   if (!rows.length) {
-    notebookEntriesEl.innerHTML = `<div class="empty-library notebook-empty">生词本还是空的。先在右侧词汇区把陌生词加入生词本。</div>`;
+    const empty = document.createElement("div");
+    empty.className = "empty-library notebook-empty";
+    empty.textContent = "生词本还是空的。先在右侧词汇区把陌生词加入生词本。";
+    notebookEntriesEl.replaceChildren(empty);
     return;
   }
 
   if (!filteredRows.length) {
-    notebookEntriesEl.innerHTML = `<div class="empty-library notebook-empty">没有找到符合当前搜索或筛选条件的单词。</div>`;
+    const empty = document.createElement("div");
+    empty.className = "empty-library notebook-empty";
+    empty.textContent = "没有找到符合当前搜索或筛选条件的单词。";
+    notebookEntriesEl.replaceChildren(empty);
     return;
   }
 
-  const zhTerms = collectChineseTerms(filteredRows);
-  notebookEntriesEl.innerHTML = filteredRows.map((item) => renderLexiconCard(item, zhTerms)).join("");
+  const frag = document.createDocumentFragment();
+  filteredRows.forEach((item) => frag.appendChild(renderLexiconCard(item)));
+  notebookEntriesEl.replaceChildren(frag);
 
   if (currentNotebookFocusKey) {
     window.requestAnimationFrame(() => focusNotebookEntry(currentNotebookFocusKey));
@@ -2456,13 +2721,13 @@ async function exportPdfFromPreview() {
 function applyArticleData(data) {
   latestArticle = String(data.article || "");
   latestWords = Array.isArray(data.words) ? data.words : latestWords;
-  const incomingLexicon = Array.isArray(data.lexicon) ? data.lexicon : [];
-  const incomingBaseLexicon = Array.isArray(data.baseLexicon) ? data.baseLexicon : [];
+  const incomingLexicon = (Array.isArray(data.lexicon) ? data.lexicon : []).map(sanitizeLexiconItemForUi);
+  const incomingBaseLexicon = (Array.isArray(data.baseLexicon) ? data.baseLexicon : []).map(sanitizeLexiconItemForUi);
   latestBaseLexicon = incomingBaseLexicon.length > 0 ? incomingBaseLexicon : incomingLexicon;
   latestContextLexicon = incomingLexicon.length > 0 ? incomingLexicon : latestBaseLexicon;
   latestLexicon = latestBaseLexicon;
-  latestContextGlosses = Array.isArray(data.contextGlosses) ? data.contextGlosses : [];
-  latestRuns = Array.isArray(data.runs) ? data.runs : [];
+  latestContextGlosses = sanitizeContextGlossesForUi(data.contextGlosses);
+  latestRuns = sanitizeRunsForUi(data.runs);
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];

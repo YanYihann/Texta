@@ -62,8 +62,11 @@ function compactWordsKey(words) {
     .join("|");
 }
 
-function makeLexiconCacheKey(words, quickMode, model) {
-  const raw = `lexicon::${compactWordsKey(words)}::quick=${quickMode ? 1 : 0}::model=${String(model || "").trim().toLowerCase()}`;
+function makeLexiconCacheKey(words, quickMode, model, detailLevel = "full") {
+  const level = String(detailLevel || "").toLowerCase() === "core" ? "core" : "full";
+  const raw = `lexicon::${compactWordsKey(words)}::quick=${quickMode ? 1 : 0}::model=${String(model || "")
+    .trim()
+    .toLowerCase()}::detail=${level}`;
   return crypto.createHash("sha1").update(raw).digest("hex");
 }
 
@@ -425,6 +428,11 @@ function normalizeGenerationMode(raw) {
   return String(raw || "").toLowerCase() === "mixed" ? "mixed" : "standard";
 }
 
+function isMixedGenerationMode(raw) {
+  const mode = String(raw || "").toLowerCase();
+  return mode === "mixed" || mode === "mixed_dense";
+}
+
 function getGenerationProfile(rawQuality) {
   const quality = normalizeGenerationQuality(rawQuality);
   if (quality === "advanced") {
@@ -697,6 +705,7 @@ function sanitizeNotebookPayload(rawList) {
   const now = new Date().toISOString();
   const out = [];
   const seen = new Set();
+  const seenIds = new Set();
 
   for (const raw of rawList.slice(0, 2000)) {
     const word = normalizeText(raw?.word, 120);
@@ -707,8 +716,12 @@ function sanitizeNotebookPayload(rawList) {
     if (!key || seen.has(key)) continue;
     seen.add(key);
 
+    const rawId = normalizeText(raw?.id, 80) || `nb_${crypto.randomBytes(8).toString("hex")}`;
+    const uniqueId = seenIds.has(rawId) ? `nb_${crypto.randomBytes(8).toString("hex")}` : rawId;
+    seenIds.add(uniqueId);
+
     out.push({
-      id: normalizeText(raw?.id, 80) || `nb_${crypto.randomBytes(8).toString("hex")}`,
+      id: uniqueId,
       userId: "",
       wordKey: key,
       word: word || key,
@@ -730,6 +743,7 @@ function sanitizeVocabPrefsPayload(rawValue) {
   const now = new Date().toISOString();
   const out = [];
   const seen = new Set();
+  const seenIds = new Set();
   const sourceEntries =
     rawValue && typeof rawValue === "object" && !Array.isArray(rawValue) ? Object.entries(rawValue) : [];
 
@@ -740,8 +754,12 @@ function sanitizeVocabPrefsPayload(rawValue) {
 
     const masteryRaw = normalizeText(rawItem?.mastery, 32).toLowerCase();
     const mastery = masteryRaw === "mastered" ? "mastered" : "unknown";
+    const rawId = normalizeText(rawItem?.id, 80) || `vp_${crypto.randomBytes(8).toString("hex")}`;
+    const uniqueId = seenIds.has(rawId) ? `vp_${crypto.randomBytes(8).toString("hex")}` : rawId;
+    seenIds.add(uniqueId);
+
     out.push({
-      id: normalizeText(rawItem?.id, 80) || `vp_${crypto.randomBytes(8).toString("hex")}`,
+      id: uniqueId,
       userId: "",
       wordKey,
       word: normalizeText(rawItem?.word, 120),
@@ -813,6 +831,34 @@ function splitWords(rawText) {
     .map((w) => normalizeInputWordToken(w))
     .filter(Boolean);
   return rawItems.filter((value, index, arr) => arr.findIndex((x) => x.toLowerCase() === value.toLowerCase()) === index);
+}
+
+function looksLikeWordListOnlyInput(rawText) {
+  const source = String(rawText || "").trim();
+  if (!source) return true;
+
+  const chineseCount = (source.match(/[\u4e00-\u9fff]/g) || []).length;
+  const sentencePunctuationCount = (source.match(/[。！？!?]/g) || []).length;
+  const semicolonCount = (source.match(/[；;]/g) || []).length;
+  const lines = source
+    .split(/\r?\n/)
+    .map((line) => String(line || "").trim())
+    .filter(Boolean);
+  const longLines = lines.filter((line) => line.length >= 80).length;
+  const sentenceLikeLines = lines.filter((line) => /[。！？!?]/.test(line)).length;
+  const tokens = source
+    .split(/[\n,，]+/)
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+  const englishWordLikeCount = tokens.filter((token) => /^[A-Za-z][A-Za-z'\-\s]{0,40}$/.test(token)).length;
+
+  if (sentencePunctuationCount >= 3) return false;
+  if (chineseCount > 40 && sentencePunctuationCount >= 1) return false;
+  if (lines.length >= 5 && sentenceLikeLines >= Math.ceil(lines.length * 0.5)) return false;
+  if (longLines >= 2) return false;
+  if (tokens.length >= 8 && englishWordLikeCount / tokens.length < 0.6) return false;
+  if (tokens.length >= 6 && semicolonCount >= 4) return false;
+  return true;
 }
 
 function splitParagraphs(article) {
@@ -1036,6 +1082,27 @@ function normalizeIpaText(raw) {
   return `/${core}/`;
 }
 
+function sanitizeGlossText(raw, maxLen = 240) {
+  let text = String(raw || "");
+  if (!text) return "";
+  const entityMap = {
+    "&nbsp;": " ",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'"
+  };
+  text = text.replace(/&nbsp;|&lt;|&gt;|&quot;|&#39;/gi, (m) => entityMap[m.toLowerCase()] || m);
+  text = text
+    .replace(/<\/?(?:mark|span|sup)\b[^>]*>/gi, " ")
+    .replace(/ass\s*=\s*["']vocab-zh(?:-inline)?["']>/gi, " ")
+    .replace(/\bclass\s*=\s*["'][^"']*["']/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.slice(0, maxLen);
+}
+
 function pickLexiconIpa(item, accent) {
   const source = item && typeof item === "object" ? item : {};
   const candidates =
@@ -1097,7 +1164,8 @@ function normalizePosTag(raw) {
   return source;
 }
 
-function normalizeLexicon(words, rawItems) {
+function normalizeLexicon(words, rawItems, detailLevel = "full") {
+  const isCore = String(detailLevel || "").toLowerCase() === "core";
   const itemMap = new Map();
   if (Array.isArray(rawItems)) {
     for (const item of rawItems) {
@@ -1112,21 +1180,21 @@ function normalizeLexicon(words, rawItems) {
       const pos = normalizePosTag(item?.pos);
       const meaningsRaw = Array.isArray(item.meanings) ? item.meanings : [];
       const meanings = meaningsRaw
-        .map((m) => String(m || "").trim())
+        .map((m) => sanitizeGlossText(m, 200))
         .filter(Boolean)
         .slice(0, 5);
-      const collocations = Array.isArray(item.collocations)
-        ? item.collocations.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 5)
+      const collocations = !isCore && Array.isArray(item.collocations)
+        ? item.collocations.map((x) => sanitizeGlossText(x, 220)).filter(Boolean).slice(0, 5)
         : [];
       const wordFormation =
-        typeof item.word_formation === "string" && item.word_formation.trim()
-          ? item.word_formation.trim()
+        !isCore && typeof item.word_formation === "string" && sanitizeGlossText(item.word_formation, 500)
+          ? sanitizeGlossText(item.word_formation, 500)
           : "";
-      const synonyms = Array.isArray(item.synonyms)
-        ? item.synonyms.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 6)
+      const synonyms = !isCore && Array.isArray(item.synonyms)
+        ? item.synonyms.map((x) => sanitizeGlossText(x, 120)).filter(Boolean).slice(0, 6)
         : [];
-      const antonyms = Array.isArray(item.antonyms)
-        ? item.antonyms.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 6)
+      const antonyms = !isCore && Array.isArray(item.antonyms)
+        ? item.antonyms.map((x) => sanitizeGlossText(x, 120)).filter(Boolean).slice(0, 6)
         : [];
 
       const usIpa = pickLexiconIpa(item, "us");
@@ -1256,37 +1324,58 @@ async function callOpenAIText(prompt, options = {}) {
   throw new Error("Unexpected request state.");
 }
 
-async function generateLexicon(words, quickMode, model) {
-  const cacheKey = makeLexiconCacheKey(words, quickMode, model);
+async function generateLexicon(words, quickMode, model, detailLevel = "full") {
+  const normalizedDetailLevel = String(detailLevel || "").toLowerCase() === "core" ? "core" : "full";
+  const isCore = normalizedDetailLevel === "core";
+  const cacheKey = makeLexiconCacheKey(words, quickMode, model, normalizedDetailLevel);
   const cached = getFromTimedCache(lexiconCache, cacheKey);
   if (cached) {
     return cloneJsonSafe(cached, []);
   }
 
   const generateLexiconChunk = async (chunkWords) => {
-    const prompt = [
-      "You are an IELTS vocabulary assistant.",
-      "Return ONLY JSON array.",
-      "Each item format:",
-      "{\"word\": string, \"pos\": string, \"us_ipa\": string, \"uk_ipa\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
-      "Rules:",
-      "1) Keep same order as input words.",
-      "2) pos should be concise (e.g. n., v., adj., adv.).",
-      "3) meanings should be concise Chinese meanings, 1-3 items, ordered by IELTS frequency.",
-      "4) meanings[0] MUST be the single most common IELTS exam sense.",
-      "5) Avoid rare/archaic niche senses unless absolutely necessary.",
-      "6) Prioritize meanings useful for reading/listening/writing tasks.",
-      "7) collocations should be common IELTS-friendly phrase combinations (English phrase + concise Chinese).",
-      "8) word_formation should include root/prefix/suffix notes when useful.",
-      "9) synonyms/antonyms should be common high-frequency exam words.",
-      "10) Keep definitions practical and exam-usable; avoid overly technical senses.",
-      `Words: ${chunkWords.join(", ")}`
-    ].join("\n");
+    const prompt = isCore
+      ? [
+          "You are an IELTS vocabulary assistant.",
+          "Return ONLY JSON array.",
+          "Each item format:",
+          "{\"word\": string, \"pos\": string, \"us_ipa\": string, \"uk_ipa\": string, \"meanings\": string[]}",
+          "Rules:",
+          "1) Keep same order as input words.",
+          "2) pos should be concise (e.g. n., v., adj., adv.).",
+          "3) meanings should be concise Chinese meanings, 1-3 items, ordered by IELTS frequency.",
+          "4) meanings[0] MUST be the single most common IELTS exam sense.",
+          "5) Avoid rare/archaic niche senses unless absolutely necessary.",
+          "6) Prioritize meanings useful for reading/listening/writing tasks.",
+          `Words: ${chunkWords.join(", ")}`
+        ].join("\n")
+      : [
+          "You are an IELTS vocabulary assistant.",
+          "Return ONLY JSON array.",
+          "Each item format:",
+          "{\"word\": string, \"pos\": string, \"us_ipa\": string, \"uk_ipa\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
+          "Rules:",
+          "1) Keep same order as input words.",
+          "2) pos should be concise (e.g. n., v., adj., adv.).",
+          "3) meanings should be concise Chinese meanings, 1-3 items, ordered by IELTS frequency.",
+          "4) meanings[0] MUST be the single most common IELTS exam sense.",
+          "5) Avoid rare/archaic niche senses unless absolutely necessary.",
+          "6) Prioritize meanings useful for reading/listening/writing tasks.",
+          "7) collocations should be common IELTS-friendly phrase combinations (English phrase + concise Chinese).",
+          "8) word_formation should include root/prefix/suffix notes when useful.",
+          "9) synonyms/antonyms should be common high-frequency exam words.",
+          "10) Keep definitions practical and exam-usable; avoid overly technical senses.",
+          `Words: ${chunkWords.join(", ")}`
+        ].join("\n");
 
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 650 : 1300, model, step: "lexicon" });
+    const text = await callOpenAIText(prompt, {
+      maxTokens: isCore ? (quickMode ? 360 : 760) : quickMode ? 650 : 1300,
+      model,
+      step: isCore ? "lexicon_core" : "lexicon"
+    });
     let parsed = extractJsonArray(text);
 
-    if (!Array.isArray(parsed)) {
+    if (!Array.isArray(parsed) && !isCore) {
       const retryPrompt = [
         "Return ONLY JSON array, no markdown, no explanation.",
         "Each item keys must be exactly: word,pos,us_ipa,uk_ipa,meanings,collocations,word_formation,synonyms,antonyms.",
@@ -1297,10 +1386,11 @@ async function generateLexicon(words, quickMode, model) {
       parsed = extractJsonArray(retryText);
     }
 
-    return normalizeLexicon(chunkWords, parsed);
+    return normalizeLexicon(chunkWords, parsed, normalizedDetailLevel);
   };
 
-  const chunkSize = words.length > LEXICON_CHUNK_SIZE ? LEXICON_CHUNK_SIZE : words.length;
+  const preferredChunkSize = isCore ? Math.max(16, LEXICON_CHUNK_SIZE) : LEXICON_CHUNK_SIZE;
+  const chunkSize = words.length > preferredChunkSize ? preferredChunkSize : words.length;
   const chunks = chunkArray(words, chunkSize);
   const chunkResults = await runWithConcurrency(chunks, LEXICON_CHUNK_CONCURRENCY, (chunk) => generateLexiconChunk(chunk));
   let lexicon = chunkResults.flat();
@@ -1309,7 +1399,7 @@ async function generateLexicon(words, quickMode, model) {
     .filter((x) => (x?.senses || []).some((s) => String(s?.meaning || "").includes("待完善")))
     .map((x) => x.word);
 
-  if (failedWords.length > 0) {
+  if (failedWords.length > 0 && !isCore) {
     const retryChunks = chunkArray(failedWords, 4);
     let recoveredAll = [];
     for (const c of retryChunks) {
@@ -1325,7 +1415,7 @@ async function generateLexicon(words, quickMode, model) {
       ].join("\n");
       const fallbackText = await callOpenAIText(fallbackPrompt, { maxTokens: quickMode ? 700 : 1400, model, step: "lexicon_fallback" });
       const fallbackParsed = extractJsonArray(fallbackText);
-      recoveredAll = recoveredAll.concat(normalizeLexicon(c, fallbackParsed));
+      recoveredAll = recoveredAll.concat(normalizeLexicon(c, fallbackParsed, normalizedDetailLevel));
     }
     const recoveredMap = new Map(recoveredAll.map((x) => [x.word.toLowerCase(), x]));
     lexicon = lexicon.map((item) => recoveredMap.get(item.word.toLowerCase()) || item);
@@ -1383,6 +1473,172 @@ async function planMixedUsage(words, lexicon, quickMode, model) {
   }
 }
 
+function splitWordsForDenseChunks(words, minSize = 4, maxSize = 6) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  if (sourceWords.length <= 12) return [sourceWords];
+  if (sourceWords.length <= maxSize) return [sourceWords];
+
+  const targetSize = Math.min(maxSize, Math.max(minSize, 5));
+  const groups = chunkArray(sourceWords, targetSize).filter((group) => group.length > 0);
+  if (groups.length <= 1) return groups;
+
+  const lastIndex = groups.length - 1;
+  while (groups[lastIndex].length > 0 && groups[lastIndex].length < minSize) {
+    let donorIndex = -1;
+    for (let i = groups.length - 2; i >= 0; i -= 1) {
+      if (groups[i].length > minSize) {
+        donorIndex = i;
+        break;
+      }
+    }
+    if (donorIndex < 0) break;
+    const moved = groups[donorIndex].pop();
+    if (!moved) break;
+    groups[lastIndex].unshift(moved);
+  }
+  return groups;
+}
+
+function buildDeterministicMixedOpeningChunk(words) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  const first = sourceWords[0] || "";
+  const second = sourceWords[1] || "";
+  if (!first) return "";
+  if (second) {
+    return `${first}先上，${second}紧跟，后面直接进入内容。`;
+  }
+  return `${first}先上，后面直接进入内容。`;
+}
+
+async function generateMixedDenseArticleByChunks(words, level, quickMode, lexicon, extraConstraint, model, usagePlan) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  if (sourceWords.length === 0) {
+    return { title: defaultTitleByDate(0), article: "", chunks: [] };
+  }
+
+  const groups = splitWordsForDenseChunks(sourceWords, 4, 6);
+  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  const usageRows = Array.isArray(usagePlan) ? usagePlan : [];
+  let hasDeterministicChunkAppend = false;
+  const buildDenseChunkWithCoverage = async (groupWords, groupLexicon, groupPlan, constraintText) => {
+    let pack = await generateArticlePackage(
+      groupWords,
+      level,
+      quickMode,
+      groupLexicon,
+      "mixed_dense",
+      constraintText,
+      model,
+      groupPlan
+    );
+    let article = String(pack?.article || "").trim();
+    let localMissing = findMissingWords(article, groupWords);
+
+    if (localMissing.length > 0) {
+      const localRetryConstraint = [
+        constraintText,
+        "Important local fix: every target word in this chunk must appear as the exact English token.",
+        "Coverage is validated by exact literal English surface forms.",
+        "Chinese translation does NOT count as usage.",
+        "Never replace a target word with Chinese-only wording.",
+        `Missing local words: ${localMissing.join(", ")}.`
+      ]
+        .filter(Boolean)
+        .join(" ");
+      pack = await generateArticlePackage(
+        groupWords,
+        level,
+        quickMode,
+        groupLexicon,
+        "mixed_dense",
+        localRetryConstraint,
+        model,
+        groupPlan
+      );
+      article = String(pack?.article || "").trim();
+      localMissing = findMissingWords(article, groupWords);
+    }
+
+    if (localMissing.length > 0) {
+      article = appendGuaranteedMissingWordsMixed(article, localMissing);
+      hasDeterministicChunkAppend = true;
+      localMissing = findMissingWords(article, groupWords);
+    }
+
+    return {
+      pack,
+      article,
+      localMissing
+    };
+  };
+
+  if (groups.length <= 1) {
+    const singleConstraint = [
+      extraConstraint,
+      "Dense chunk 1/1.",
+      `Use ALL these target words in this chunk: ${sourceWords.join(", ")}.`,
+      "The first sentence must contain at least one target word.",
+      "Do not write a long Chinese-only introduction before the first target word.",
+      "Before the first target word, allow at most 12 Chinese characters.",
+      "Start directly with the mixed content, not with background setup."
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const single = await buildDenseChunkWithCoverage(sourceWords, lexicon, usageRows, singleConstraint);
+    return {
+      ...single.pack,
+      article: single.article,
+      chunks: [
+        {
+          index: 0,
+          words: sourceWords.slice(),
+          article: single.article
+        }
+      ],
+      hasDeterministicChunkAppend
+    };
+  }
+
+  const parts = [];
+  const chunks = [];
+  let title = "";
+
+  for (let i = 0; i < groups.length; i += 1) {
+    const groupWords = groups[i];
+    const groupSet = new Set(groupWords.map((w) => String(w || "").toLowerCase()));
+    const groupLexicon = groupWords.map((w) => lexMap.get(String(w || "").toLowerCase())).filter(Boolean);
+    const groupPlan = usageRows.filter((item) => groupSet.has(String(item?.word || "").toLowerCase()));
+    const denseConstraint = [
+      `Dense chunk ${i + 1}/${groups.length}.`,
+      `Use ALL these target words in this chunk: ${groupWords.join(", ")}.`,
+      "The first sentence must contain at least one target word.",
+      "Do not write a long Chinese-only introduction before the first target word.",
+      "Before the first target word, allow at most 12 Chinese characters.",
+      "Start directly with the mixed content, not with background setup."
+    ].join(" ");
+    const finalConstraint = [extraConstraint, denseConstraint].filter(Boolean).join(" ");
+    const localPack = await buildDenseChunkWithCoverage(groupWords, groupLexicon, groupPlan, finalConstraint);
+    const pack = localPack.pack;
+    if (!title) {
+      title = String(pack?.title || "").trim();
+    }
+    const article = String(localPack?.article || "").trim();
+    parts.push(article);
+    chunks.push({
+      index: i,
+      words: groupWords.slice(),
+      article
+    });
+  }
+
+  return {
+    title: title || defaultTitleByDate(sourceWords.length),
+    article: parts.filter(Boolean).join("\n\n"),
+    chunks,
+    hasDeterministicChunkAppend
+  };
+}
+
 async function generateMixedArticleByScenes(words, level, quickMode, lexicon, extraConstraint, model, usagePlan) {
   const groups = splitWordsForMixedScenes(words, usagePlan);
   const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
@@ -1427,16 +1683,22 @@ async function generateArticlePackage(
   usagePlan = []
 ) {
   const promptLevel = levelToPromptText(level);
-  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
+  const modeKey = String(generationMode || "").toLowerCase();
+  const isMixedMode = isMixedGenerationMode(modeKey);
+  const isDenseMixedMode = modeKey === "mixed_dense";
   const lengthRule = isMixedMode
-    ? "Keep it compact and easy to read, with short natural sentences."
+    ? isDenseMixedMode
+      ? "Use high-density mixed flow: prefer 4-8 short sentences, not a long narrative paragraph."
+      : "Keep it compact and easy to read, with short natural sentences."
     : quickMode
       ? "Length: 120-180 words."
       : words.length > 16
         ? "Length: 320-450 words."
         : "Length: 220-320 words.";
   const paragraphRule = isMixedMode
-    ? "Use 2-4 short paragraphs separated by blank lines."
+    ? isDenseMixedMode
+      ? "Use 4-8 short lines or short paragraphs, separated by blank lines when needed."
+      : "Use 2-4 short paragraphs separated by blank lines."
     : quickMode
       ? "Use 2-3 short paragraphs separated by blank lines."
       : words.length > 16
@@ -1461,12 +1723,28 @@ async function generateArticlePackage(
 
   const modeRules = isMixedMode
     ? [
-        "Write a Chinese-first mixed-language passage, not a formal article.",
+        isDenseMixedMode
+          ? "Write high-density Chinese-English mixed word flow, not a complete long-form article."
+          : "Write a Chinese-first mixed-language passage, not a formal article.",
         "The tone must be natural, conversational, and everyday-life based.",
         "It should feel like a real person talking, sharing, complaining, reflecting, or reacting in daily life.",
         "The main body should be fluent natural Chinese, with target words inserted in English only.",
         "Insert target words as part of sentence rhythm, not as explanations or glossary items.",
+        "Prefer 1-2 target words per sentence, and keep sentence units short.",
+        "Keep Chinese bridge text between adjacent target words very short: ideal <=10 Chinese characters, hard limit <=18.",
+        "Avoid long Chinese-only paragraphs that push target words far apart.",
+        "Prefer 4-8 short sentences instead of long paragraphs.",
+        isDenseMixedMode ? "The first sentence must contain at least one target word." : "",
+        isDenseMixedMode ? "Do not begin with a standalone Chinese background paragraph." : "",
+        isDenseMixedMode ? "Prefer the first target word to appear within the first 12 Chinese characters." : "",
+        isDenseMixedMode ? "Every sentence should be short and dense." : "",
+        isDenseMixedMode ? "Do not write scene setup before using target words." : "",
         "For each target word, use exactly the original input form (no plural/past/ing).",
+        "Coverage is validated by exact literal English surface forms.",
+        "Chinese translation does NOT count as usage.",
+        "Never replace a target word with Chinese-only wording.",
+        "Every target word must appear in the final passage as the exact English token from input.",
+        'If the target word is "Derive", "Sterility", "Plume", "Bristle", "Cricket", etc., do not translate it away.',
         "Each target word should appear once if possible, and never more than twice.",
         "Prefer one target word per short clause, but allow multiple target words in one sentence when natural.",
         "Do not break sentences awkwardly just to isolate target words.",
@@ -1508,7 +1786,7 @@ async function generateArticlePackage(
     .filter(Boolean)
     .join("\n");
 
-  const maxTokens = quickMode ? 420 : words.length > 16 ? 1200 : 820;
+  const maxTokens = isDenseMixedMode ? (quickMode ? 300 : 580) : quickMode ? 420 : words.length > 16 ? 1200 : 820;
   const text = await callOpenAIText(prompt, { maxTokens, model, step: "article" });
   const parsed = extractJsonObject(text);
 
@@ -1547,6 +1825,22 @@ function appendMissingWordsSentence(article, missingWords, lexicon) {
     .join(", ");
   return `${article}\n\nVocabulary focus: ${phrase}.`;
 }
+
+function appendGuaranteedMissingWordsMixed(article, missingWords) {
+  const source = String(article || "").trim();
+  const words = Array.from(
+    new Set(
+      (Array.isArray(missingWords) ? missingWords : [])
+        .map((w) => String(w || "").trim())
+        .filter(Boolean)
+    )
+  );
+  if (words.length === 0) return source;
+
+  const lines = words.map((word) => `${word}这个词我今天也特别记住了。`);
+  return `${source}\n\n${lines.join("\n")}`.trim();
+}
+
 function defaultTitleByDate(wordCount) {
   const now = new Date();
   const y = now.getFullYear();
@@ -1691,6 +1985,99 @@ function findOverusedWords(article, words, maxAllowed = 2) {
     }
   }
   return overused;
+}
+
+function countChineseChars(text) {
+  const matches = String(text || "").match(/[\u4e00-\u9fff]/g);
+  return matches ? matches.length : 0;
+}
+
+function findLargeWordGapsFromRuns(runs, maxGap = 18) {
+  const sourceRuns = Array.isArray(runs) ? runs : [];
+  const issues = [];
+  let prevWordRun = null;
+  let betweenText = "";
+
+  for (const run of sourceRuns) {
+    if (String(run?.type || "") === "word") {
+      if (prevWordRun) {
+        const chineseChars = countChineseChars(betweenText);
+        if (chineseChars > maxGap) {
+          issues.push({
+            from: String(prevWordRun?.word || prevWordRun?.text || "").trim(),
+            to: String(run?.word || run?.text || "").trim(),
+            chineseChars,
+            gapPreview: String(betweenText || "")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 80)
+          });
+        }
+      }
+      prevWordRun = run;
+      betweenText = "";
+      continue;
+    }
+
+    if (prevWordRun) {
+      betweenText += String(run?.text || "");
+    }
+  }
+
+  return issues;
+}
+
+function findLeadWordGapFromRuns(runs, maxLeadChineseChars = 12) {
+  const sourceRuns = Array.isArray(runs) ? runs : [];
+  let leadText = "";
+
+  for (const run of sourceRuns) {
+    if (String(run?.type || "") === "word") {
+      break;
+    }
+    leadText += String(run?.text || "");
+  }
+
+  const chineseChars = countChineseChars(leadText);
+  if (chineseChars > maxLeadChineseChars) {
+    return {
+      chineseChars,
+      preview: String(leadText || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 80)
+    };
+  }
+  return null;
+}
+
+function findTailWordGapFromRuns(runs, maxTailChineseChars = 20) {
+  const sourceRuns = Array.isArray(runs) ? runs : [];
+  let tailText = "";
+  let metWord = false;
+
+  for (let i = sourceRuns.length - 1; i >= 0; i -= 1) {
+    const run = sourceRuns[i];
+    if (String(run?.type || "") === "word") {
+      metWord = true;
+      break;
+    }
+    tailText = `${String(run?.text || "")}${tailText}`;
+  }
+
+  if (!metWord) return null;
+
+  const chineseChars = countChineseChars(tailText);
+  if (chineseChars > maxTailChineseChars) {
+    return {
+      chineseChars,
+      preview: String(tailText || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 80)
+    };
+  }
+  return null;
 }
 
 function cleanMixedArtifactText(article) {
@@ -1958,12 +2345,9 @@ function buildContextGlosses(words, baseLexicon, contextLexicon, usagePlan, alig
       pos: normalizePosTag(context?.pos || base?.pos || plan?.pos || ""),
       marker: String(align?.marker || context?.senses?.[0]?.marker || base?.senses?.[0]?.marker || "①"),
       contextMeaning,
-      baseMeanings,
       scene: String(plan?.scene || "").trim(),
       naturalPattern: String(plan?.allowedPattern || "").trim(),
-      avoid: String(plan?.avoid || "").trim(),
-      englishForms: Array.isArray(align?.english_forms) ? align.english_forms : [],
-      zhTerms: Array.isArray(align?.zh_terms) ? align.zh_terms : []
+      avoid: String(plan?.avoid || "").trim()
     };
   });
 }
@@ -1986,7 +2370,8 @@ function buildArticleRuns(article, words, contextGlosses) {
   const markerSet = "①②③④⑤⑥⑦⑧⑨⑩";
   const pattern = new RegExp(`(^|[^A-Za-z])(${escaped.join("|")})([${markerSet}]?)(?=$|[^A-Za-z])`, "gi");
   const runs = [];
-  const wordCountByKey = new Map();
+  const countParagraphBreaks = (text) => (String(text || "").match(/\n\s*\n+/g) || []).length;
+  let paragraphIndex = 0;
   let cursor = 0;
   let match;
 
@@ -1999,25 +2384,29 @@ function buildArticleRuns(article, words, contextGlosses) {
     if (start < cursor) continue;
 
     if (start > cursor) {
+      const gapText = source.slice(cursor, start);
       runs.push({
         type: "text",
-        text: source.slice(cursor, start)
+        text: gapText,
+        paragraphIndex,
+        charStart: cursor,
+        charEnd: start
       });
+      paragraphIndex += countParagraphBreaks(gapText);
     }
 
     const key = matchedWord.toLowerCase();
     const gloss = glossMap.get(key) || {};
-    const occ = Number(wordCountByKey.get(key) || 0) + 1;
-    wordCountByKey.set(key, occ);
     runs.push({
       type: "word",
       word: gloss?.word || matchedWord,
       text: matchedWord,
       marker: marker || String(gloss?.marker || "①"),
       pos: String(gloss?.pos || ""),
-      contextMeaning: String(gloss?.contextMeaning || ""),
       displayMeaning: String(gloss?.contextMeaning || ""),
-      occurrence: occ
+      paragraphIndex,
+      charStart: start,
+      charEnd: end
     });
     cursor = end;
   }
@@ -2025,49 +2414,26 @@ function buildArticleRuns(article, words, contextGlosses) {
   if (cursor < source.length) {
     runs.push({
       type: "text",
-      text: source.slice(cursor)
+      text: source.slice(cursor),
+      paragraphIndex,
+      charStart: cursor,
+      charEnd: source.length
     });
   }
 
   return runs.filter((run) => String(run?.text || run?.word || "").length > 0);
 }
 
-function shouldRunContextRefine(words, lexicon) {
+function shouldRunContextRefine(words, lexicon, generationMode, generationQuality, contextGlosses) {
+  const mode = String(generationMode || "").toLowerCase();
+  if (mode !== "mixed") return false;
+  if (normalizeGenerationQuality(generationQuality) !== "advanced") return false;
   const sourceWords = Array.isArray(words) ? words : [];
   const sourceLexicon = Array.isArray(lexicon) ? lexicon : [];
-  if (sourceWords.length === 0 || sourceLexicon.length === 0) return false;
-
-  const sensitiveWords = new Set([
-    "sterility",
-    "bristle",
-    "derive",
-    "cricket",
-    "plume",
-    "cruel",
-    "drain",
-    "collapse",
-    "standard",
-    "process",
-    "attitude"
-  ]);
-
-  let ambiguousCount = 0;
-  let hasSensitive = false;
-  for (const item of sourceLexicon) {
-    const word = String(item?.word || "").trim().toLowerCase();
-    if (sensitiveWords.has(word)) {
-      hasSensitive = true;
-    }
-    const sensesCount = Array.isArray(item?.senses) ? item.senses.filter((s) => String(s?.meaning || "").trim()).length : 0;
-    if (sensesCount > 1) {
-      ambiguousCount += 1;
-    }
-  }
-
-  if (hasSensitive) return true;
-  if (ambiguousCount === 0) return false;
-  if (sourceWords.length <= 8) return ambiguousCount >= 4;
-  return ambiguousCount >= Math.max(7, Math.ceil(sourceWords.length * 0.6));
+  if (sourceWords.length === 0 || sourceWords.length > 8 || sourceLexicon.length === 0) return false;
+  const rows = Array.isArray(contextGlosses) ? contextGlosses : [];
+  const missingContextCount = rows.filter((row) => !hasChineseChars(row?.contextMeaning)).length;
+  return missingContextCount > 0;
 }
 
 async function refineMixedLexiconByContext(words, lexicon, article, quickMode, model) {
@@ -2185,6 +2551,11 @@ async function reviewMixedSemantics(words, lexicon, article, quickMode, model) {
     "2) meaning_ok=false when the displayed Chinese meaning does not match the sentence context.",
     "3) reason/suggestion should be concise Chinese, no markdown.",
     "4) Be strict and practical; do not mark everything true.",
+    "5) Coverage is validated by exact literal English surface forms.",
+    "6) Chinese translation does NOT count as usage.",
+    "7) Do not suggest replacing the target word with a Chinese-only paraphrase.",
+    "8) The target word must remain visible in English.",
+    '9) If the target word is "Derive", "Sterility", "Plume", "Bristle", "Cricket", etc., do not suggest translating it away.',
     `Words: ${sourceWords.join(", ")}`,
     "Word guide:",
     reviewGuide,
@@ -2234,6 +2605,11 @@ async function rewriteAwkwardMixedClauses(article, reviewRows, lexicon, quickMod
     "Do not add glossary sections, keyword lists, or dictionary-style lines.",
     "Do not output Chinese gloss + English word duplicates (e.g., 残忍cruel / 无菌sterility with direct duplicate meaning).",
     "Keep target words in their original form.",
+    "Coverage is validated by exact literal English surface forms.",
+    "Chinese translation does NOT count as usage.",
+    "Do not remove, translate away, or paraphrase away any target English word.",
+    "Keep every target word visible in exact English form.",
+    'If the target word is "Derive", "Sterility", "Plume", "Bristle", "Cricket", etc., do not translate it away.',
     "If one word is hard to place naturally, move it to a short separate micro-scene.",
     "Problem words and notes JSON:",
     JSON.stringify(issues, null, 2),
@@ -2257,7 +2633,7 @@ function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mi
   const markerMap = new Map(
     (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
   );
-  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
+  const isMixedMode = isMixedGenerationMode(generationMode);
   const lines = (missingWords || []).map((word, index) => {
     const marker = markerMap.get(String(word).toLowerCase()) || "①";
     const token = isMixedMode ? String(word) : `${word}${marker}`;
@@ -2286,7 +2662,7 @@ async function generateMissingWordsRewrite(missingWords, lexicon, generationMode
     })
     .join("\n");
 
-  const isMixedMode = String(generationMode || "").toLowerCase() === "mixed";
+  const isMixedMode = isMixedGenerationMode(generationMode);
   const prompt = isMixedMode
     ? [
         "You are rewriting missing vocabulary content for a mixed Chinese-English learning passage.",
@@ -2294,6 +2670,11 @@ async function generateMissingWordsRewrite(missingWords, lexicon, generationMode
         "Write concise Chinese sentences.",
         "Each sentence should include one target English word in original form.",
         "Each target word must appear exactly once across the whole output.",
+        "Coverage is validated by exact literal English surface forms.",
+        "Chinese translation does NOT count as usage.",
+        "Never replace a target word with Chinese-only wording.",
+        "Every target word must appear in the final passage as the exact English token from input.",
+        'If the target word is "Derive", "Sterility", "Plume", "Bristle", "Cricket", etc., do not translate it away.',
         "Do NOT output Chinese gloss + English word pairs such as 板球 cricket / 无菌 sterility.",
         "When Chinese characters directly connect with a target word, keep compact form like 打cricket / 的sterility (no extra spaces).",
         "Do NOT use parentheses style like 中文（word）.",
@@ -2520,14 +2901,11 @@ async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, qui
     return [];
   }
 
-  const localAlignment = normalizeAlignment(words, lexicon, [], paragraphsEn, paragraphsZh);
-  const localCovered = localAlignment.filter((row) => Array.isArray(row?.english_forms) && row.english_forms.length > 0).length;
-  const localCoverage = words.length > 0 ? localCovered / words.length : 1;
-
-  // Mixed mode only needs accurate English-form mapping for click/jump; local rules are usually enough.
-  if (String(generationMode || "").toLowerCase() === "mixed" && localCoverage >= 0.9) {
-    return localAlignment;
+  if (String(generationMode || "").toLowerCase() === "mixed") {
+    return [];
   }
+
+  const localAlignment = normalizeAlignment(words, lexicon, [], paragraphsEn, paragraphsZh);
 
   const vocabHints = lexicon
     .map((item) => {
@@ -3167,6 +3545,9 @@ app.post("/api/generate", async (req, res) => {
     const level = String(req.body.level || "中级");
     const quickMode = Boolean(req.body.quickMode);
     const generationMode = String(req.body.generationMode || "standard").toLowerCase() === "mixed" ? "mixed" : "standard";
+    if (!looksLikeWordListOnlyInput(rawWords)) {
+      return res.status(400).json({ error: "Please provide a word list only, not a full article or paragraph." });
+    }
     const words = splitWords(rawWords);
 
     if (words.length === 0) {
@@ -3182,13 +3563,175 @@ app.post("/api/generate", async (req, res) => {
     const traceStore = { calls: [] };
 
     const generateContent = async () => {
-      let lexicon = await generateLexicon(words, quickMode, selectedModel);
+      let lexicon = await generateLexicon(words, quickMode, selectedModel, generationMode === "mixed" ? "core" : "full");
       const baseLexiconRaw = cloneJsonSafe(lexicon, []);
       let mixedUsagePlan =
         generationMode === "mixed" ? await planMixedUsage(words, lexicon, quickMode, selectedModel) : [];
+      const mixedLexiconMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+      const mixedUsageRows = Array.isArray(mixedUsagePlan) ? mixedUsagePlan : [];
+      const rebuildMixedArticleFromChunks = (pack) => {
+        const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
+        return chunks
+          .map((chunk) => String(chunk?.article || "").trim())
+          .filter(Boolean)
+          .join("\n\n");
+      };
+      const summarizeBetweenWordIssues = (issues) =>
+        (Array.isArray(issues) ? issues : [])
+          .slice(0, 4)
+          .map((row) => `${row.from}->${row.to}:${row.chineseChars}字`)
+          .join("; ");
+      const computeSparseIssues = (articleText) => {
+        if (generationMode !== "mixed") {
+          return { betweenWordIssues: [], leadIssue: null, tailIssue: null };
+        }
+        const runsForGapCheck = buildArticleRuns(articleText, words, []);
+        return {
+          betweenWordIssues: findLargeWordGapsFromRuns(runsForGapCheck, 18),
+          leadIssue: findLeadWordGapFromRuns(runsForGapCheck, 12),
+          tailIssue: findTailWordGapFromRuns(runsForGapCheck, 20)
+        };
+      };
+      const getChunkIndexByWord = (pack) => {
+        const map = new Map();
+        const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
+        chunks.forEach((chunk, idx) => {
+          (Array.isArray(chunk?.words) ? chunk.words : []).forEach((word) => {
+            const key = String(word || "").trim().toLowerCase();
+            if (key && !map.has(key)) {
+              map.set(key, idx);
+            }
+          });
+        });
+        return map;
+      };
+      const pickRetryChunkIndexes = (pack, missingWords, overusedWords, betweenWordIssues, leadIssue, tailIssue) => {
+        const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
+        if (chunks.length === 0) return [];
+        const wordChunkMap = getChunkIndexByWord(pack);
+        const set = new Set();
+
+        if (leadIssue) {
+          set.add(0);
+        }
+        if (tailIssue) {
+          set.add(chunks.length - 1);
+        }
+        for (const word of Array.isArray(missingWords) ? missingWords : []) {
+          const idx = wordChunkMap.get(String(word || "").trim().toLowerCase());
+          if (Number.isInteger(idx)) set.add(idx);
+        }
+        for (const word of Array.isArray(overusedWords) ? overusedWords : []) {
+          const idx = wordChunkMap.get(String(word || "").trim().toLowerCase());
+          if (Number.isInteger(idx)) set.add(idx);
+        }
+        for (const issue of Array.isArray(betweenWordIssues) ? betweenWordIssues : []) {
+          const fromIdx = wordChunkMap.get(String(issue?.from || "").trim().toLowerCase());
+          const toIdx = wordChunkMap.get(String(issue?.to || "").trim().toLowerCase());
+          if (Number.isInteger(fromIdx)) set.add(fromIdx);
+          if (Number.isInteger(toIdx)) set.add(toIdx);
+        }
+        if (set.size === 0) {
+          set.add(0);
+        }
+        return Array.from(set).sort((a, b) => a - b);
+      };
+      const regenerateMixedChunks = async (pack, chunkIndexes, extraConstraint = "", strictLead = false) => {
+        const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
+        if (chunks.length === 0) return pack;
+        const indexes = Array.from(new Set(Array.isArray(chunkIndexes) ? chunkIndexes : [])).filter(
+          (idx) => Number.isInteger(idx) && idx >= 0 && idx < chunks.length
+        );
+        if (indexes.length === 0) return pack;
+        let deterministicChunkAppendUsed = Boolean(pack?.hasDeterministicChunkAppend);
+
+        for (const idx of indexes) {
+          const chunk = chunks[idx];
+          const chunkWords = Array.isArray(chunk?.words) ? chunk.words : [];
+          if (chunkWords.length === 0) continue;
+          const chunkSet = new Set(chunkWords.map((w) => String(w || "").toLowerCase()));
+          const chunkLexicon = chunkWords.map((w) => mixedLexiconMap.get(String(w || "").toLowerCase())).filter(Boolean);
+          const chunkPlan = mixedUsageRows.filter((item) => chunkSet.has(String(item?.word || "").toLowerCase()));
+          const strictLeadRules =
+            strictLead && idx === 0
+              ? [
+                  "The passage must start with a target word in the first sentence.",
+                  "The first sentence must contain a target word.",
+                  "Before the first target word, allow at most 8 Chinese characters.",
+                  "No Chinese-only intro."
+                ]
+              : [];
+          const denseConstraint = [
+            extraConstraint,
+            `Regenerate only this failed dense chunk ${idx + 1}/${chunks.length}.`,
+            strictLeadRules.join(" "),
+            "Coverage is validated by exact literal English surface forms.",
+            "Chinese translation does NOT count as usage.",
+            "Never replace a target word with Chinese-only wording."
+          ]
+            .filter(Boolean)
+            .join(" ");
+          let regenerated = await generateArticlePackage(
+            chunkWords,
+            level,
+            quickMode,
+            chunkLexicon,
+            "mixed_dense",
+            denseConstraint,
+            selectedModel,
+            chunkPlan
+          );
+          let chunkArticle = String(regenerated?.article || "").trim();
+          let localMissing = findMissingWords(chunkArticle, chunkWords);
+
+          if (localMissing.length > 0) {
+            const localRetryConstraint = [
+              denseConstraint,
+              "Important local fix: every target word in this chunk must appear as the exact English token.",
+              "Coverage is validated by exact literal English surface forms.",
+              "Chinese translation does NOT count as usage.",
+              "Never replace a target word with Chinese-only wording.",
+              `Missing local words: ${localMissing.join(", ")}.`
+            ]
+              .filter(Boolean)
+              .join(" ");
+            regenerated = await generateArticlePackage(
+              chunkWords,
+              level,
+              quickMode,
+              chunkLexicon,
+              "mixed_dense",
+              localRetryConstraint,
+              selectedModel,
+              chunkPlan
+            );
+            chunkArticle = String(regenerated?.article || "").trim();
+            localMissing = findMissingWords(chunkArticle, chunkWords);
+          }
+
+          if (localMissing.length > 0) {
+            chunkArticle = appendGuaranteedMissingWordsMixed(chunkArticle, localMissing);
+            deterministicChunkAppendUsed = true;
+          }
+
+          chunks[idx] = {
+            ...chunk,
+            article: chunkArticle,
+            words: chunkWords.slice()
+          };
+          if (idx === 0) {
+            pack.title = String(regenerated?.title || pack?.title || "").trim() || pack?.title || "";
+          }
+        }
+
+        pack.chunks = chunks;
+        pack.article = rebuildMixedArticleFromChunks(pack);
+        pack.hasDeterministicChunkAppend = deterministicChunkAppendUsed;
+        return pack;
+      };
       const generateMainArticle = async (extraConstraint = "") => {
         if (generationMode === "mixed") {
-          return generateMixedArticleByScenes(
+          return generateMixedDenseArticleByChunks(
             words,
             level,
             quickMode,
@@ -3207,46 +3750,87 @@ app.post("/api/generate", async (req, res) => {
       }
       let missing = findMissingWords(articlePack.article, words);
       let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
+      let sparseDiagnostics =
+        generationMode === "mixed"
+          ? computeSparseIssues(articlePack.article)
+          : { betweenWordIssues: [], leadIssue: null, tailIssue: null };
 
-      const retryCount = generationMode === "mixed" ? (quickMode ? 2 : 4) : quickMode ? 1 : 2;
-      for (let i = 0; i < retryCount && (missing.length > 0 || overused.length > 0); i += 1) {
-        articlePack = await generateMainArticle(
-          [
-            `Important fix (round ${i + 1}): ALL target words must be included.`,
-            `Missing words: ${missing.join(", ")}.`,
-            overused.length > 0
-              ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
-              : "",
-            "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
-            "Mixed mode should stay compact and natural, avoid long Chinese-only blocks."
-          ].join(" ")
-        );
+      const retryCount = generationMode === "mixed" ? (quickMode ? 0 : 1) : quickMode ? 1 : 2;
+      for (
+        let i = 0;
+        i < retryCount &&
+        (missing.length > 0 ||
+          overused.length > 0 ||
+          sparseDiagnostics.betweenWordIssues.length > 0 ||
+          sparseDiagnostics.leadIssue !== null ||
+          sparseDiagnostics.tailIssue !== null);
+        i += 1
+      ) {
+        const retryConstraint = [
+          `Important fix (round ${i + 1}): ALL target words must be included.`,
+          `Missing words: ${missing.join(", ")}.`,
+          overused.length > 0
+            ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
+            : "",
+          sparseDiagnostics.betweenWordIssues.length > 0
+            ? `Large Chinese gap(s) between adjacent target words: ${summarizeBetweenWordIssues(
+                sparseDiagnostics.betweenWordIssues
+              )}.`
+            : "",
+          sparseDiagnostics.leadIssue
+            ? `Lead Chinese-only gap before first target word is too long (${sparseDiagnostics.leadIssue.chineseChars} chars).`
+            : "",
+          sparseDiagnostics.tailIssue
+            ? `Tail Chinese-only gap after last target word is too long (${sparseDiagnostics.tailIssue.chineseChars} chars).`
+            : "",
+          "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
+          "Mixed mode should stay compact and natural, avoid long Chinese-only blocks.",
+          "Shorten Chinese distance between adjacent target words. Keep compact layout; no long Chinese paragraph.",
+          "Coverage is validated by exact literal English surface forms.",
+          "Chinese translation does NOT count as usage.",
+          "Never replace a target word with Chinese-only wording.",
+          "Every target word must appear in the final passage as the exact English token from input.",
+          "The passage must start with a target word in the first sentence.",
+          "Do not write a long Chinese-only introduction before the first target word.",
+          "Before the first target word, allow at most 12 Chinese characters.",
+          "Start directly with the mixed content, not with background setup."
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        if (generationMode === "mixed" && Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
+          const retryChunkIndexes = pickRetryChunkIndexes(
+            articlePack,
+            missing,
+            overused,
+            sparseDiagnostics.betweenWordIssues,
+            sparseDiagnostics.leadIssue,
+            sparseDiagnostics.tailIssue
+          );
+          articlePack = await regenerateMixedChunks(articlePack, retryChunkIndexes, retryConstraint, Boolean(sparseDiagnostics.leadIssue));
+        } else {
+          articlePack = await generateMainArticle(retryConstraint);
+        }
         if (generationMode === "mixed") {
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+          if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
+            articlePack.chunks = articlePack.chunks.map((chunk) => ({
+              ...chunk,
+              article: normalizeMixedArticleStyle(chunk?.article || "", chunk?.words || [], lexicon)
+            }));
+            articlePack.article = rebuildMixedArticleFromChunks(articlePack);
+          }
         }
         missing = findMissingWords(articlePack.article, words);
         overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
+        sparseDiagnostics =
+          generationMode === "mixed"
+            ? computeSparseIssues(articlePack.article)
+            : { betweenWordIssues: [], leadIssue: null, tailIssue: null };
       }
 
       let mixedSemanticRows = [];
-      if (generationMode === "mixed") {
-        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        mixedSemanticRows = await reviewMixedSemantics(words, lexicon, articlePack.article, quickMode, selectedModel);
-        const awkwardRows = mixedSemanticRows.filter((row) => !row?.natural || !row?.meaningOk);
-        if (awkwardRows.length > 0) {
-          articlePack.article = await rewriteAwkwardMixedClauses(
-            articlePack.article,
-            awkwardRows,
-            lexicon,
-            quickMode,
-            selectedModel
-          );
-          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        }
-        missing = findMissingWords(articlePack.article, words);
-      }
 
-      let ranMixedRewrite = false;
       if (missing.length > 0) {
         if (generationMode !== "mixed") {
           articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
@@ -3261,26 +3845,58 @@ app.post("/api/generate", async (req, res) => {
             selectedModel
           );
           articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewritten}`.trim();
+          if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
+            const lastChunkIndex = articlePack.chunks.length - 1;
+            const prev = String(articlePack.chunks[lastChunkIndex]?.article || "").trim();
+            articlePack.chunks[lastChunkIndex] = {
+              ...articlePack.chunks[lastChunkIndex],
+              article: `${prev}\n\n${rewritten}`.trim()
+            };
+          }
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-          ranMixedRewrite = true;
           missing = findMissingWords(articlePack.article, words);
+          overused = findOverusedWords(articlePack.article, words, 2);
+          sparseDiagnostics = computeSparseIssues(articlePack.article);
 
           if (missing.length > 0) {
             const fallbackRewrite = buildMissingRewriteFallback(missing, lexicon, generationMode);
             articlePack.article = `${String(articlePack.article || "").trim()}\n${fallbackRewrite}`.trim();
+            if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
+              const lastChunkIndex = articlePack.chunks.length - 1;
+              const prev = String(articlePack.chunks[lastChunkIndex]?.article || "").trim();
+              articlePack.chunks[lastChunkIndex] = {
+                ...articlePack.chunks[lastChunkIndex],
+                article: `${prev}\n${fallbackRewrite}`.trim()
+              };
+            }
             articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-            ranMixedRewrite = true;
             missing = findMissingWords(articlePack.article, words);
+            overused = findOverusedWords(articlePack.article, words, 2);
+            sparseDiagnostics = computeSparseIssues(articlePack.article);
           }
         }
       }
 
-      if (generationMode === "mixed" && shouldRunContextRefine(words, lexicon)) {
+      const contextGlossesBeforeRefine =
+        generationMode === "mixed" ? buildContextGlosses(words, baseLexiconRaw, lexicon, mixedUsagePlan, []) : [];
+      if (generationMode === "mixed" && shouldRunContextRefine(words, lexicon, generationMode, generationQuality, contextGlossesBeforeRefine)) {
         lexicon = await refineMixedLexiconByContext(words, lexicon, articlePack.article, quickMode, selectedModel);
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+        missing = findMissingWords(articlePack.article, words);
+        overused = findOverusedWords(articlePack.article, words, 2);
+        sparseDiagnostics = computeSparseIssues(articlePack.article);
       }
 
-      if (generationMode === "mixed" && ranMixedRewrite) {
+      if (
+        generationMode === "mixed" &&
+        generationQuality === "advanced" &&
+        missing.length === 0 &&
+        overused.length === 0 &&
+        sparseDiagnostics.betweenWordIssues.length === 0 &&
+        sparseDiagnostics.leadIssue === null &&
+        sparseDiagnostics.tailIssue === null &&
+        !articlePack?.hasDeterministicChunkAppend
+      ) {
         mixedSemanticRows = await reviewMixedSemantics(words, lexicon, articlePack.article, quickMode, selectedModel);
         const awkwardRows = mixedSemanticRows.filter((row) => !row?.natural || !row?.meaningOk);
         if (awkwardRows.length > 0) {
@@ -3292,6 +3908,9 @@ app.post("/api/generate", async (req, res) => {
             selectedModel
           );
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+          missing = findMissingWords(articlePack.article, words);
+          overused = findOverusedWords(articlePack.article, words, 2);
+          sparseDiagnostics = computeSparseIssues(articlePack.article);
         }
       }
 
@@ -3300,10 +3919,83 @@ app.post("/api/generate", async (req, res) => {
       }
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
       missing = findMissingWords(articlePack.article, words);
+      overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
+      sparseDiagnostics =
+        generationMode === "mixed"
+          ? computeSparseIssues(articlePack.article)
+          : { betweenWordIssues: [], leadIssue: null, tailIssue: null };
+
+      if (generationMode === "mixed" && sparseDiagnostics.leadIssue !== null) {
+        if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
+          articlePack = await regenerateMixedChunks(
+            articlePack,
+            [0],
+            [
+              "Lead gap hard fix.",
+              "The passage must start with a target word in the first sentence.",
+              "Before the first target word, allow at most 8 Chinese characters.",
+              "No Chinese-only intro."
+            ].join(" "),
+            true
+          );
+          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+          articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+          missing = findMissingWords(articlePack.article, words);
+          overused = findOverusedWords(articlePack.article, words, 2);
+          sparseDiagnostics = computeSparseIssues(articlePack.article);
+        }
+
+        if (sparseDiagnostics.leadIssue !== null) {
+          const fallbackWords =
+            Array.isArray(articlePack?.chunks?.[0]?.words) && articlePack.chunks[0].words.length > 0
+              ? articlePack.chunks[0].words.slice(0, 2)
+              : words.slice(0, 2);
+          const deterministicOpening = buildDeterministicMixedOpeningChunk(fallbackWords);
+          if (deterministicOpening) {
+            if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
+              const firstChunk = articlePack.chunks[0];
+              articlePack.chunks[0] = {
+                ...firstChunk,
+                article: `${deterministicOpening}\n${String(firstChunk?.article || "").trim()}`.trim()
+              };
+              articlePack.article = rebuildMixedArticleFromChunks(articlePack);
+            } else {
+              articlePack.article = `${deterministicOpening}\n${String(articlePack.article || "").trim()}`.trim();
+            }
+            articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+            articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+            missing = findMissingWords(articlePack.article, words);
+            overused = findOverusedWords(articlePack.article, words, 2);
+            sparseDiagnostics = computeSparseIssues(articlePack.article);
+          }
+        }
+      }
+
+      if (generationMode === "mixed" && missing.length > 0) {
+        articlePack.article = appendGuaranteedMissingWordsMixed(articlePack.article, missing);
+        if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
+          const lastChunkIndex = articlePack.chunks.length - 1;
+          const prev = String(articlePack.chunks[lastChunkIndex]?.article || "").trim();
+          articlePack.chunks[lastChunkIndex] = {
+            ...articlePack.chunks[lastChunkIndex],
+            article: appendGuaranteedMissingWordsMixed(prev, missing)
+          };
+          articlePack.hasDeterministicChunkAppend = true;
+        }
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        missing = findMissingWords(articlePack.article, words);
+      }
+
+      if (generationMode === "mixed" && missing.length > 0) {
+        throw new Error(
+          `Still missing exact English tokens (Chinese translation does not count): ${missing.join(", ")}`
+        );
+      }
 
       const paragraphsEn = splitParagraphs(articlePack.article);
       const paragraphsZh = generationMode === "mixed" ? [] : await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
-      const alignment = await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel, generationMode);
+      const alignment =
+        generationMode === "mixed" ? [] : await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel, generationMode);
       const baseLexicon = buildBaseLexiconForResponse(baseLexiconRaw);
       const contextGlosses =
         generationMode === "mixed" ? buildContextGlosses(words, baseLexiconRaw, lexicon, mixedUsagePlan, alignment) : [];
