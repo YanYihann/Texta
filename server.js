@@ -3188,6 +3188,52 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
   const output = [];
   const seen = new Set();
   const stripMarkers = (x) => String(x || "").replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "").trim();
+  const normalizeZhForMarkerMatch = (value) =>
+    String(value || "")
+      .replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, " ")
+      .replace(/^(?:n|v|adj|adv|prep|pron|conj|num|det|int)\.?\s*/i, "")
+      .replace(/[（(][^）)]*[）)]/g, " ")
+      .replace(/[，,；;、/|]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const splitZhMeaningCandidates = (meaning) => {
+    const full = normalizeZhForMarkerMatch(meaning);
+    const parts = full
+      .split(/[\s，,；;、/|]+/)
+      .map((x) => x.trim())
+      .filter((x) => x && /[\u4e00-\u9fff]/.test(x) && x.length >= 2);
+    const out = [];
+    if (full && /[\u4e00-\u9fff]/.test(full)) out.push(full);
+    for (const part of parts) {
+      if (!out.includes(part)) out.push(part);
+    }
+    return out;
+  };
+  const detectMarkerFromZhTerms = (zhTerms, senses) => {
+    const terms = (Array.isArray(zhTerms) ? zhTerms : [])
+      .map((x) => normalizeZhForMarkerMatch(x))
+      .filter((x) => x && /[\u4e00-\u9fff]/.test(x));
+    if (terms.length === 0) return "";
+    const rows = Array.isArray(senses) ? senses : [];
+    let best = { marker: "", score: 0 };
+    for (const sense of rows) {
+      const marker = String(sense?.marker || "").trim();
+      if (!marker) continue;
+      const candidates = splitZhMeaningCandidates(sense?.meaning || "");
+      for (const term of terms) {
+        for (const candidate of candidates) {
+          if (!candidate) continue;
+          const hit = term === candidate || term.includes(candidate) || candidate.includes(term);
+          if (!hit) continue;
+          const score = Math.max(candidate.length, term.length);
+          if (score > best.score) {
+            best = { marker, score };
+          }
+        }
+      }
+    }
+    return best.marker;
+  };
 
   const appearsInEn = (x) => {
     const v = String(x || "").trim().toLowerCase();
@@ -3231,9 +3277,10 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
     englishForms = Array.from(new Set([...englishForms, ...inferredForms]));
     if (englishForms.length === 0 && appearsInEn(word)) englishForms = [word];
     const markerFromArticle = detectMarkerFromForms([word, ...englishForms, ...inferredForms]);
+    const markerFromZhTerms = detectMarkerFromZhTerms(zhTerms, lex?.senses);
     output.push({
       word: lex?.word || word,
-      marker: String(markerFromArticle || item?.marker || lex?.senses?.[0]?.marker || "①"),
+      marker: String(markerFromArticle || markerFromZhTerms || item?.marker || lex?.senses?.[0]?.marker || "①"),
       zh_terms: zhTerms,
       english_forms: englishForms
     });
@@ -3253,9 +3300,10 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
     const inferredForms = inferFormsFromArticle(w, paragraphsEn).map(stripMarkers).filter(appearsInEn);
     const finalForms = inferredForms.length > 0 ? inferredForms : appearsInEn(String(w || "")) ? [String(w || "")] : [];
     const markerFromArticle = detectMarkerFromForms([String(w || ""), ...finalForms]);
+    const markerFromZhTerms = detectMarkerFromZhTerms(fallbackZh, lex?.senses);
     output.push({
       word: String(w || ""),
-      marker: String(markerFromArticle || lex?.senses?.[0]?.marker || "①"),
+      marker: String(markerFromArticle || markerFromZhTerms || lex?.senses?.[0]?.marker || "①"),
       zh_terms: fallbackZh.slice(0, 10),
       english_forms: finalForms
     });
