@@ -51,6 +51,82 @@ const LEXICON_CACHE_MAX = Math.max(50, Number(process.env.LEXICON_CACHE_MAX || 8
 const LEXICON_CHUNK_SIZE = Math.max(8, Number(process.env.LEXICON_CHUNK_SIZE || 12));
 const LEXICON_CHUNK_CONCURRENCY = Math.max(1, Math.min(4, Number(process.env.LEXICON_CHUNK_CONCURRENCY || 2)));
 const MIXED_HARD_WORDS = new Set(["derive", "sterility", "collapse", "process", "standard"]);
+const MIXED_FORCE_ENGLISH_WORDS = new Set([
+  "budget",
+  "relax",
+  "process",
+  "standard",
+  "attitude",
+  "motivation",
+  "cover",
+  "reject",
+  "derive",
+  "contribute",
+  "expenses",
+  "vacation"
+]);
+const MIXED_FORCE_ENGLISH_TEMPLATES = {
+  budget: {
+    preferredPattern: "用好budget",
+    forbiddenChineseOnly: ["用好预算", "控制预算", "预算"],
+    allowedTemplates: ["用好budget", "budget要控制好", "别超出budget"]
+  },
+  relax: {
+    preferredPattern: "需要relax一下",
+    forbiddenChineseOnly: ["放松一下", "需要放松", "放松"],
+    allowedTemplates: ["需要relax一下", "先relax一下", "周末可以relax"]
+  },
+  process: {
+    preferredPattern: "按照process做",
+    forbiddenChineseOnly: ["按照流程做", "流程", "过程"],
+    allowedTemplates: ["按照process做", "process要走完", "先看清process"]
+  },
+  standard: {
+    preferredPattern: "达到standard",
+    forbiddenChineseOnly: ["达到标准", "标准"],
+    allowedTemplates: ["达到standard", "standard不能降", "按standard执行"]
+  },
+  attitude: {
+    preferredPattern: "保持积极的attitude",
+    forbiddenChineseOnly: ["保持积极的态度", "态度"],
+    allowedTemplates: ["保持积极的attitude", "attitude要稳住", "调整attitude"]
+  },
+  motivation: {
+    preferredPattern: "找到motivation",
+    forbiddenChineseOnly: ["找到动力", "动力"],
+    allowedTemplates: ["找到motivation", "motivation又回来了", "保持motivation"]
+  },
+  cover: {
+    preferredPattern: "先cover重点",
+    forbiddenChineseOnly: ["覆盖重点", "涵盖重点", "覆盖"],
+    allowedTemplates: ["先cover重点", "这部分先cover掉", "尽量全面cover"]
+  },
+  reject: {
+    preferredPattern: "直接reject这个方案",
+    forbiddenChineseOnly: ["拒绝这个方案", "拒绝", "驳回"],
+    allowedTemplates: ["直接reject这个方案", "可以reject它", "别急着reject"]
+  },
+  derive: {
+    preferredPattern: "从数据里derive结论",
+    forbiddenChineseOnly: ["推导结论", "推导", "得出结论"],
+    allowedTemplates: ["从数据里derive结论", "先derive核心点", "可以derive出趋势"]
+  },
+  contribute: {
+    preferredPattern: "这会contribute到结果里",
+    forbiddenChineseOnly: ["有助于结果", "贡献", "促成"],
+    allowedTemplates: ["这会contribute到结果里", "持续contribute", "每个人都在contribute"]
+  },
+  expenses: {
+    preferredPattern: "控制expenses",
+    forbiddenChineseOnly: ["控制开销", "开销", "支出"],
+    allowedTemplates: ["控制expenses", "expenses别超线", "先记下expenses"]
+  },
+  vacation: {
+    preferredPattern: "准备vacation",
+    forbiddenChineseOnly: ["准备假期", "假期"],
+    allowedTemplates: ["准备vacation", "vacation快到了", "给vacation留预算"]
+  }
+};
 
 const lexiconCache = new Map();
 const modelTraceStorage = new AsyncLocalStorage();
@@ -1451,13 +1527,14 @@ async function planMixedUsage(words, lexicon, quickMode, model) {
     "You are planning natural usage for a Chinese-first mixed-language passage.",
     "Return ONLY JSON array in the same order as input words.",
     "Each item format:",
-    '{"word": string, "pos": string, "meaning": string, "scene": string, "allowed_pattern": string, "avoid": string}',
+    '{"word": string, "pos": string, "meaning": string, "scene": string, "allowed_pattern": string, "avoid": string, "must_keep_english": boolean, "preferred_pattern": string, "forbidden_chinese_only": string[], "allowed_templates": string[]}',
     "Rules:",
     "1) meaning should be the most natural context-appropriate Chinese meaning for daily-life usage, not just dictionary default.",
     "2) scene should be a short label like park, coffee-chat, home, reflection.",
     "3) allowed_pattern should be concise and practical.",
     "4) avoid should mention awkward/collocation mistakes to prevent forced usage.",
     "5) For hard words (e.g. derive/sterility/process/standard/collapse), prefer separate micro-scene or reflective short clause.",
+    "6) For must-keep words (budget/relax/process/standard/attitude/motivation/cover/reject/derive/contribute/expenses/vacation), set must_keep_english=true and provide preferred_pattern / forbidden_chinese_only / allowed_templates.",
     `Words: ${sourceWords.join(", ")}`,
     "Lexicon candidates:",
     lexGuide
@@ -1521,6 +1598,24 @@ async function generateMixedDenseArticleByChunks(words, level, quickMode, lexico
   const usageRows = Array.isArray(usagePlan) ? usagePlan : [];
   let hasDeterministicChunkAppend = false;
   const buildDenseChunkWithCoverage = async (groupWords, groupLexicon, groupPlan, constraintText) => {
+    const planMap = new Map((Array.isArray(groupPlan) ? groupPlan : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+    const lexMapLocal = new Map((Array.isArray(groupLexicon) ? groupLexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+    const localContextRows = groupWords.map((word) => {
+      const key = String(word || "").toLowerCase();
+      const plan = planMap.get(key);
+      const lexItem = lexMapLocal.get(key);
+      const contextMeaning = String(plan?.meaning || lexItem?.senses?.[0]?.meaning || "").trim();
+      const hints = buildMustKeepEnglishHints(word, contextMeaning);
+      return {
+        word,
+        contextMeaning,
+        mustKeepEnglish: Boolean(plan?.mustKeepEnglish ?? hints.mustKeepEnglish),
+        preferredPattern: String(plan?.preferredPattern || hints.preferredPattern || "").trim(),
+        forbiddenChineseOnly: normalizeChinesePhraseList(plan?.forbiddenChineseOnly || hints.forbiddenChineseOnly || [], 10),
+        allowedTemplates: Array.isArray(plan?.allowedTemplates) ? plan.allowedTemplates : hints.allowedTemplates
+      };
+    });
+
     let pack = await generateArticlePackage(
       groupWords,
       level,
@@ -1533,6 +1628,7 @@ async function generateMixedDenseArticleByChunks(words, level, quickMode, lexico
     );
     let article = String(pack?.article || "").trim();
     let localMissing = findMissingWords(article, groupWords);
+    let localSoftIssues = findSoftMissingByChineseSubstitution(article, localContextRows);
 
     if (localMissing.length > 0) {
       const localRetryConstraint = [
@@ -1557,6 +1653,13 @@ async function generateMixedDenseArticleByChunks(words, level, quickMode, lexico
       );
       article = String(pack?.article || "").trim();
       localMissing = findMissingWords(article, groupWords);
+      localSoftIssues = findSoftMissingByChineseSubstitution(article, localContextRows);
+    }
+
+    if (localSoftIssues.length > 0) {
+      article = restoreEnglishIntoChinesePhrase(article, localSoftIssues);
+      localMissing = findMissingWords(article, groupWords);
+      localSoftIssues = findSoftMissingByChineseSubstitution(article, localContextRows);
     }
 
     if (localMissing.length > 0) {
@@ -1841,6 +1944,80 @@ function appendGuaranteedMissingWordsMixed(article, missingWords) {
   return `${source}\n\n${lines.join("\n")}`.trim();
 }
 
+function extractChineseCandidatesFromContextRow(row) {
+  const meaningRaw = String(row?.contextMeaning || row?.meaning || "").trim();
+  const fromMeaning = meaningRaw
+    .split(/[、,，/;；]/)
+    .map((x) => String(x || "").trim())
+    .filter((x) => x.length >= 1 && /[\u4e00-\u9fff]/.test(x));
+  const fromForbidden = normalizeChinesePhraseList(row?.forbiddenChineseOnly || row?.forbidden_chinese_only || [], 10);
+  return Array.from(new Set([...fromForbidden, ...fromMeaning]))
+    .map((x) => String(x || "").trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+}
+
+function findSoftMissingByChineseSubstitution(article, contextGlosses) {
+  const source = String(article || "");
+  const rows = Array.isArray(contextGlosses) ? contextGlosses : [];
+  const issues = [];
+  for (const row of rows) {
+    const word = String(row?.word || "").trim();
+    if (!word) continue;
+    const regex = buildWordPresenceRegex(word);
+    if (regex && regex.test(source)) continue;
+    const candidates = extractChineseCandidatesFromContextRow(row);
+    if (candidates.length === 0) continue;
+    const matchedChinese = candidates.find((phrase) => source.includes(phrase));
+    if (!matchedChinese) continue;
+
+    issues.push({
+      word,
+      contextMeaning: String(row?.contextMeaning || row?.meaning || "").trim(),
+      matchedChinese,
+      mustKeepEnglish: Boolean(row?.mustKeepEnglish),
+      preferredPattern: String(row?.preferredPattern || "").trim(),
+      forbiddenChineseOnly: normalizeChinesePhraseList(row?.forbiddenChineseOnly || [], 10),
+      allowedTemplates: Array.isArray(row?.allowedTemplates) ? row.allowedTemplates.map((x) => String(x || "").trim()).filter(Boolean) : []
+    });
+  }
+  return issues;
+}
+
+function restoreEnglishIntoChinesePhrase(article, issues) {
+  let source = String(article || "");
+  const rows = Array.isArray(issues) ? issues : [];
+  for (const issue of rows) {
+    const word = String(issue?.word || "").trim();
+    if (!word) continue;
+    const regex = buildWordPresenceRegex(word);
+    if (regex && regex.test(source)) continue;
+    const phrases = Array.from(
+      new Set([
+        String(issue?.matchedChinese || "").trim(),
+        ...normalizeChinesePhraseList(issue?.forbiddenChineseOnly || [], 10),
+        ...extractChineseCandidatesFromContextRow(issue)
+      ])
+    )
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+
+    let replaced = false;
+    for (const phrase of phrases) {
+      if (!phrase) continue;
+      const phraseRegex = new RegExp(escapeRegex(phrase));
+      if (!phraseRegex.test(source)) continue;
+      source = source.replace(phraseRegex, word);
+      replaced = true;
+      const afterReplace = buildWordPresenceRegex(word);
+      if (afterReplace && afterReplace.test(source)) break;
+    }
+
+    if (!replaced) continue;
+  }
+  return source;
+}
+
 function defaultTitleByDate(wordCount) {
   const now = new Date();
   const y = now.getFullYear();
@@ -1859,6 +2036,44 @@ function levelToPromptText(level) {
   return "intermediate";
 }
 
+function normalizeChinesePhraseList(values, maxItems = 8) {
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map((item) => String(item || "").trim())
+        .filter((item) => item.length > 0 && /[\u4e00-\u9fff]/.test(item))
+    )
+  ).slice(0, maxItems);
+}
+
+function buildMustKeepEnglishHints(word, meaning) {
+  const normalizedWord = String(word || "").trim();
+  const key = normalizedWord.toLowerCase();
+  const normalizedMeaning = String(meaning || "").trim();
+  const mustKeepEnglish = MIXED_FORCE_ENGLISH_WORDS.has(key);
+  const preset = MIXED_FORCE_ENGLISH_TEMPLATES[key] || null;
+  const preferredPattern = String(preset?.preferredPattern || (mustKeepEnglish ? `${normalizedWord}要自然嵌入句子` : ""))
+    .trim()
+    .slice(0, 80);
+  const forbiddenChineseOnly = normalizeChinesePhraseList(
+    preset?.forbiddenChineseOnly || (mustKeepEnglish && normalizedMeaning ? [normalizedMeaning] : []),
+    8
+  );
+  const allowedTemplates = Array.from(
+    new Set(
+      (Array.isArray(preset?.allowedTemplates) ? preset.allowedTemplates : [])
+        .map((x) => String(x || "").trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 8);
+  return {
+    mustKeepEnglish,
+    preferredPattern,
+    forbiddenChineseOnly,
+    allowedTemplates
+  };
+}
+
 function buildFallbackMixedUsagePlan(words, lexicon) {
   const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
   return (Array.isArray(words) ? words : []).map((word) => {
@@ -1872,7 +2087,8 @@ function buildFallbackMixedUsagePlan(words, lexicon) {
       meaning: primaryMeaning || "词义待补充",
       scene: MIXED_HARD_WORDS.has(key) ? "brief-reflection" : "daily-life",
       allowedPattern: MIXED_HARD_WORDS.has(key) ? "keep this word in a short reflective clause" : "everyday-life natural clause",
-      avoid: MIXED_HARD_WORDS.has(key) ? "forcing this word into casual small talk" : ""
+      avoid: MIXED_HARD_WORDS.has(key) ? "forcing this word into casual small talk" : "",
+      ...buildMustKeepEnglishHints(word, primaryMeaning || "词义待补充")
     };
   });
 }
@@ -1881,6 +2097,14 @@ function normalizeMixedUsagePlan(rows, words, lexicon) {
   const fallback = buildFallbackMixedUsagePlan(words, lexicon);
   if (!Array.isArray(rows)) return fallback;
   const byWord = new Map();
+  const toBool = (value, defaultValue = false) => {
+    if (typeof value === "boolean") return value;
+    const normalized = String(value || "").trim().toLowerCase();
+    if (!normalized) return defaultValue;
+    if (["true", "1", "yes", "y", "是"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "否"].includes(normalized)) return false;
+    return defaultValue;
+  };
   for (const row of rows) {
     const word = String(row?.word || "").trim().toLowerCase();
     if (!word || byWord.has(word)) continue;
@@ -1890,6 +2114,22 @@ function normalizeMixedUsagePlan(rows, words, lexicon) {
   return fallback.map((base) => {
     const hit = byWord.get(String(base.word || "").toLowerCase()) || {};
     const meaning = String(hit?.meaning || "").trim() || base.meaning;
+    const fallbackHints = buildMustKeepEnglishHints(base.word, meaning);
+    const mustKeepEnglish = toBool(hit?.must_keep_english ?? hit?.mustKeepEnglish, fallbackHints.mustKeepEnglish);
+    const preferredPattern = String(hit?.preferred_pattern || hit?.preferredPattern || fallbackHints.preferredPattern)
+      .trim()
+      .slice(0, 80);
+    const forbiddenChineseOnly = normalizeChinesePhraseList(
+      hit?.forbidden_chinese_only || hit?.forbiddenChineseOnly || fallbackHints.forbiddenChineseOnly,
+      8
+    );
+    const allowedTemplates = Array.from(
+      new Set(
+        (Array.isArray(hit?.allowed_templates) ? hit.allowed_templates : Array.isArray(hit?.allowedTemplates) ? hit.allowedTemplates : [])
+          .map((x) => String(x || "").trim())
+          .filter(Boolean)
+      )
+    ).slice(0, 8);
     return {
       word: base.word,
       pos: normalizePosTag(hit?.pos || base.pos || ""),
@@ -1898,7 +2138,11 @@ function normalizeMixedUsagePlan(rows, words, lexicon) {
       allowedPattern: String(hit?.allowed_pattern || hit?.allowedPattern || base.allowedPattern || "")
         .trim()
         .slice(0, 120),
-      avoid: String(hit?.avoid || "").trim().slice(0, 120)
+      avoid: String(hit?.avoid || "").trim().slice(0, 120),
+      mustKeepEnglish,
+      preferredPattern,
+      forbiddenChineseOnly,
+      allowedTemplates: allowedTemplates.length > 0 ? allowedTemplates : fallbackHints.allowedTemplates
     };
   });
 }
@@ -1922,7 +2166,16 @@ function buildMixedUsagePlanGuide(usagePlan, wordsFilter) {
       const scene = String(item?.scene || "").trim() || "daily-life";
       const allowedPattern = String(item?.allowedPattern || "").trim();
       const avoid = String(item?.avoid || "").trim();
-      const tail = [allowedPattern ? `allowed: ${allowedPattern}` : "", avoid ? `avoid: ${avoid}` : ""]
+      const mustKeepEnglish = Boolean(item?.mustKeepEnglish);
+      const preferredPattern = String(item?.preferredPattern || "").trim();
+      const forbiddenChineseOnly = normalizeChinesePhraseList(item?.forbiddenChineseOnly || [], 6);
+      const tail = [
+        allowedPattern ? `allowed: ${allowedPattern}` : "",
+        avoid ? `avoid: ${avoid}` : "",
+        mustKeepEnglish ? "mustKeepEnglish: true" : "",
+        preferredPattern ? `preferred: ${preferredPattern}` : "",
+        forbiddenChineseOnly.length > 0 ? `forbidCN: ${forbiddenChineseOnly.join("/")}` : ""
+      ]
         .filter(Boolean)
         .join(" | ");
       return `${word} (${pos}) => ${meaning}; scene: ${scene}${tail ? `; ${tail}` : ""}`;
@@ -2314,6 +2567,110 @@ function buildBaseLexiconForResponse(lexicon) {
   });
 }
 
+function isPlaceholderDetailList(values) {
+  const rows = (Array.isArray(values) ? values : []).map((x) => String(x || "").trim()).filter(Boolean);
+  if (rows.length === 0) return true;
+  return rows.every((x) => x === "(暂无)");
+}
+
+function isPlaceholderDetailText(value) {
+  const text = String(value || "").trim();
+  return !text || text === "(暂无)";
+}
+
+function hasSparseDetailEntry(entry) {
+  const source = entry && typeof entry === "object" ? entry : {};
+  return (
+    isPlaceholderDetailList(source.collocations) ||
+    isPlaceholderDetailText(source.wordFormation) ||
+    isPlaceholderDetailList(source.synonyms) ||
+    isPlaceholderDetailList(source.antonyms)
+  );
+}
+
+function detailEntryScore(entry) {
+  const source = entry && typeof entry === "object" ? entry : {};
+  const collocationsCount = isPlaceholderDetailList(source.collocations) ? 0 : (Array.isArray(source.collocations) ? source.collocations.length : 0);
+  const synonymsCount = isPlaceholderDetailList(source.synonyms) ? 0 : (Array.isArray(source.synonyms) ? source.synonyms.length : 0);
+  const antonymsCount = isPlaceholderDetailList(source.antonyms) ? 0 : (Array.isArray(source.antonyms) ? source.antonyms.length : 0);
+  const formationScore = isPlaceholderDetailText(source.wordFormation) ? 0 : 1;
+  return collocationsCount * 2 + synonymsCount + antonymsCount + formationScore;
+}
+
+function mergeDetailEntry(baseEntry, detailPatch) {
+  const base = baseEntry && typeof baseEntry === "object" ? baseEntry : {};
+  const patch = detailPatch && typeof detailPatch === "object" ? detailPatch : {};
+  const merged = { ...base };
+  if (!isPlaceholderDetailList(patch.collocations)) {
+    merged.collocations = patch.collocations;
+  }
+  if (!isPlaceholderDetailText(patch.wordFormation)) {
+    merged.wordFormation = patch.wordFormation;
+  }
+  if (!isPlaceholderDetailList(patch.synonyms)) {
+    merged.synonyms = patch.synonyms;
+  }
+  if (!isPlaceholderDetailList(patch.antonyms)) {
+    merged.antonyms = patch.antonyms;
+  }
+  return merged;
+}
+
+async function enrichSingleWordDetailEntry(word, entry, model) {
+  if (!hasSparseDetailEntry(entry)) return entry;
+  const normalizedWord = String(word || "").trim();
+  if (!normalizedWord) return entry;
+  const prompt = [
+    "You are filling detailed IELTS vocabulary card fields for one word.",
+    "Return ONLY JSON object.",
+    '{"word":"...", "collocations": string[], "word_formation": string, "synonyms": string[], "antonyms": string[]}',
+    "Rules:",
+    "1) Keep collocations practical and high-frequency, format like: phrase (中文).",
+    "2) word_formation should be concise Chinese root/prefix/suffix explanation when useful.",
+    "3) synonyms/antonyms should be common exam-friendly words.",
+    "4) Do not return empty placeholders like (暂无) unless truly impossible.",
+    `Word: ${normalizedWord}`,
+    "Current card snapshot:",
+    JSON.stringify(
+      {
+        pos: String(entry?.pos || ""),
+        senses: Array.isArray(entry?.senses) ? entry.senses : [],
+        collocations: Array.isArray(entry?.collocations) ? entry.collocations : [],
+        wordFormation: String(entry?.wordFormation || ""),
+        synonyms: Array.isArray(entry?.synonyms) ? entry.synonyms : [],
+        antonyms: Array.isArray(entry?.antonyms) ? entry.antonyms : []
+      },
+      null,
+      2
+    )
+  ].join("\n");
+
+  try {
+    const text = await callOpenAIText(prompt, { maxTokens: 520, model, step: "vocab_detail_enrich" });
+    const parsed = extractJsonObject(text);
+    if (!parsed || typeof parsed !== "object") return entry;
+    const patch = {
+      collocations: Array.isArray(parsed?.collocations)
+        ? parsed.collocations.map((x) => sanitizeGlossText(x, 220)).filter(Boolean).slice(0, 8)
+        : [],
+      wordFormation: typeof parsed?.word_formation === "string"
+        ? sanitizeGlossText(parsed.word_formation, 500)
+        : typeof parsed?.wordFormation === "string"
+          ? sanitizeGlossText(parsed.wordFormation, 500)
+          : "",
+      synonyms: Array.isArray(parsed?.synonyms)
+        ? parsed.synonyms.map((x) => sanitizeGlossText(x, 120)).filter(Boolean).slice(0, 10)
+        : [],
+      antonyms: Array.isArray(parsed?.antonyms)
+        ? parsed.antonyms.map((x) => sanitizeGlossText(x, 120)).filter(Boolean).slice(0, 10)
+        : []
+    };
+    return mergeDetailEntry(entry, patch);
+  } catch {
+    return entry;
+  }
+}
+
 function buildContextGlosses(words, baseLexicon, contextLexicon, usagePlan, alignment) {
   const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
   const baseMap = new Map((Array.isArray(baseLexicon) ? baseLexicon : []).map((x) => [String(x?.word || "").toLowerCase(), x]));
@@ -2339,6 +2696,7 @@ function buildContextGlosses(words, baseLexicon, contextLexicon, usagePlan, alig
     const contextMeaning = hasChineseChars(contextMeaningFromPlan)
       ? contextMeaningFromPlan
       : contextMeaningFromLexicon || baseMeanings[0] || "";
+    const fallbackHints = buildMustKeepEnglishHints(word, contextMeaning);
 
     return {
       word: context?.word || base?.word || word,
@@ -2347,7 +2705,17 @@ function buildContextGlosses(words, baseLexicon, contextLexicon, usagePlan, alig
       contextMeaning,
       scene: String(plan?.scene || "").trim(),
       naturalPattern: String(plan?.allowedPattern || "").trim(),
-      avoid: String(plan?.avoid || "").trim()
+      avoid: String(plan?.avoid || "").trim(),
+      mustKeepEnglish: Boolean(plan?.mustKeepEnglish ?? fallbackHints.mustKeepEnglish),
+      preferredPattern: String(plan?.preferredPattern || fallbackHints.preferredPattern || "").trim(),
+      forbiddenChineseOnly: normalizeChinesePhraseList(plan?.forbiddenChineseOnly || fallbackHints.forbiddenChineseOnly || [], 8),
+      allowedTemplates: Array.from(
+        new Set(
+          (Array.isArray(plan?.allowedTemplates) ? plan.allowedTemplates : Array.isArray(fallbackHints.allowedTemplates) ? fallbackHints.allowedTemplates : [])
+            .map((x) => String(x || "").trim())
+            .filter(Boolean)
+        )
+      ).slice(0, 8)
     };
   });
 }
@@ -3537,12 +3905,26 @@ app.post("/api/vocab/detail", async (req, res) => {
     const generationQuality = normalizeGenerationQuality(req.body?.generationQuality || "normal");
     const generationProfile = getGenerationProfile(generationQuality);
     const selectedModel = generationProfile.model;
-    const quickMode = Boolean(req.body?.quickMode);
+    const quickMode = false;
     console.log("[api/vocab/detail] word =", word);
     const fullLexicon = await generateLexicon([word], quickMode, selectedModel, "full");
     console.log("[api/vocab/detail] full lexicon =", fullLexicon);
     const baseLexicon = buildBaseLexiconForResponse(fullLexicon);
-    const entry = Array.isArray(baseLexicon) && baseLexicon.length > 0 ? baseLexicon[0] : null;
+    let entry = Array.isArray(baseLexicon) && baseLexicon.length > 0 ? baseLexicon[0] : null;
+    if (entry && hasSparseDetailEntry(entry) && selectedModel !== OPENAI_MODEL_ADVANCED) {
+      const richerLexicon = await generateLexicon([word], false, OPENAI_MODEL_ADVANCED, "full");
+      const richerBaseLexicon = buildBaseLexiconForResponse(richerLexicon);
+      const richerEntry = Array.isArray(richerBaseLexicon) && richerBaseLexicon.length > 0 ? richerBaseLexicon[0] : null;
+      if (detailEntryScore(richerEntry) > detailEntryScore(entry)) {
+        entry = richerEntry;
+      }
+    }
+    if (entry && hasSparseDetailEntry(entry)) {
+      const enriched = await enrichSingleWordDetailEntry(word, entry, OPENAI_MODEL_ADVANCED || selectedModel);
+      if (detailEntryScore(enriched) >= detailEntryScore(entry)) {
+        entry = enriched;
+      }
+    }
     console.log("[api/vocab/detail] entry =", entry);
     if (!entry) {
       return res.status(404).json({ error: "Word detail not found." });
@@ -3701,6 +4083,23 @@ app.post("/api/generate", async (req, res) => {
           const chunkSet = new Set(chunkWords.map((w) => String(w || "").toLowerCase()));
           const chunkLexicon = chunkWords.map((w) => mixedLexiconMap.get(String(w || "").toLowerCase())).filter(Boolean);
           const chunkPlan = mixedUsageRows.filter((item) => chunkSet.has(String(item?.word || "").toLowerCase()));
+          const chunkPlanMap = new Map((Array.isArray(chunkPlan) ? chunkPlan : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+          const chunkLexMap = new Map((Array.isArray(chunkLexicon) ? chunkLexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+          const chunkContextRows = chunkWords.map((word) => {
+            const key = String(word || "").toLowerCase();
+            const plan = chunkPlanMap.get(key);
+            const lexItem = chunkLexMap.get(key);
+            const contextMeaning = String(plan?.meaning || lexItem?.senses?.[0]?.meaning || "").trim();
+            const hints = buildMustKeepEnglishHints(word, contextMeaning);
+            return {
+              word,
+              contextMeaning,
+              mustKeepEnglish: Boolean(plan?.mustKeepEnglish ?? hints.mustKeepEnglish),
+              preferredPattern: String(plan?.preferredPattern || hints.preferredPattern || "").trim(),
+              forbiddenChineseOnly: normalizeChinesePhraseList(plan?.forbiddenChineseOnly || hints.forbiddenChineseOnly || [], 10),
+              allowedTemplates: Array.isArray(plan?.allowedTemplates) ? plan.allowedTemplates : hints.allowedTemplates
+            };
+          });
           const strictLeadRules =
             strictLead && idx === 0
               ? [
@@ -3732,6 +4131,7 @@ app.post("/api/generate", async (req, res) => {
           );
           let chunkArticle = String(regenerated?.article || "").trim();
           let localMissing = findMissingWords(chunkArticle, chunkWords);
+          let localSoftIssues = findSoftMissingByChineseSubstitution(chunkArticle, chunkContextRows);
 
           if (localMissing.length > 0) {
             const localRetryConstraint = [
@@ -3756,6 +4156,13 @@ app.post("/api/generate", async (req, res) => {
             );
             chunkArticle = String(regenerated?.article || "").trim();
             localMissing = findMissingWords(chunkArticle, chunkWords);
+            localSoftIssues = findSoftMissingByChineseSubstitution(chunkArticle, chunkContextRows);
+          }
+
+          if (localSoftIssues.length > 0) {
+            chunkArticle = restoreEnglishIntoChinesePhrase(chunkArticle, localSoftIssues);
+            localMissing = findMissingWords(chunkArticle, chunkWords);
+            localSoftIssues = findSoftMissingByChineseSubstitution(chunkArticle, chunkContextRows);
           }
 
           if (localMissing.length > 0) {
@@ -4017,6 +4424,16 @@ app.post("/api/generate", async (req, res) => {
             overused = findOverusedWords(articlePack.article, words, 2);
             sparseDiagnostics = computeSparseIssues(articlePack.article);
           }
+        }
+      }
+
+      if (generationMode === "mixed") {
+        const restoreContextGlosses = buildContextGlosses(words, baseLexiconRaw, lexicon, mixedUsagePlan, []);
+        const softMissingIssues = findSoftMissingByChineseSubstitution(articlePack.article, restoreContextGlosses);
+        if (softMissingIssues.length > 0) {
+          articlePack.article = restoreEnglishIntoChinesePhrase(articlePack.article, softMissingIssues);
+          articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+          missing = findMissingWords(articlePack.article, words);
         }
       }
 
