@@ -17,6 +17,7 @@ const favoriteBtn = document.getElementById("favoriteBtn");
 const exportTitleInput = document.getElementById("exportTitle");
 const fontSizeSelectEl = document.getElementById("fontSizeSelect");
 const libraryFavoritesBtnEl = document.getElementById("libraryFavoritesBtn");
+let libraryHistoryBtnEl = document.getElementById("libraryHistoryBtn");
 const libraryNotebookBtnEl = document.getElementById("libraryNotebookBtn");
 const addUnknownToNotebookBtnEl = document.getElementById("addUnknownToNotebookBtn");
 const statusEl = document.getElementById("status");
@@ -628,6 +629,7 @@ function normalizeGenerationQualityValue(raw) {
 
 function normalizeLibraryModeValue(raw) {
   const mode = String(raw || "").toLowerCase();
+  if (mode === "history") return "history";
   if (mode === "notebook") return "notebook";
   return "favorites";
 }
@@ -1194,10 +1196,13 @@ function filterNotebookRows(rows) {
 
 function renderFavorites() {
   if (!favoritesListEl) return;
-  const favoritesSection = favorites.length
-    ? favorites
-        .map(
-          (item) => `
+  if (!favorites.length) {
+    favoritesListEl.innerHTML = `<div class="fav-meta">暂无收藏</div>`;
+    return;
+  }
+  favoritesListEl.innerHTML = favorites
+    .map(
+      (item) => `
       <div class="fav-item" data-fav-id="${escapeHtml(item.id)}">
         <div class="fav-left">
           <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
@@ -1209,14 +1214,19 @@ function renderFavorites() {
         </div>
       </div>
     `
-        )
-        .join("")
-    : `<div class="fav-meta">暂无收藏</div>`;
+    )
+    .join("");
+}
 
-  const historySection = historyEntries.length
-    ? historyEntries
-        .map(
-          (item) => `
+function renderHistorySidebar() {
+  if (!favoritesListEl) return;
+  if (!historyEntries.length) {
+    favoritesListEl.innerHTML = `<div class="fav-meta">暂无历史记录（生成后会自动保存到本地）。</div>`;
+    return;
+  }
+  favoritesListEl.innerHTML = historyEntries
+    .map(
+      (item) => `
       <div class="fav-item history-item" data-history-id="${escapeHtml(item.id)}">
         <div class="fav-left">
           <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
@@ -1227,20 +1237,8 @@ function renderFavorites() {
         </div>
       </div>
     `
-        )
-        .join("")
-    : `<div class="fav-meta">暂无历史记录（生成后会自动保存到本地）。</div>`;
-
-  favoritesListEl.innerHTML = `
-    <div class="fav-section">
-      <div class="fav-meta">收藏夹（会同步到云端）</div>
-      ${favoritesSection}
-    </div>
-    <div class="fav-section">
-      <div class="fav-meta">历史记录（仅本地浏览器）</div>
-      ${historySection}
-    </div>
-  `;
+    )
+    .join("");
 }
 
 function renderNotebookSidebar() {
@@ -1267,6 +1265,10 @@ function renderNotebookSidebar() {
 }
 
 function renderLibraryList() {
+  if (currentLibraryMode === "history") {
+    renderHistorySidebar();
+    return;
+  }
   if (currentLibraryMode === "notebook") {
     renderNotebookSidebar();
     return;
@@ -2107,6 +2109,7 @@ function setResultMode(mode) {
 
 function syncLibraryTabs() {
   libraryFavoritesBtnEl?.classList.toggle("active", currentLibraryMode === "favorites");
+  libraryHistoryBtnEl?.classList.toggle("active", currentLibraryMode === "history");
   libraryNotebookBtnEl?.classList.toggle("active", currentLibraryMode === "notebook");
 }
 
@@ -2143,6 +2146,32 @@ function setLibraryMode(mode, options = {}) {
     applyMobilePageLayout();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+}
+
+function ensureHistoryTabButton() {
+  if (libraryHistoryBtnEl) return libraryHistoryBtnEl;
+  const tabsWrap = libraryFavoritesBtnEl?.parentElement;
+  if (!tabsWrap) return null;
+  const btn = document.createElement("button");
+  btn.id = "libraryHistoryBtn";
+  btn.type = "button";
+  btn.className = "library-tab";
+  btn.textContent = "History";
+  if (libraryFavoritesBtnEl.nextSibling) {
+    tabsWrap.insertBefore(btn, libraryFavoritesBtnEl.nextSibling);
+  } else {
+    tabsWrap.appendChild(btn);
+  }
+  libraryHistoryBtnEl = btn;
+  return btn;
+}
+
+function bindHistoryTabButtonClick(button) {
+  if (!button || button.dataset.boundClick === "1") return;
+  button.dataset.boundClick = "1";
+  button.addEventListener("click", () => {
+    setLibraryMode("history", { navigate: false, focusArticle: Boolean(latestArticle) });
+  });
 }
 
 function refreshMobileNav() {
@@ -3432,6 +3461,8 @@ libraryFavoritesBtnEl?.addEventListener("click", () => {
   setLibraryMode("favorites", { navigate: false, focusArticle: Boolean(latestArticle) });
 });
 
+bindHistoryTabButtonClick(libraryHistoryBtnEl);
+
 libraryNotebookBtnEl?.addEventListener("click", () => {
   setLibraryMode("notebook", { navigate: false });
 });
@@ -3527,25 +3558,26 @@ favoritesListEl.addEventListener("click", (event) => {
     return;
   }
 
-  const deleteHistoryBtn = target.closest(".fav-delete[data-history-delete]");
-  if (deleteHistoryBtn) {
-    const id = deleteHistoryBtn.getAttribute("data-history-delete") || "";
-    historyEntries = historyEntries.filter((row) => row.id !== id);
-    saveHistoryEntries();
-    renderLibraryList();
-    statusEl.textContent = "已从历史记录删除。";
-    return;
-  }
-  const historyItemEl = target.closest(".history-item[data-history-id]");
-  if (historyItemEl) {
+  if (currentLibraryMode === "history") {
+    const deleteHistoryBtn = target.closest(".fav-delete[data-history-delete]");
+    if (deleteHistoryBtn) {
+      const id = deleteHistoryBtn.getAttribute("data-history-delete") || "";
+      historyEntries = historyEntries.filter((row) => row.id !== id);
+      saveHistoryEntries();
+      renderLibraryList();
+      statusEl.textContent = "已从历史记录删除。";
+      return;
+    }
+    const historyItemEl = target.closest(".history-item[data-history-id]");
+    if (!historyItemEl) return;
     const id = historyItemEl.getAttribute("data-history-id");
     const found = historyEntries.find((x) => x.id === id);
     if (!found) return;
     currentFavoriteId = "";
-    setLibraryMode("favorites", { focusArticle: true, mobilePage: "article" });
     latestWords = Array.isArray(found.words) ? found.words : [];
     wordsInput.value = latestWords.join(", ");
     applyArticleData(found);
+    setLibraryMode("history", { navigate: false, focusArticle: true, mobilePage: "article" });
     statusEl.textContent = "已从历史记录打开文章。";
     return;
   }
@@ -3608,6 +3640,8 @@ logoutBtnEl.addEventListener("click", async () => {
 async function init() {
   mountGuideButtonNearUser();
   applyThemePreference();
+  const historyBtn = ensureHistoryTabButton();
+  bindHistoryTabButtonClick(historyBtn);
   const ok = await loadMe();
   if (!ok) {
     location.href = "./index.html";
