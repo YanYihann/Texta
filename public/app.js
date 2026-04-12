@@ -118,9 +118,13 @@ let librarySyncRetryCount = 0;
 let librarySyncDirty = false;
 let generationElapsedTimer = null;
 let generationStartAtMs = 0;
+let notebookPrefetchInFlight = false;
+const notebookHydrationCompletedKeys = new Set();
+const notebookHydrationLastAttemptByKey = new Map();
 const LIBRARY_SYNC_DELAY_MS = 800;
 const LIBRARY_SYNC_RETRY_BASE_MS = 2500;
 const LIBRARY_SYNC_RETRY_MAX_MS = 60000;
+const NOTEBOOK_HYDRATION_RETRY_MS = 2 * 60 * 1000;
 const themeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 if ("speechSynthesis" in window && typeof window.speechSynthesis?.addEventListener === "function") {
   window.speechSynthesis.addEventListener("voiceschanged", () => {
@@ -2414,6 +2418,14 @@ function needsVocabHydration(item) {
   return needsDetailHydration(item) || needsPronunciationHydration(item);
 }
 
+function shouldAttemptNotebookHydrationForKey(key) {
+  const normalizedKey = keyifyWord(key || "");
+  if (!normalizedKey) return false;
+  if (notebookHydrationCompletedKeys.has(normalizedKey)) return false;
+  const lastAt = Number(notebookHydrationLastAttemptByKey.get(normalizedKey) || 0);
+  return Date.now() - lastAt >= NOTEBOOK_HYDRATION_RETRY_MS;
+}
+
 function upsertWordEntryByKey(list, key, nextEntry) {
   const rows = Array.isArray(list) ? list.slice() : [];
   const index = rows.findIndex((item) => keyifyWord(item?.word || item?.key || "") === key);
@@ -2436,11 +2448,17 @@ function mergeDetailedEntryIntoState(entry) {
   const key = keyifyWord(mergedEntry?.word || "");
   if (!key) return;
   vocabDetailErrorTipByKey.delete(key);
+  notebookHydrationLastAttemptByKey.delete(key);
 
   latestLexicon = upsertWordEntryByKey(latestLexicon, key, mergedEntry);
   latestBaseLexicon = upsertWordEntryByKey(latestBaseLexicon, key, mergedEntry);
   latestContextLexicon = upsertWordEntryByKey(latestContextLexicon, key, mergedEntry);
   notebookEntries = upsertWordEntryByKey(notebookEntries, key, mergedEntry);
+  if (!needsVocabHydration(mergedEntry)) {
+    notebookHydrationCompletedKeys.add(key);
+  } else {
+    notebookHydrationCompletedKeys.delete(key);
+  }
 }
 
 async function fetchVocabDetailEntry(word) {
@@ -2584,28 +2602,43 @@ function collectPendingNotebookVocabHydrationTargets(entries) {
     const current = findLexiconItemByKey(key) || item;
     const word = String(current?.word || item?.word || "").trim();
     if (!word) continue;
-    if (!needsVocabHydration(current)) continue;
+    if (!needsVocabHydration(current)) {
+      notebookHydrationCompletedKeys.add(key);
+      notebookHydrationLastAttemptByKey.delete(key);
+      continue;
+    }
+    if (notebookHydrationCompletedKeys.has(key)) {
+      notebookHydrationCompletedKeys.delete(key);
+    }
+    if (!shouldAttemptNotebookHydrationForKey(key)) continue;
     targets.push({ key, word });
   }
   return targets;
 }
 
 async function prefetchNotebookVocabDetails(entries) {
+  if (notebookPrefetchInFlight) return;
   const targets = collectPendingNotebookVocabHydrationTargets(entries);
   if (targets.length === 0) return;
+  notebookPrefetchInFlight = true;
   console.log("[notebook-prefetch] start targets =", targets.map((t) => t.word));
-  const settled = await Promise.all(
-    targets.map(async (target) => {
-      const detail = await fetchVocabDetailEntry(target.word);
-      if (!detail) return false;
-      mergeDetailedEntryIntoState(detail);
-      return true;
-    })
-  );
-  if (settled.some(Boolean)) {
-    refreshVocabularySurfaces();
+  try {
+    const settled = await Promise.all(
+      targets.map(async (target) => {
+        notebookHydrationLastAttemptByKey.set(target.key, Date.now());
+        const detail = await fetchVocabDetailEntry(target.word);
+        if (!detail) return { fetched: false, resolved: false };
+        mergeDetailedEntryIntoState(detail);
+        return { fetched: true, resolved: !needsVocabHydration(detail) };
+      })
+    );
+    if (settled.some((row) => row?.fetched)) {
+      refreshVocabularySurfaces();
+    }
+    console.log("[notebook-prefetch] done");
+  } finally {
+    notebookPrefetchInFlight = false;
   }
-  console.log("[notebook-prefetch] done");
 }
 
 function buildStudyControls(item) {
@@ -2812,7 +2845,7 @@ function renderNotebookView() {
   const frag = document.createDocumentFragment();
   filteredRows.forEach((item) => frag.appendChild(renderLexiconCard(item)));
   notebookEntriesEl.replaceChildren(frag);
-  if (currentLibraryMode === "notebook") {
+  if (currentLibraryMode === "notebook" && !notebookPrefetchInFlight) {
     void prefetchNotebookVocabDetails(filteredRows);
   }
 
