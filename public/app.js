@@ -681,10 +681,14 @@ function sanitizeTextListForUi(rawList, maxLen = 220, maxItems = 20) {
 
 function sanitizeLexiconItemForUi(item) {
   const source = item && typeof item === "object" ? item : {};
+  const usIpa = resolveIpaFromItem(source, "us");
+  const ukIpa = resolveIpaFromItem(source, "uk");
   return {
     ...source,
     word: sanitizeGlossTextForUi(source.word, 80) || String(source.word || "").trim(),
     pos: normalizePosTagLabel(source.pos),
+    usIpa,
+    ukIpa,
     senses: sanitizeSenseRowsForUi(source.senses),
     collocations: sanitizeTextListForUi(source.collocations, 220, 20),
     synonyms: sanitizeTextListForUi(source.synonyms, 120, 30),
@@ -2297,19 +2301,38 @@ function speakGlossaryByKeyWithAccent(key, accent) {
     return;
   }
 
+  const accentLang = accent === "uk" ? "en-GB" : "en-US";
   const selectedVoice = pickVoiceForAccent(accent);
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(word);
-  u.lang = selectedVoice?.lang || (accent === "uk" ? "en-GB" : "en-US");
-  if (selectedVoice) {
-    u.voice = selectedVoice;
-  }
-  u.rate = 1;
-  u.pitch = 1;
-  if (window.speechSynthesis.paused) {
-    window.speechSynthesis.resume();
-  }
-  window.speechSynthesis.speak(u);
+  const speakOnce = (voice) => {
+    const u = new SpeechSynthesisUtterance(word);
+    u.lang = voice?.lang || accentLang;
+    if (voice) {
+      u.voice = voice;
+    }
+    u.rate = 1;
+    u.pitch = 1;
+    return u;
+  };
+
+  let retried = false;
+  const runSpeak = (voice) => {
+    window.speechSynthesis.cancel();
+    const utterance = speakOnce(voice);
+    utterance.onerror = () => {
+      if (!retried) {
+        retried = true;
+        runSpeak(null);
+        return;
+      }
+      statusEl.textContent = "发音播放失败，请重试。";
+    };
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+    window.speechSynthesis.speak(utterance);
+  };
+
+  runSpeak(selectedVoice);
 }
 
 function renderParagraphBlocks(
@@ -2380,6 +2403,15 @@ function needsDetailHydration(item) {
     isPlaceholderDetailList(item?.synonyms) ||
     isPlaceholderDetailList(item?.antonyms)
   );
+}
+
+function needsPronunciationHydration(item) {
+  if (!item || typeof item !== "object") return false;
+  return !resolveIpaFromItem(item, "us") || !resolveIpaFromItem(item, "uk");
+}
+
+function needsVocabHydration(item) {
+  return needsDetailHydration(item) || needsPronunciationHydration(item);
 }
 
 function upsertWordEntryByKey(list, key, nextEntry) {
@@ -2488,7 +2520,7 @@ async function ensureVocabDetailForKey(key) {
   if (!current) return;
   const word = String(current?.word || "").trim();
   console.log("[detail] clicked word =", word);
-  const shouldHydrate = needsDetailHydration(current);
+  const shouldHydrate = needsVocabHydration(current);
   console.log("[detail] needs hydration =", shouldHydrate);
   if (!shouldHydrate) return;
   if (!word) return;
@@ -2515,7 +2547,7 @@ function collectPendingVocabDetailHydrationTargets() {
     const current = findLexiconItemByKey(key) || item;
     const word = String(current?.word || item?.word || "").trim();
     if (!word) continue;
-    if (!needsDetailHydration(current)) continue;
+    if (!needsVocabHydration(current)) continue;
     targets.push({ key, word });
   }
   return targets;
@@ -2539,6 +2571,41 @@ async function prefetchVocabDetailEntriesForCurrentArticle() {
     refreshVocabularySurfaces();
   }
   console.log("[detail-prefetch] done");
+}
+
+function collectPendingNotebookVocabHydrationTargets(entries) {
+  const source = Array.isArray(entries) ? entries : [];
+  const seen = new Set();
+  const targets = [];
+  for (const item of source) {
+    const key = keyifyWord(item?.word || item?.key || "");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const current = findLexiconItemByKey(key) || item;
+    const word = String(current?.word || item?.word || "").trim();
+    if (!word) continue;
+    if (!needsVocabHydration(current)) continue;
+    targets.push({ key, word });
+  }
+  return targets;
+}
+
+async function prefetchNotebookVocabDetails(entries) {
+  const targets = collectPendingNotebookVocabHydrationTargets(entries);
+  if (targets.length === 0) return;
+  console.log("[notebook-prefetch] start targets =", targets.map((t) => t.word));
+  const settled = await Promise.all(
+    targets.map(async (target) => {
+      const detail = await fetchVocabDetailEntry(target.word);
+      if (!detail) return false;
+      mergeDetailedEntryIntoState(detail);
+      return true;
+    })
+  );
+  if (settled.some(Boolean)) {
+    refreshVocabularySurfaces();
+  }
+  console.log("[notebook-prefetch] done");
 }
 
 function buildStudyControls(item) {
@@ -2745,6 +2812,9 @@ function renderNotebookView() {
   const frag = document.createDocumentFragment();
   filteredRows.forEach((item) => frag.appendChild(renderLexiconCard(item)));
   notebookEntriesEl.replaceChildren(frag);
+  if (currentLibraryMode === "notebook") {
+    void prefetchNotebookVocabDetails(filteredRows);
+  }
 
   if (currentNotebookFocusKey) {
     window.requestAnimationFrame(() => focusNotebookEntry(currentNotebookFocusKey));
@@ -3153,7 +3223,7 @@ articleBlocksEl.addEventListener("click", (event) => {
     const key = mark.getAttribute("data-word-key");
     const currentEntry = findLexiconItemByKey(key || "");
     console.log("[detail] clicked word =", String(currentEntry?.word || key || ""));
-    console.log("[detail] needs hydration =", needsDetailHydration(currentEntry));
+    console.log("[detail] needs hydration =", needsVocabHydration(currentEntry));
     jumpToGlossaryKey(key || "");
     return;
   }
@@ -3167,7 +3237,7 @@ articleBlocksEl.addEventListener("click", (event) => {
   if (keys.length > 0) {
     const currentEntry = findLexiconItemByKey(keys[0]);
     console.log("[detail] clicked word =", String(currentEntry?.word || keys[0] || ""));
-    console.log("[detail] needs hydration =", needsDetailHydration(currentEntry));
+    console.log("[detail] needs hydration =", needsVocabHydration(currentEntry));
     jumpToGlossaryKey(keys[0]);
   }
 });
@@ -3181,7 +3251,7 @@ glossaryEl.addEventListener("click", (event) => {
     if (itemKey) {
       const currentEntry = findLexiconItemByKey(itemKey);
       console.log("[detail] clicked word =", String(currentEntry?.word || itemKey || ""));
-      console.log("[detail] needs hydration =", needsDetailHydration(currentEntry));
+      console.log("[detail] needs hydration =", needsVocabHydration(currentEntry));
       void ensureVocabDetailForKey(itemKey);
     }
   }
@@ -3211,7 +3281,7 @@ notebookEntriesEl?.addEventListener("click", (event) => {
     if (itemKey) {
       const currentEntry = findLexiconItemByKey(itemKey);
       console.log("[detail] clicked word =", String(currentEntry?.word || itemKey || ""));
-      console.log("[detail] needs hydration =", needsDetailHydration(currentEntry));
+      console.log("[detail] needs hydration =", needsVocabHydration(currentEntry));
       void ensureVocabDetailForKey(itemKey);
     }
   }
