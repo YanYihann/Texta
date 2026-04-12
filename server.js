@@ -250,7 +250,18 @@ function buildAdminModelDiagnostics(traceStore) {
   };
 }
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    setHeaders: (res, filePath) => {
+      const name = path.basename(String(filePath || "")).toLowerCase();
+      if (name === "app.html" || name === "app.js" || name === "style.css" || name === "site-config.js") {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+    }
+  })
+);
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   const allowAll = FRONTEND_ORIGIN === "*";
