@@ -91,7 +91,7 @@ let authToken = localStorage.getItem("texta_auth_token") || "";
 let currentUser = null;
 let currentMobilePage = "home";
 let currentFontSize = localStorage.getItem("texta_font_size") || "small";
-let currentLibraryMode = localStorage.getItem("texta_library_mode") || "favorites";
+let currentLibraryMode = "favorites";
 let currentNotebookFocusKey = "";
 let notebookSearchTerm = "";
 let notebookPosFilter = "all";
@@ -101,11 +101,13 @@ const vocabDetailErrorTipByKey = new Map();
 const DEBUG_DISABLE_VOCAB_DETAIL_CACHE = false;
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
+const HISTORY_KEY = "texta_history_v1";
 const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
 const NOTEBOOK_KEY = "texta_notebook_v1";
 const GUIDE_FORCE_OPEN_KEY = "texta_guide_force_open";
 const THEME_PREF_KEY = "texta_theme_preference";
 let favorites = [];
+let historyEntries = [];
 let vocabPrefs = {};
 let notebookEntries = [];
 let themePreference = localStorage.getItem(THEME_PREF_KEY) || "system";
@@ -544,6 +546,20 @@ function saveFavorites(options = {}) {
   scheduleLibrarySync();
 }
 
+function loadHistoryEntries() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    historyEntries = Array.isArray(parsed) ? parsed.map(normalizeFavorite) : [];
+  } catch {
+    historyEntries = [];
+  }
+}
+
+function saveHistoryEntries() {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(historyEntries.slice(0, 80)));
+}
+
 function loadVocabPrefs() {
   try {
     const raw = localStorage.getItem(VOCAB_PREFS_KEY);
@@ -608,6 +624,12 @@ function normalizeGenerationModeValue(raw) {
 
 function normalizeGenerationQualityValue(raw) {
   return String(raw || "").toLowerCase() === "advanced" ? "advanced" : "normal";
+}
+
+function normalizeLibraryModeValue(raw) {
+  const mode = String(raw || "").toLowerCase();
+  if (mode === "notebook") return "notebook";
+  return "favorites";
 }
 
 function normalizePosTagLabel(raw) {
@@ -1172,13 +1194,10 @@ function filterNotebookRows(rows) {
 
 function renderFavorites() {
   if (!favoritesListEl) return;
-  if (!favorites.length) {
-    favoritesListEl.innerHTML = `<div class="fav-meta">暂无收藏</div>`;
-    return;
-  }
-  favoritesListEl.innerHTML = favorites
-    .map(
-      (item) => `
+  const favoritesSection = favorites.length
+    ? favorites
+        .map(
+          (item) => `
       <div class="fav-item" data-fav-id="${escapeHtml(item.id)}">
         <div class="fav-left">
           <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
@@ -1190,8 +1209,38 @@ function renderFavorites() {
         </div>
       </div>
     `
-    )
-    .join("");
+        )
+        .join("")
+    : `<div class="fav-meta">暂无收藏</div>`;
+
+  const historySection = historyEntries.length
+    ? historyEntries
+        .map(
+          (item) => `
+      <div class="fav-item history-item" data-history-id="${escapeHtml(item.id)}">
+        <div class="fav-left">
+          <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
+          <div class="fav-meta">${escapeHtml(item.savedAt || "")}</div>
+        </div>
+        <div class="fav-actions">
+          <button class="fav-delete" type="button" data-history-delete="${escapeHtml(item.id)}">删除</button>
+        </div>
+      </div>
+    `
+        )
+        .join("")
+    : `<div class="fav-meta">暂无历史记录（生成后会自动保存到本地）。</div>`;
+
+  favoritesListEl.innerHTML = `
+    <div class="fav-section">
+      <div class="fav-meta">收藏夹（会同步到云端）</div>
+      ${favoritesSection}
+    </div>
+    <div class="fav-section">
+      <div class="fav-meta">历史记录（仅本地浏览器）</div>
+      ${historySection}
+    </div>
+  `;
 }
 
 function renderNotebookSidebar() {
@@ -2072,7 +2121,7 @@ function focusNotebookEntry(key) {
 }
 
 function setLibraryMode(mode, options = {}) {
-  currentLibraryMode = mode === "notebook" ? "notebook" : "favorites";
+  currentLibraryMode = normalizeLibraryModeValue(mode);
   localStorage.setItem("texta_library_mode", currentLibraryMode);
   syncLibraryTabs();
   renderLibraryList();
@@ -3070,7 +3119,8 @@ function applyArticleData(data) {
     renderUsage(data.usage);
   }
   renderAdminDiagnostics(data?.adminDiagnostics || null);
-  currentFavoriteId = String(data.id || "").trim();
+  const candidateFavoriteId = String(data.id || "").trim();
+  currentFavoriteId = candidateFavoriteId && favorites.some((item) => item.id === candidateFavoriteId) ? candidateFavoriteId : "";
 
   const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
   articleTitleEl.textContent = finalTitle;
@@ -3157,6 +3207,32 @@ function favoriteFromCurrent() {
   };
 }
 
+function historyFromCurrent() {
+  return {
+    ...favoriteFromCurrent(),
+    id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  };
+}
+
+function saveCurrentArticleToHistory() {
+  if (!latestArticle) return;
+  const next = historyFromCurrent();
+  const existingIndex = historyEntries.findIndex(
+    (item) =>
+      String(item?.article || "") === String(next.article || "") &&
+      JSON.stringify(Array.isArray(item?.words) ? item.words : []) === JSON.stringify(Array.isArray(next.words) ? next.words : [])
+  );
+  if (existingIndex >= 0) {
+    historyEntries.splice(existingIndex, 1);
+  }
+  historyEntries.unshift(next);
+  historyEntries = historyEntries.slice(0, 80);
+  saveHistoryEntries();
+  if (currentLibraryMode === "favorites") {
+    renderLibraryList();
+  }
+}
+
 generateBtn.addEventListener("click", async () => {
   const wordsText = wordsInput.value.trim();
   const level = levelSelect.value;
@@ -3213,6 +3289,7 @@ generateBtn.addEventListener("click", async () => {
       }
 
       applyArticleData({ ...data, words: latestWords });
+      saveCurrentArticleToHistory();
       void prefetchVocabDetailEntriesForCurrentArticle();
       const usedCost = Number(data?.usageCost || (generationQuality === "advanced" ? 5 : 1));
       const elapsedMs = generationStartAtMs ? Date.now() - generationStartAtMs : 0;
@@ -3450,6 +3527,29 @@ favoritesListEl.addEventListener("click", (event) => {
     return;
   }
 
+  const deleteHistoryBtn = target.closest(".fav-delete[data-history-delete]");
+  if (deleteHistoryBtn) {
+    const id = deleteHistoryBtn.getAttribute("data-history-delete") || "";
+    historyEntries = historyEntries.filter((row) => row.id !== id);
+    saveHistoryEntries();
+    renderLibraryList();
+    statusEl.textContent = "已从历史记录删除。";
+    return;
+  }
+  const historyItemEl = target.closest(".history-item[data-history-id]");
+  if (historyItemEl) {
+    const id = historyItemEl.getAttribute("data-history-id");
+    const found = historyEntries.find((x) => x.id === id);
+    if (!found) return;
+    currentFavoriteId = "";
+    setLibraryMode("favorites", { focusArticle: true, mobilePage: "article" });
+    latestWords = Array.isArray(found.words) ? found.words : [];
+    wordsInput.value = latestWords.join(", ");
+    applyArticleData(found);
+    statusEl.textContent = "已从历史记录打开文章。";
+    return;
+  }
+
   const rename = target.closest(".fav-rename[data-fav-rename]");
   if (rename) {
     const renameId = rename.getAttribute("data-fav-rename");
@@ -3513,7 +3613,9 @@ async function init() {
     location.href = "./index.html";
     return;
   }
+  currentLibraryMode = normalizeLibraryModeValue(localStorage.getItem("texta_library_mode"));
   loadFavorites();
+  loadHistoryEntries();
   loadVocabPrefs();
   loadNotebookEntries();
   await hydrateLibraryFromServer();

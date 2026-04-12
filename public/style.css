@@ -1314,6 +1314,11 @@ button:disabled {
   gap: 8px;
 }
 
+.fav-section {
+  display: grid;
+  gap: 8px;
+}
+
 .empty-library {
   padding: 14px 12px;
   border: 1px dashed #dbe1ea;
