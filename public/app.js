@@ -2156,12 +2156,8 @@ function ensureHistoryTabButton() {
   btn.id = "libraryHistoryBtn";
   btn.type = "button";
   btn.className = "library-tab";
-  btn.textContent = "History";
-  if (libraryFavoritesBtnEl.nextSibling) {
-    tabsWrap.insertBefore(btn, libraryFavoritesBtnEl.nextSibling);
-  } else {
-    tabsWrap.appendChild(btn);
-  }
+  btn.textContent = "历史";
+  tabsWrap.insertBefore(btn, libraryFavoritesBtnEl);
   libraryHistoryBtnEl = btn;
   return btn;
 }
