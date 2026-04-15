@@ -21,6 +21,6 @@ services:
       - key: OPENAI_RETRY_COUNT
         value: "2"
       - key: FRONTEND_ORIGIN
-        value: https://yanyihann.github.io
+        value: https://texta.yanyihan.top,http://texta.yanyihan.top,https://yanyihann.github.io
       - key: DATABASE_URL
         sync: false

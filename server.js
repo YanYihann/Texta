@@ -42,6 +42,7 @@ const OPENAI_BASE_URL = normalizeBaseUrl(process.env.OPENAI_BASE_URL);
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 30000);
 const OPENAI_RETRY_COUNT = Number(process.env.OPENAI_RETRY_COUNT || 2);
 const FRONTEND_ORIGIN = String(process.env.FRONTEND_ORIGIN || "*").trim();
+const FRONTEND_ORIGIN_RULES = buildAllowedOrigins(FRONTEND_ORIGIN);
 const AUTH_TOKEN_TTL_MS = Number(process.env.AUTH_TOKEN_TTL_MS || 1000 * 60 * 60 * 24 * 7);
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const ADMIN_NAME = String(process.env.ADMIN_NAME || "Admin").trim();
@@ -263,19 +264,12 @@ app.use(
   })
 );
 app.use((req, res, next) => {
-  const origin = req.headers.origin || "";
-  const allowAll = FRONTEND_ORIGIN === "*";
-  const allowed =
-    allowAll ||
-    origin === FRONTEND_ORIGIN ||
-    (FRONTEND_ORIGIN.includes(",") &&
-      FRONTEND_ORIGIN
-        .split(",")
-        .map((x) => x.trim())
-        .includes(origin));
+  const origin = normalizeOrigin(req.headers.origin || "");
+  const allowAll = FRONTEND_ORIGIN_RULES.allowAll;
+  const allowed = allowAll || (Boolean(origin) && FRONTEND_ORIGIN_RULES.origins.has(origin));
 
   if (allowed) {
-    res.setHeader("Access-Control-Allow-Origin", allowAll ? "*" : origin || FRONTEND_ORIGIN);
+    res.setHeader("Access-Control-Allow-Origin", allowAll ? "*" : origin);
     res.setHeader("Vary", "Origin");
   }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -1559,6 +1553,54 @@ async function planMixedUsage(words, lexicon, quickMode, model) {
     console.error("Failed to plan mixed usage:", error.message);
     return buildFallbackMixedUsagePlan(sourceWords, lexicon);
   }
+}
+
+function normalizeOrigin(rawOrigin) {
+  const value = String(rawOrigin || "").trim();
+  if (!value) {
+    return "";
+  }
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+}
+
+function buildAllowedOrigins(raw) {
+  const configured = String(raw || "").trim();
+  if (!configured || configured === "*") {
+    return { allowAll: true, origins: new Set() };
+  }
+
+  const origins = new Set();
+  const tokens = configured
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  for (const token of tokens) {
+    if (token === "*") {
+      return { allowAll: true, origins: new Set() };
+    }
+
+    const tryValues =
+      token.startsWith("http://") || token.startsWith("https://") ? [token] : [`https://${token}`, `http://${token}`];
+    for (const maybeUrl of tryValues) {
+      try {
+        const parsed = new URL(maybeUrl);
+        origins.add(parsed.origin);
+        if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+          const alternateProtocol = parsed.protocol === "https:" ? "http:" : "https:";
+          origins.add(`${alternateProtocol}//${parsed.host}`);
+        }
+      } catch {
+        // Ignore invalid entries so one malformed value does not break CORS.
+      }
+    }
+  }
+
+  return { allowAll: false, origins };
 }
 
 function splitWordsForDenseChunks(words, minSize = 4, maxSize = 6) {
