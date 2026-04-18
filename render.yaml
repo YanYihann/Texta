@@ -13,9 +13,9 @@ services:
       - key: OPENAI_MODEL
         value: gpt-4o-mini
       - key: OPENAI_API_MODE
-        value: responses
+        value: chat
       - key: OPENAI_BASE_URL
-        value: https://api.openai.com/v1
+        value: https://api.openai-proxy.org/v1
       - key: OPENAI_TIMEOUT_MS
         value: "30000"
       - key: OPENAI_RETRY_COUNT
