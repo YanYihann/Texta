@@ -8,6 +8,7 @@ const usageSortSelectEl = document.getElementById("usageSortSelect");
 
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 let allUsers = [];
+let pendingPlanUserId = "";
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
@@ -90,6 +91,38 @@ function getRoleKey(user) {
   return "user";
 }
 
+function isAdminUser(user) {
+  return String(user?.role || "").toLowerCase() === "admin";
+}
+
+function getPlanActionLabel(user) {
+  const plan = String(user?.plan || "free").toLowerCase();
+  return plan === "vip" ? "Set to User" : "Set to VIP";
+}
+
+function getPlanActionTarget(user) {
+  const plan = String(user?.plan || "free").toLowerCase();
+  return plan === "vip" ? "free" : "vip";
+}
+
+function renderPlanAction(user) {
+  if (isAdminUser(user)) return "";
+  const userId = String(user?.id || "");
+  const isBusy = pendingPlanUserId === userId;
+  return `
+    <button
+      type="button"
+      class="usage-plan-btn"
+      data-plan-toggle="1"
+      data-user-id="${escapeHtml(userId)}"
+      data-target-plan="${getPlanActionTarget(user)}"
+      ${isBusy ? "disabled" : ""}
+    >
+      ${isBusy ? "Processing..." : getPlanActionLabel(user)}
+    </button>
+  `;
+}
+
 function toTimeValue(value) {
   const text = String(value || "").trim();
   if (!text) return 0;
@@ -165,22 +198,58 @@ function renderSummary(items) {
 }
 
 function renderUserCard(user) {
+  const displayName = escapeHtml(user.name || user.email || "Unnamed user");
+  const email = escapeHtml(user.email || "");
+  const rolePlan = escapeHtml(formatRolePlan(user));
+  const createdAt = formatDisplayTime(user.createdAt);
+
   return `
     <div class="admin-item usage-item">
       <div class="usage-user-head">
-        <div><strong>${escapeHtml(user.name || user.email || "未命名用户")}</strong></div>
-        <div class="fav-meta">${escapeHtml(user.email || "")}</div>
-        <div class="fav-meta usage-meta-line">身份：${escapeHtml(formatRolePlan(user))} | 注册时间：${formatDisplayTime(user.createdAt)}</div>
+        <div><strong>${displayName}</strong></div>
+        <div class="fav-meta">${email}</div>
+        <div class="fav-meta usage-meta-line">Role: ${rolePlan} | Created: ${createdAt}</div>
       </div>
       <div class="usage-right">
         <div class="usage-count-box">
-          <div class="usage-count-label">一共使用</div>
+          <div class="usage-count-label">Usage Total</div>
           <div class="usage-count-number">${Number(user.totalUsage || 0)}</div>
         </div>
-        <a class="upgrade-link usage-detail-btn" href="./admin-usage-detail.html?userId=${encodeURIComponent(user.id)}">查看详情</a>
+        ${renderPlanAction(user)}
+        <a class="upgrade-link usage-detail-btn" href="./admin-usage-detail.html?userId=${encodeURIComponent(user.id)}">Details</a>
       </div>
     </div>
   `;
+}
+
+function mergeUpdatedUser(updatedUser) {
+  if (!updatedUser || !updatedUser.id) return;
+  const idx = allUsers.findIndex((item) => item.id === updatedUser.id);
+  if (idx === -1) return;
+  allUsers[idx] = { ...allUsers[idx], ...updatedUser };
+}
+
+async function changeUserPlan(userId, targetPlan) {
+  const { response, data } = await fetchJson(
+    `/api/admin/users/${encodeURIComponent(userId)}/plan`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ plan: targetPlan })
+    },
+    0
+  );
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to update plan");
+  }
+
+  if (data?.user) {
+    mergeUpdatedUser(data.user);
+  }
 }
 
 function filterUsers() {
@@ -237,7 +306,31 @@ refreshUsageBtnEl.addEventListener("click", async () => {
   try {
     await loadUsageOverview();
   } catch (error) {
-    usageStatusEl.textContent = `刷新失败：${error.message}`;
+    usageStatusEl.textContent = `Refresh failed: ${error.message}`;
+  }
+});
+
+usageUserListEl.addEventListener("click", async (event) => {
+  const target = event.target;
+  const button = target instanceof Element ? target.closest("[data-plan-toggle='1']") : null;
+  if (!button) return;
+
+  const userId = String(button.getAttribute("data-user-id") || "").trim();
+  const targetPlan = String(button.getAttribute("data-target-plan") || "").trim().toLowerCase();
+  if (!userId || !["free", "vip"].includes(targetPlan)) return;
+
+  try {
+    pendingPlanUserId = userId;
+    filterUsers();
+    usageStatusEl.textContent = targetPlan === "vip" ? "Upgrading to VIP..." : "Switching to normal user...";
+    await changeUserPlan(userId, targetPlan);
+    pendingPlanUserId = "";
+    filterUsers();
+    usageStatusEl.textContent = targetPlan === "vip" ? "Updated: now VIP" : "Updated: now normal user";
+  } catch (error) {
+    pendingPlanUserId = "";
+    filterUsers();
+    usageStatusEl.textContent = `Update failed: ${error.message}`;
   }
 });
 

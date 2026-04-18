@@ -3871,6 +3871,49 @@ app.get("/api/admin/usage-users/:id/detail", async (req, res) => {
   }
 });
 
+app.post("/api/admin/users/:id/plan", async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const userId = String(req.params.id || "").trim();
+    if (!userId) {
+      return res.status(400).json({ error: "Missing user id." });
+    }
+
+    const targetPlan = String(req.body?.plan || "")
+      .trim()
+      .toLowerCase();
+    if (!["free", "vip"].includes(targetPlan)) {
+      return res.status(400).json({ error: "Invalid plan. Use free or vip." });
+    }
+
+    const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!currentUser) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    if (String(currentUser.role || "").toLowerCase() === "admin") {
+      return res.status(403).json({ error: "Cannot change admin plan." });
+    }
+
+    const currentPlan = String(currentUser.plan || "free").toLowerCase();
+    if (currentPlan === targetPlan) {
+      return res.json({ ok: true, unchanged: true, user: publicUser(currentUser) });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { plan: targetPlan }
+    });
+
+    res.json({ ok: true, user: publicUser(updated) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to update user plan.", detail: error.message });
+  }
+});
+
 app.post("/api/admin/vip-requests/:id/approve", async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
