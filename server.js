@@ -1560,15 +1560,21 @@ async function planMixedUsage(words, lexicon, quickMode, model) {
 
   const prompt = [
     "You are planning natural usage for a Chinese-first mixed-language passage.",
+    "Plan for DIRECT mixed-language writing. Do not plan a Chinese draft to be translated later.",
+    "First infer the overall theme of the word list. Examples: natural geography, weather/climate, emotion/psychology, campus life, technology/society, abstract concepts.",
+    "If most words share a theme, choose one coherent scene around that theme.",
+    "If the words are random, create one plausible story scene that can naturally contain all of them.",
+    "Arrange words by story logic, not by input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
+    "For each word, choose a grammar role matching its POS: nouns as objects/places/items, verbs as actions, adjectives modifying Chinese nouns, academic terms in class/research contexts, abstract words in reflection.",
     "Return ONLY JSON array in the same order as input words.",
     "Each item format:",
     '{"word": string, "pos": string, "meaning": string, "scene": string, "allowed_pattern": string, "avoid": string, "must_keep_english": boolean, "preferred_pattern": string, "forbidden_chinese_only": string[], "allowed_templates": string[]}',
     "Rules:",
     "1) meaning should be the most natural context-appropriate Chinese meaning for daily-life usage, not just dictionary default.",
-    "2) scene should be a short label like park, coffee-chat, home, reflection.",
-    "3) allowed_pattern should be concise and practical.",
+    "2) scene should be a short label for the shared theme/scene, e.g. geography-field-trip, storm-observation, campus-day, lab-accident, family-memory.",
+    "3) allowed_pattern should describe the natural Chinese grammar slot for this English word.",
     "4) avoid should mention awkward/collocation mistakes to prevent forced usage.",
-    "5) For hard words (e.g. derive/sterility/process/standard/collapse), prefer separate micro-scene or reflective short clause.",
+    "5) Avoid isolated example sentences. Every word should belong to the same coherent passage whenever possible.",
     "6) For must-keep words (budget/relax/process/standard/attitude/motivation/cover/reject/derive/contribute/expenses/vacation), set must_keep_english=true and provide preferred_pattern / forbidden_chinese_only / allowed_templates.",
     `Words: ${sourceWords.join(", ")}`,
     "Lexicon candidates:",
@@ -1912,6 +1918,11 @@ async function generateArticlePackage(
         isDenseMixedMode
           ? "Write high-density Chinese-English mixed word flow, not a complete long-form article."
           : "Write a Chinese-first mixed-language narrative passage, not isolated example sentences.",
+        "Generate the mixed passage directly. Do not first write a Chinese-only passage and then replace words.",
+        "Before writing, internally infer the common domain of the target words. If they share a domain, build the whole passage around that domain.",
+        "If the target words do not share a clear domain, create one believable story scene that can naturally contain them.",
+        "Order target words by narrative logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
+        "Place every target word in a grammatically natural slot based on its POS.",
         "The passage must have one continuous real-world scene and a clear timeline.",
         "Prefer a field trip, travel, weather observation, school activity, or daily-life event when it fits the target words.",
         "The tone must be natural, concrete, and story-like.",
@@ -1964,7 +1975,7 @@ async function generateArticlePackage(
     "Use the most natural context-appropriate meaning for each word in the exact scene.",
     "Naturalness is more important than using default dictionary sense.",
     "Do not force a target word into an unnatural sentence just for coverage.",
-    "If a word is difficult to place naturally, put it in a separate short micro-scene.",
+    isMixedMode ? "If a word is difficult to place naturally, integrate it as a brief observation, classroom note, object, action, or reflection inside the same scene." : "If a word is difficult to place naturally, put it in a separate short micro-scene.",
     "Do not include sense markers in the article body.",
     "The output should read smoothly even for someone who ignores the vocabulary-learning purpose.",
     "Make title concise and natural.",
@@ -4455,18 +4466,17 @@ app.post("/api/generate", async (req, res) => {
           sparseDiagnostics.tailIssue
             ? `Tail Chinese-only gap after last target word is too long (${sparseDiagnostics.tailIssue.chineseChars} chars).`
             : "",
-          "If needed, split into short fragments, but keep natural Chinese body and include every target word.",
-          "Mixed mode should stay compact and natural, avoid long Chinese-only blocks.",
-          "Shorten Chinese distance between adjacent target words. Keep compact layout; no long Chinese paragraph.",
+          "Keep one coherent mixed Chinese-English short passage. Do not split into unrelated fragments.",
+          "Preserve narrative order and story flow while fixing coverage issues.",
+          "Chinese connects the story; only target words stay in English.",
           "Coverage is validated by exact literal English surface forms.",
           "Chinese translation does NOT count as usage.",
           "Never replace a target word with Chinese-only wording.",
           "Every target word must appear in the final passage as the exact English token from input.",
           "All other words must be Chinese. Do not include any non-target English token in the article body.",
-          "The passage must start with a target word in the first sentence.",
-          "Do not write a long Chinese-only introduction before the first target word.",
-          "Before the first target word, allow at most 12 Chinese characters.",
-          "Start directly with the mixed content, not with background setup."
+          "A short Chinese setup is allowed if it improves coherence.",
+          "Do not add dictionary explanations, word lists, or standalone example sentences.",
+          "The final article should feel like a complete scene rather than a vocabulary exercise."
         ]
           .filter(Boolean)
           .join(" ");
