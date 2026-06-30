@@ -1916,12 +1916,14 @@ async function generateArticlePackage(
           : "Write a Chinese-first mixed-language short passage. The backend will replace protected tokens with English words after generation.",
         "Return ONLY valid JSON. Do not output markdown or explanations.",
         "HARD RULES, highest priority:",
-        "1) Use every protected token exactly as written, such as 【词1】 and 【词2】.",
+        "1) Use every protected token exactly as written, such as ⟦T1⟧ and ⟦T2⟧.",
         "2) Never translate, delete, rename, split, or modify protected tokens.",
         "3) Do NOT write the real English target words directly in the article body; use protected tokens only.",
         "4) All non-protected-token content in article must be Chinese.",
         "5) Coverage of protected tokens is more important than naturalness; improve naturalness only after all protected tokens are included.",
-        "6) The JSON title must be Chinese in mixed mode.",
+        "6) The first sentence must include at least one protected token; do not write a Chinese-only introduction.",
+        "7) If the article body has no protected token, the answer is invalid.",
+        "8) The JSON title must be Chinese in mixed mode.",
         "Protected target guide:",
         protectedTargetGuide,
         "Writing goal:",
@@ -1933,10 +1935,10 @@ async function generateArticlePackage(
         isDenseMixedMode ? "Use 4-8 short Chinese sentences or short lines." : "Use 6-10 natural Chinese sentences.",
         isDenseMixedMode ? "Prefer 1-2 protected tokens per sentence." : "Prefer 1-3 protected tokens per sentence when they naturally belong together.",
         "Do not add long Chinese-only setup before the first protected token.",
-        "Do not use glossary parentheses such as 中文（【词1】）.",
-        "Do not output Chinese meaning + protected token duplicates such as 残忍【词1】 or 无菌【词2】.",
+        "Do not use glossary parentheses such as 中文（⟦T1⟧）.",
+        "Do not output Chinese meaning + protected token duplicates such as 残忍⟦T1⟧ or 无菌⟦T2⟧.",
         "Do not output word lists, keyword sections, dictionary lines, or standalone examples.",
-        "When Chinese characters directly connect with a protected token, keep compact form like 看到【词1】 or 感到【词2】.",
+        "When Chinese characters directly connect with a protected token, keep compact form like 看到⟦T1⟧ or 感到⟦T2⟧.",
         "If a protected token is hard to place naturally, add a brief observation, notebook sentence, classroom remark, object, action, or feeling inside the same scene."
       ]
     : ["Write an English IELTS-style article."];
@@ -2059,6 +2061,10 @@ function buildGenerationDiagnostics(article, words, generationMode, sparseFn) {
   };
 }
 
+function escapeRegExpLiteral(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function buildProtectedWordTokens(words) {
   const cleanWords = (Array.isArray(words) ? words : [])
     .map((w) => String(w || "").trim())
@@ -2067,13 +2073,22 @@ function buildProtectedWordTokens(words) {
   return cleanWords.map((word, index) => ({
     word,
     index,
-    token: `【词${index + 1}】`
+    // Highly distinctive placeholder. It is replaced with the real English word before returning to the frontend.
+    token: `⟦T${index + 1}⟧`,
+    legacyToken: `【词${index + 1}】`
   }));
 }
 
 function getProtectedTokenRegex(item) {
   const index = Number(item?.index || 0) + 1;
-  return new RegExp(`【\\s*词\\s*${index}\\s*】`, "g");
+  const variants = [
+    String(item?.token || "").trim(),
+    String(item?.legacyToken || "").trim(),
+    `【词${index}】`
+  ]
+    .filter(Boolean)
+    .map((x) => escapeRegExpLiteral(x));
+  return new RegExp(variants.join("|"), "g");
 }
 
 function replaceProtectedTokens(article, protectedTokens) {
@@ -2138,21 +2153,24 @@ function convertWordsInTextToProtectedTokens(text, protectedTokens) {
   return output;
 }
 
-function finalizeProtectedMixedArticle(article, words, protectedTokens) {
+function finalizeProtectedMixedArticle(article, words, protectedTokens, options = {}) {
   let output = String(article || "").trim();
   const tokens = Array.isArray(protectedTokens) ? protectedTokens : [];
   if (tokens.length === 0) return output;
 
+  const allowAppendMissing = Boolean(options?.allowAppendMissing);
   const missingProtected = findMissingProtectedTokens(output, tokens).filter((item) => {
     const regex = buildWordPresenceRegex(item?.word || "");
     return regex ? !regex.test(output) : true;
   });
 
-  if (missingProtected.length > 0) {
+  // Do not append missing placeholders during the first generation pass; let retry/repair handle coverage first.
+  if (allowAppendMissing && missingProtected.length > 0) {
     output = appendMissingProtectedSentence(output, missingProtected);
   }
 
   output = replaceProtectedTokens(output, tokens);
+  output = output.replace(/⟦\s*T\s*\d+\s*⟧/g, "");
   output = output.replace(/【\s*词\s*\d+\s*】/g, "");
   return output.trim();
 }
