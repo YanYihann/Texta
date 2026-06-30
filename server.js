@@ -1665,17 +1665,6 @@ function splitWordsForDenseChunks(words, minSize = 4, maxSize = 6) {
   return groups;
 }
 
-function buildDeterministicMixedOpeningChunk(words) {
-  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
-  const first = sourceWords[0] || "";
-  const second = sourceWords[1] || "";
-  if (!first) return "";
-  if (second) {
-    return `${first}先上，${second}紧跟，后面直接进入内容。`;
-  }
-  return `${first}先上，后面直接进入内容。`;
-}
-
 async function generateMixedDenseArticleByChunks(words, level, quickMode, lexicon, extraConstraint, model, usagePlan) {
   const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
   if (sourceWords.length === 0) {
@@ -1685,7 +1674,6 @@ async function generateMixedDenseArticleByChunks(words, level, quickMode, lexico
   const groups = splitWordsForDenseChunks(sourceWords, 4, 6);
   const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
   const usageRows = Array.isArray(usagePlan) ? usagePlan : [];
-  let hasDeterministicChunkAppend = false;
   const buildDenseChunkWithCoverage = async (groupWords, groupLexicon, groupPlan, constraintText) => {
     const planMap = new Map((Array.isArray(groupPlan) ? groupPlan : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
     const lexMapLocal = new Map((Array.isArray(groupLexicon) ? groupLexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
@@ -1752,8 +1740,6 @@ async function generateMixedDenseArticleByChunks(words, level, quickMode, lexico
     }
 
     if (localMissing.length > 0) {
-      article = appendGuaranteedMissingWordsMixed(article, localMissing);
-      hasDeterministicChunkAppend = true;
       localMissing = findMissingWords(article, groupWords);
     }
 
@@ -1787,7 +1773,7 @@ async function generateMixedDenseArticleByChunks(words, level, quickMode, lexico
           article: single.article
         }
       ],
-      hasDeterministicChunkAppend
+      hasDeterministicChunkAppend: false
     };
   }
 
@@ -1827,7 +1813,7 @@ async function generateMixedDenseArticleByChunks(words, level, quickMode, lexico
     title: title || defaultTitleByDate(sourceWords.length),
     article: parts.filter(Boolean).join("\n\n"),
     chunks,
-    hasDeterministicChunkAppend
+    hasDeterministicChunkAppend: false
   };
 }
 
@@ -2026,21 +2012,6 @@ function appendMissingWordsSentence(article, missingWords, lexicon) {
     .map((w) => `${w}${markerMap.get(String(w).toLowerCase()) || "①"}`)
     .join(", ");
   return `${article}\n\nVocabulary focus: ${phrase}.`;
-}
-
-function appendGuaranteedMissingWordsMixed(article, missingWords) {
-  const source = String(article || "").trim();
-  const words = Array.from(
-    new Set(
-      (Array.isArray(missingWords) ? missingWords : [])
-        .map((w) => String(w || "").trim())
-        .filter(Boolean)
-    )
-  );
-  if (words.length === 0) return source;
-
-  const lines = words.map((word) => `${word}这个词我今天也特别记住了。`);
-  return `${source}\n\n${lines.join("\n")}`.trim();
 }
 
 function extractChineseCandidatesFromContextRow(row) {
@@ -3123,88 +3094,6 @@ async function rewriteAwkwardMixedClauses(article, reviewRows, lexicon, quickMod
     console.error("Failed to rewrite awkward mixed clauses:", error.message);
     return source;
   }
-}
-
-function buildMissingRewriteFallback(missingWords, lexicon, generationMode = "mixed") {
-  const markerMap = new Map(
-    (lexicon || []).map((x) => [String(x.word || "").toLowerCase(), String(x?.senses?.[0]?.marker || "①")])
-  );
-  const isMixedMode = isMixedGenerationMode(generationMode);
-  const lines = (missingWords || []).map((word, index) => {
-    const marker = markerMap.get(String(word).toLowerCase()) || "①";
-    const token = isMixedMode ? String(word) : `${word}${marker}`;
-    if (isMixedMode) {
-      return `后来想想，这个细节让我记住了 ${token}。`;
-    }
-    return `Supplement ${index + 1}: The key point in this line is ${token}.`;
-  });
-  return lines.join("\n");
-}
-
-async function generateMissingWordsRewrite(missingWords, lexicon, generationMode, quickMode, model) {
-  const words = Array.isArray(missingWords) ? missingWords.map((x) => String(x || "").trim()).filter(Boolean) : [];
-  if (words.length === 0) {
-    return "";
-  }
-
-  const guideMap = new Map((lexicon || []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-  const vocabGuide = words
-    .map((word) => {
-      const item = guideMap.get(word.toLowerCase());
-      const pos = String(item?.pos || "").trim();
-      const senses = Array.isArray(item?.senses) ? item.senses : [];
-      const meaning = senses.map((s) => String(s?.meaning || "").trim()).find(Boolean) || "词义待补充";
-      return `${word} (${pos || "-"}): ${meaning}`;
-    })
-    .join("\n");
-
-  const isMixedMode = isMixedGenerationMode(generationMode);
-  const prompt = isMixedMode
-    ? [
-        "You are rewriting missing vocabulary content for a mixed Chinese-English learning passage.",
-        "Return plain text only. No JSON, no markdown, no list bullets.",
-        "Write concise Chinese sentences.",
-        "Each sentence should include one target English word in original form.",
-        "Each target word must appear exactly once across the whole output.",
-        "Coverage is validated by exact literal English surface forms.",
-        "Chinese translation does NOT count as usage.",
-        "Never replace a target word with Chinese-only wording.",
-        "Every target word must appear in the final passage as the exact English token from input.",
-        'If the target word is "Derive", "Sterility", "Plume", "Bristle", "Cricket", etc., do not translate it away.',
-        "Do NOT output Chinese gloss + English word pairs such as 板球 cricket / 无菌 sterility.",
-        "When Chinese characters directly connect with a target word, keep compact form like 打cricket / 的sterility (no extra spaces).",
-        "Do NOT use parentheses style like 中文（word）.",
-        "Do NOT output standalone dictionary lines such as 'n. xxx'.",
-        "Make each added sentence sound like a natural continuation of the same voice.",
-        "Do not sound like a repair patch or vocabulary exercise.",
-        "Words:",
-        words.join(", "),
-        "Vocabulary guide:",
-        vocabGuide
-      ].join("\n")
-    : [
-        "You are rewriting missing vocabulary content for an English passage.",
-        "Return plain text only.",
-        "Write concise natural English sentences.",
-        "Each sentence must include exactly one target word.",
-        "Each target word must appear exactly once.",
-        "Words:",
-        words.join(", "),
-        "Vocabulary guide:",
-        vocabGuide
-      ].join("\n");
-
-  try {
-    const rewritten = await callOpenAIText(prompt, { maxTokens: quickMode ? 220 : 420, model, step: "rewrite_missing" });
-    const cleaned = isMixedMode ? cleanMixedArtifactText(rewritten) : String(rewritten || "").trim();
-    if (cleaned) {
-      return cleaned;
-    }
-  } catch (error) {
-    console.error("Failed to rewrite missing words:", error.message);
-  }
-
-  return buildMissingRewriteFallback(words, lexicon, generationMode);
 }
 
 async function generateParagraphTranslations(paragraphs, lexicon, quickMode, model) {
@@ -4293,8 +4182,6 @@ app.post("/api/generate", async (req, res) => {
           (idx) => Number.isInteger(idx) && idx >= 0 && idx < chunks.length
         );
         if (indexes.length === 0) return pack;
-        let deterministicChunkAppendUsed = Boolean(pack?.hasDeterministicChunkAppend);
-
         for (const idx of indexes) {
           const chunk = chunks[idx];
           const chunkWords = Array.isArray(chunk?.words) ? chunk.words : [];
@@ -4384,11 +4271,6 @@ app.post("/api/generate", async (req, res) => {
             localSoftIssues = findSoftMissingByChineseSubstitution(chunkArticle, chunkContextRows);
           }
 
-          if (localMissing.length > 0) {
-            chunkArticle = appendGuaranteedMissingWordsMixed(chunkArticle, localMissing);
-            deterministicChunkAppendUsed = true;
-          }
-
           chunks[idx] = {
             ...chunk,
             article: chunkArticle,
@@ -4401,7 +4283,7 @@ app.post("/api/generate", async (req, res) => {
 
         pack.chunks = chunks;
         pack.article = rebuildMixedArticleFromChunks(pack);
-        pack.hasDeterministicChunkAppend = deterministicChunkAppendUsed;
+        pack.hasDeterministicChunkAppend = false;
         return pack;
       };
       const generateMainArticle = async (extraConstraint = "") => {
@@ -4521,43 +4403,19 @@ app.post("/api/generate", async (req, res) => {
           missing = findMissingWords(articlePack.article, words);
         } else {
           const missingBeforeRewrite = missing.slice();
-          const rewritten = await generateMissingWordsRewrite(
-            missingBeforeRewrite,
-            lexicon,
-            generationMode,
-            quickMode,
-            selectedModel
-          );
-          articlePack.article = `${String(articlePack.article || "").trim()}\n\n${rewritten}`.trim();
-          if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
-            const lastChunkIndex = articlePack.chunks.length - 1;
-            const prev = String(articlePack.chunks[lastChunkIndex]?.article || "").trim();
-            articlePack.chunks[lastChunkIndex] = {
-              ...articlePack.chunks[lastChunkIndex],
-              article: `${prev}\n\n${rewritten}`.trim()
-            };
-          }
+          const rewriteConstraint = [
+            "Rewrite the entire mixed passage from scratch as one coherent scene.",
+            `The previous attempt missed these exact target English tokens: ${missingBeforeRewrite.join(", ")}.`,
+            "Do not append a supplement paragraph. Do not add standalone example sentences.",
+            "Use every target word naturally inside the story.",
+            "All non-target content must be Chinese. Only target words may appear in English."
+          ].join(" ");
+          articlePack = await generateMainArticle(rewriteConstraint);
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
           missing = findMissingWords(articlePack.article, words);
           overused = findOverusedWords(articlePack.article, words, 2);
           sparseDiagnostics = computeSparseIssues(articlePack.article);
 
-          if (missing.length > 0) {
-            const fallbackRewrite = buildMissingRewriteFallback(missing, lexicon, generationMode);
-            articlePack.article = `${String(articlePack.article || "").trim()}\n${fallbackRewrite}`.trim();
-            if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
-              const lastChunkIndex = articlePack.chunks.length - 1;
-              const prev = String(articlePack.chunks[lastChunkIndex]?.article || "").trim();
-              articlePack.chunks[lastChunkIndex] = {
-                ...articlePack.chunks[lastChunkIndex],
-                article: `${prev}\n${fallbackRewrite}`.trim()
-              };
-            }
-            articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-            missing = findMissingWords(articlePack.article, words);
-            overused = findOverusedWords(articlePack.article, words, 2);
-            sparseDiagnostics = computeSparseIssues(articlePack.article);
-          }
         }
       }
 
@@ -4629,30 +4487,6 @@ app.post("/api/generate", async (req, res) => {
           sparseDiagnostics = computeSparseIssues(articlePack.article);
         }
 
-        if (sparseDiagnostics.leadIssue !== null) {
-          const fallbackWords =
-            Array.isArray(articlePack?.chunks?.[0]?.words) && articlePack.chunks[0].words.length > 0
-              ? articlePack.chunks[0].words.slice(0, 2)
-              : words.slice(0, 2);
-          const deterministicOpening = buildDeterministicMixedOpeningChunk(fallbackWords);
-          if (deterministicOpening) {
-            if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
-              const firstChunk = articlePack.chunks[0];
-              articlePack.chunks[0] = {
-                ...firstChunk,
-                article: `${deterministicOpening}\n${String(firstChunk?.article || "").trim()}`.trim()
-              };
-              articlePack.article = rebuildMixedArticleFromChunks(articlePack);
-            } else {
-              articlePack.article = `${deterministicOpening}\n${String(articlePack.article || "").trim()}`.trim();
-            }
-            articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-            articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-            missing = findMissingWords(articlePack.article, words);
-            overused = findOverusedWords(articlePack.article, words, 2);
-            sparseDiagnostics = computeSparseIssues(articlePack.article);
-          }
-        }
       }
 
       if (generationMode === "mixed") {
@@ -4662,28 +4496,17 @@ app.post("/api/generate", async (req, res) => {
           articlePack.article = restoreEnglishIntoChinesePhrase(articlePack.article, softMissingIssues);
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
           missing = findMissingWords(articlePack.article, words);
+          unexpectedEnglish = findUnexpectedEnglishTokens(articlePack.article, words);
         }
-      }
-
-      if (generationMode === "mixed" && missing.length > 0) {
-        articlePack.article = appendGuaranteedMissingWordsMixed(articlePack.article, missing);
-        if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
-          const lastChunkIndex = articlePack.chunks.length - 1;
-          const prev = String(articlePack.chunks[lastChunkIndex]?.article || "").trim();
-          articlePack.chunks[lastChunkIndex] = {
-            ...articlePack.chunks[lastChunkIndex],
-            article: appendGuaranteedMissingWordsMixed(prev, missing)
-          };
-          articlePack.hasDeterministicChunkAppend = true;
-        }
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-        missing = findMissingWords(articlePack.article, words);
       }
 
       if (generationMode === "mixed" && missing.length > 0) {
         throw new Error(
           `Still missing exact English tokens (Chinese translation does not count): ${missing.join(", ")}`
         );
+      }
+      if (generationMode === "mixed" && unexpectedEnglish.length > 0) {
+        throw new Error(`Unexpected non-target English tokens remained: ${unexpectedEnglish.join(", ")}`);
       }
 
       const paragraphsEn = splitParagraphs(articlePack.article);
