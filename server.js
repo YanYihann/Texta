@@ -1900,37 +1900,44 @@ async function generateArticlePackage(
         : `${item.word} (${item.pos || "-"}): ${primaryText}`;
     })
     .join("\n");
-  const usagePlanGuide = isMixedMode ? buildMixedUsagePlanGuide(usagePlan, words) : "";
-  const requiredWordPlan = isMixedMode ? buildMixedRequiredWordPlan(words, lexicon, usagePlan) : "";
+  const protectedTokens = isMixedMode ? buildProtectedWordTokens(words) : [];
+  const protectedTokenList = protectedTokens.map((item) => item.token);
+  const protectedTargetGuide = isMixedMode ? buildProtectedTargetGuide(protectedTokens, lexicon, usagePlan) : "";
+  const rawUsagePlanGuide = isMixedMode ? buildMixedUsagePlanGuide(usagePlan, words) : "";
+  const rawRequiredWordPlan = isMixedMode ? buildMixedRequiredWordPlan(words, lexicon, usagePlan) : "";
+  const usagePlanGuide = isMixedMode ? convertWordsInTextToProtectedTokens(rawUsagePlanGuide, protectedTokens) : rawUsagePlanGuide;
+  const requiredWordPlan = isMixedMode ? convertWordsInTextToProtectedTokens(rawRequiredWordPlan, protectedTokens) : rawRequiredWordPlan;
+  const promptExtraConstraint = isMixedMode ? convertWordsInTextToProtectedTokens(extraConstraint, protectedTokens) : extraConstraint;
 
   const modeRules = isMixedMode
     ? [
         isDenseMixedMode
-          ? "Write high-density Chinese-English mixed word flow."
-          : "Write a Chinese-first mixed-language short passage similar to: 清晨，我们沿着由granite构成的山路前进，脚下的terrain起伏不平。",
+          ? "Write high-density Chinese mixed flow using protected tokens."
+          : "Write a Chinese-first mixed-language short passage. The backend will replace protected tokens with English words after generation.",
         "Return ONLY valid JSON. Do not output markdown or explanations.",
         "HARD RULES, highest priority:",
-        "1) Every target token must appear in article exactly as written.",
-        "2) Do not change spelling, capitalization, plural form, tense, or word form.",
-        "3) The target tokens are the ONLY allowed Latin-alphabet tokens in article.",
-        "4) All non-target content in article must be Chinese.",
-        "5) Chinese translation does not count as usage.",
-        "6) Coverage is more important than naturalness; improve naturalness only after all tokens are included.",
-        "7) The JSON title must be Chinese in mixed mode.",
+        "1) Use every protected token exactly as written, such as 【词1】 and 【词2】.",
+        "2) Never translate, delete, rename, split, or modify protected tokens.",
+        "3) Do NOT write the real English target words directly in the article body; use protected tokens only.",
+        "4) All non-protected-token content in article must be Chinese.",
+        "5) Coverage of protected tokens is more important than naturalness; improve naturalness only after all protected tokens are included.",
+        "6) The JSON title must be Chinese in mixed mode.",
+        "Protected target guide:",
+        protectedTargetGuide,
         "Writing goal:",
         "Write one coherent Chinese mini-scene, not isolated example sentences.",
-        "First infer the common domain of the words. If they share a domain, build the whole passage around that domain.",
-        "If the words are random, create one believable daily-life, school, travel, field-trip, lab, or weather-observation scene that can contain them.",
-        "Arrange target tokens by story logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
-        "Place each target token in a natural grammar slot based on POS: noun as object/place/item/concept, verb as action/change, adjective before a Chinese noun, academic term in a class/research note, abstract word in reflection.",
+        "First infer the common domain of the protected tokens. If they share a domain, build the whole passage around that domain.",
+        "If the tokens are semantically random, create one believable daily-life, school, travel, field-trip, lab, or weather-observation scene that can contain them.",
+        "Arrange protected tokens by story logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
+        "Place each protected token in a natural grammar slot based on its POS: noun as object/place/item/concept, verb as action/change, adjective before a Chinese noun, academic term in a class/research note, abstract word in reflection.",
         isDenseMixedMode ? "Use 4-8 short Chinese sentences or short lines." : "Use 6-10 natural Chinese sentences.",
-        isDenseMixedMode ? "Prefer 1-2 target tokens per sentence." : "Prefer 1-3 target tokens per sentence when they naturally belong together.",
-        "Do not add long Chinese-only setup before the first target token.",
-        "Do not use glossary parentheses such as 中文（word）.",
-        "Do not output Chinese meaning + English word duplicates such as 残忍cruel or 无菌sterility.",
+        isDenseMixedMode ? "Prefer 1-2 protected tokens per sentence." : "Prefer 1-3 protected tokens per sentence when they naturally belong together.",
+        "Do not add long Chinese-only setup before the first protected token.",
+        "Do not use glossary parentheses such as 中文（【词1】）.",
+        "Do not output Chinese meaning + protected token duplicates such as 残忍【词1】 or 无菌【词2】.",
         "Do not output word lists, keyword sections, dictionary lines, or standalone examples.",
-        "When Chinese characters directly connect with a target token, keep compact form like 看到granite or 感到shiver.",
-        "If a token is hard to place naturally, add a brief observation, notebook sentence, classroom remark, object, action, or feeling inside the same scene."
+        "When Chinese characters directly connect with a protected token, keep compact form like 看到【词1】 or 感到【词2】.",
+        "If a protected token is hard to place naturally, add a brief observation, notebook sentence, classroom remark, object, action, or feeling inside the same scene."
       ]
     : ["Write an English IELTS-style article."];
   const bodyLabel = isMixedMode ? "Passage" : "Article";
@@ -1943,22 +1950,22 @@ async function generateArticlePackage(
     lengthRule,
     paragraphRule,
     `${bodyLabel} must be plain text paragraphs separated by blank lines.`,
-    isMixedMode ? "Every target token must appear in article exactly as written." : "Every target word must appear at least once.",
-    "Use the most natural context-appropriate meaning for each word in the exact scene.",
-    isMixedMode ? "Coverage is more important than naturalness." : "Naturalness is more important than using default dictionary sense.",
-    isMixedMode ? "Do not remove a hard word just because it is awkward; integrate it as a short observation inside the same scene." : "Do not force a target word into an unnatural sentence just for coverage.",
-    isMixedMode ? "If a word is difficult to place naturally, integrate it as a brief observation, classroom note, object, action, or reflection inside the same scene." : "If a word is difficult to place naturally, put it in a separate short micro-scene.",
+    isMixedMode ? "Every protected token must appear in article exactly as written." : "Every target word must appear at least once.",
+    isMixedMode ? "Use the context-appropriate meaning from the protected token guide." : "Use the most natural context-appropriate meaning for each word in the exact scene.",
+    isMixedMode ? "Protected-token coverage is more important than naturalness." : "Naturalness is more important than using default dictionary sense.",
+    isMixedMode ? "Do not remove a hard protected token just because it is awkward; integrate it as a short observation inside the same scene." : "Do not force a target word into an unnatural sentence just for coverage.",
+    isMixedMode ? "If a protected token is difficult to place naturally, integrate it as a brief observation, classroom note, object, action, or reflection inside the same scene." : "If a word is difficult to place naturally, put it in a separate short micro-scene.",
     "Do not include sense markers in the article body.",
     "The output should read smoothly even for someone who ignores the vocabulary-learning purpose.",
     "Make title concise and natural.",
-    "Vocabulary guide:",
-    vocabGuide,
+    isMixedMode ? "Protected token guide:" : "Vocabulary guide:",
+    isMixedMode ? protectedTargetGuide : vocabGuide,
     isMixedMode ? "Mandatory target-word placement plan:" : "",
     isMixedMode ? requiredWordPlan : "",
-    isMixedMode ? `Exact target token checklist: ${words.map((w) => `"${w}"`).join(", ")}` : "",
+    isMixedMode ? `Exact protected token checklist: ${protectedTokenList.map((w) => `"${w}"`).join(", ")}` : "",
     isMixedMode ? "Usage planning hints:" : "",
     isMixedMode ? usagePlanGuide : "",
-    extraConstraint
+    promptExtraConstraint
   ]
     .filter(Boolean)
     .join("\n");
@@ -1970,7 +1977,7 @@ async function generateArticlePackage(
   if (parsed && typeof parsed.title === "string" && typeof parsed.article === "string") {
     return {
       title: parsed.title.trim() || defaultTitleByDate(words.length),
-      article: parsed.article.trim()
+      article: isMixedMode ? finalizeProtectedMixedArticle(parsed.article, words, protectedTokens) : parsed.article.trim()
     };
   }
 
@@ -1978,7 +1985,7 @@ async function generateArticlePackage(
   if (looseParsed && looseParsed.article) {
     return {
       title: looseParsed.title || defaultTitleByDate(words.length),
-      article: looseParsed.article
+      article: isMixedMode ? finalizeProtectedMixedArticle(looseParsed.article, words, protectedTokens) : looseParsed.article
     };
   }
 
@@ -1988,7 +1995,7 @@ async function generateArticlePackage(
 
   return {
     title: guessedTitle.replace(/^title\s*:\s*/i, "").trim() || defaultTitleByDate(words.length),
-    article: guessedArticle.trim()
+    article: isMixedMode ? finalizeProtectedMixedArticle(guessedArticle, words, protectedTokens) : guessedArticle.trim()
   };
 }
 
@@ -2050,6 +2057,108 @@ function buildGenerationDiagnostics(article, words, generationMode, sparseFn) {
         ? sparseFn(article)
         : { betweenWordIssues: [], leadIssue: null, tailIssue: null }
   };
+}
+
+function buildProtectedWordTokens(words) {
+  const cleanWords = (Array.isArray(words) ? words : [])
+    .map((w) => String(w || "").trim())
+    .filter(Boolean);
+
+  return cleanWords.map((word, index) => ({
+    word,
+    index,
+    token: `【词${index + 1}】`
+  }));
+}
+
+function getProtectedTokenRegex(item) {
+  const index = Number(item?.index || 0) + 1;
+  return new RegExp(`【\\s*词\\s*${index}\\s*】`, "g");
+}
+
+function replaceProtectedTokens(article, protectedTokens) {
+  let output = String(article || "");
+  for (const item of protectedTokens || []) {
+    const word = String(item?.word || "").trim();
+    if (!word) continue;
+    output = output.replace(getProtectedTokenRegex(item), word);
+  }
+  return output;
+}
+
+function findMissingProtectedTokens(article, protectedTokens) {
+  const source = String(article || "");
+  return (Array.isArray(protectedTokens) ? protectedTokens : []).filter((item) => !getProtectedTokenRegex(item).test(source));
+}
+
+function appendMissingProtectedSentence(article, missingProtectedTokens) {
+  const tokens = Array.from(
+    new Set(
+      (Array.isArray(missingProtectedTokens) ? missingProtectedTokens : [])
+        .map((item) => String(item?.token || "").trim())
+        .filter(Boolean)
+    )
+  );
+  if (tokens.length === 0) return String(article || "").trim();
+
+  const source = String(article || "").trim();
+  const sentence = `整理记录时，我又把${tokens.join("、")}补进同一段观察里，确保这些细节没有被漏掉。`;
+  return source ? `${source}\n\n${sentence}` : sentence;
+}
+
+function buildProtectedTargetGuide(protectedTokens, lexicon = [], usagePlan = []) {
+  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  const planMap = new Map((Array.isArray(usagePlan) ? usagePlan : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+
+  return (Array.isArray(protectedTokens) ? protectedTokens : [])
+    .map((item) => {
+      const word = String(item?.word || "").trim();
+      const key = word.toLowerCase();
+      const lexItem = lexMap.get(key) || {};
+      const plan = planMap.get(key) || {};
+      const meaning = String(plan?.meaning || lexItem?.senses?.[0]?.meaning || "词义待补充").trim();
+      const pos = String(plan?.pos || lexItem?.pos || "-").trim();
+      const naturalSlot = String(plan?.allowedPattern || plan?.allowed_pattern || "放在自然中文语法位置中").trim();
+      return `${item.token} (${pos}) = ${meaning}; 语法位置: ${naturalSlot}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function convertWordsInTextToProtectedTokens(text, protectedTokens) {
+  let output = String(text || "");
+  for (const item of protectedTokens || []) {
+    const word = String(item?.word || "").trim();
+    const token = String(item?.token || "").trim();
+    if (!word || !token) continue;
+    const regex = buildWordPresenceRegex(word);
+    if (!regex) continue;
+    output = output.replace(regex, (match, prefix = "") => `${prefix}${token}`);
+  }
+  return output;
+}
+
+function finalizeProtectedMixedArticle(article, words, protectedTokens) {
+  let output = String(article || "").trim();
+  const tokens = Array.isArray(protectedTokens) ? protectedTokens : [];
+  if (tokens.length === 0) return output;
+
+  const missingProtected = findMissingProtectedTokens(output, tokens).filter((item) => {
+    const regex = buildWordPresenceRegex(item?.word || "");
+    return regex ? !regex.test(output) : true;
+  });
+
+  if (missingProtected.length > 0) {
+    output = appendMissingProtectedSentence(output, missingProtected);
+  }
+
+  output = replaceProtectedTokens(output, tokens);
+  output = output.replace(/【\s*词\s*\d+\s*】/g, "");
+  return output.trim();
+}
+
+function stripMixedWordMarkers(article) {
+  return String(article || "").replace(/([A-Za-z][A-Za-z'-]*)([①②③④⑤⑥⑦⑧⑨⑩])/g, "$1");
 }
 
 function extractChineseCandidatesFromContextRow(row) {
@@ -4522,7 +4631,11 @@ app.post("/api/generate", async (req, res) => {
       if (generationMode === "mixed") {
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
       }
-      articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+      if (generationMode === "mixed") {
+        articlePack.article = stripMixedWordMarkers(articlePack.article);
+      } else {
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+      }
       diagnostics = recomputeDiagnostics(articlePack.article);
       ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
 
@@ -4540,7 +4653,7 @@ app.post("/api/generate", async (req, res) => {
             true
           );
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-          articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+          articlePack.article = stripMixedWordMarkers(articlePack.article);
           diagnostics = recomputeDiagnostics(articlePack.article);
           ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
         }
@@ -4552,7 +4665,7 @@ app.post("/api/generate", async (req, res) => {
         const softMissingIssues = findSoftMissingByChineseSubstitution(articlePack.article, restoreContextGlosses);
         if (softMissingIssues.length > 0) {
           articlePack.article = restoreEnglishIntoChinesePhrase(articlePack.article, softMissingIssues);
-          articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+          articlePack.article = stripMixedWordMarkers(articlePack.article);
           diagnostics = recomputeDiagnostics(articlePack.article);
           ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
         }
@@ -4566,7 +4679,7 @@ app.post("/api/generate", async (req, res) => {
           articlePack.article = appendMissingMixedSentence(articlePack.article, missing);
         }
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        articlePack.article = stripMixedWordMarkers(articlePack.article);
         diagnostics = recomputeDiagnostics(articlePack.article);
         ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
       }
@@ -4579,7 +4692,7 @@ app.post("/api/generate", async (req, res) => {
       if (generationMode === "mixed" && unexpectedEnglish.length > 0) {
         articlePack.article = removeUnexpectedEnglishTokens(articlePack.article, words);
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        articlePack.article = stripMixedWordMarkers(articlePack.article);
         diagnostics = recomputeDiagnostics(articlePack.article);
         ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
         if (unexpectedEnglish.length > 0) {

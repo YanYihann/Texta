@@ -125,69 +125,70 @@ Vocabulary guide:
 混合短文模式：
 
 ```text
-Write a Chinese-first mixed-language short passage similar to: 清晨，我们沿着由granite构成的山路前进，脚下的terrain起伏不平。
+Write a Chinese-first mixed-language short passage. The backend will replace protected tokens with English words after generation.
 Return ONLY valid JSON. Do not output markdown or explanations.
 HARD RULES, highest priority:
-1) Every target token must appear in article exactly as written.
-2) Do not change spelling, capitalization, plural form, tense, or word form.
-3) The target tokens are the ONLY allowed Latin-alphabet tokens in article.
-4) All non-target content in article must be Chinese.
-5) Chinese translation does not count as usage.
-6) Coverage is more important than naturalness; improve naturalness only after all tokens are included.
-7) The JSON title must be Chinese in mixed mode.
+1) Use every protected token exactly as written, such as 【词1】 and 【词2】.
+2) Never translate, delete, rename, split, or modify protected tokens.
+3) Do NOT write the real English target words directly in the article body; use protected tokens only.
+4) All non-protected-token content in article must be Chinese.
+5) Coverage of protected tokens is more important than naturalness; improve naturalness only after all protected tokens are included.
+6) The JSON title must be Chinese in mixed mode.
+Protected target guide:
+{protectedTargetGuide}
 Writing goal:
 Write one coherent Chinese mini-scene, not isolated example sentences.
-First infer the common domain of the words. If they share a domain, build the whole passage around that domain.
-If the words are random, create one believable daily-life, school, travel, field-trip, lab, or weather-observation scene that can contain them.
-Arrange target tokens by story logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.
-Place each target token in a natural grammar slot based on POS: noun as object/place/item/concept, verb as action/change, adjective before a Chinese noun, academic term in a class/research note, abstract word in reflection.
+First infer the common domain of the protected tokens. If they share a domain, build the whole passage around that domain.
+If the tokens are semantically random, create one believable daily-life, school, travel, field-trip, lab, or weather-observation scene that can contain them.
+Arrange protected tokens by story logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.
+Place each protected token in a natural grammar slot based on its POS: noun as object/place/item/concept, verb as action/change, adjective before a Chinese noun, academic term in a class/research note, abstract word in reflection.
 Use 6-10 natural Chinese sentences.
-Prefer 1-3 target tokens per sentence when they naturally belong together.
-Do not add long Chinese-only setup before the first target token.
-Do not use glossary parentheses such as 中文（word）.
-Do not output Chinese meaning + English word duplicates such as 残忍cruel or 无菌sterility.
+Prefer 1-3 protected tokens per sentence when they naturally belong together.
+Do not add long Chinese-only setup before the first protected token.
+Do not use glossary parentheses such as 中文（【词1】）.
+Do not output Chinese meaning + protected token duplicates such as 残忍【词1】 or 无菌【词2】.
 Do not output word lists, keyword sections, dictionary lines, or standalone examples.
-When Chinese characters directly connect with a target token, keep compact form like 看到granite or 感到shiver.
-If a token is hard to place naturally, add a brief observation, notebook sentence, classroom remark, object, action, or feeling inside the same scene.
+When Chinese characters directly connect with a protected token, keep compact form like 看到【词1】 or 感到【词2】.
+If a protected token is hard to place naturally, add a brief observation, notebook sentence, classroom remark, object, action, or feeling inside the same scene.
 Return ONLY JSON object:
 {"title":"...", "article":"..."}
 Level: {level}.
 Write one coherent short scene of 6-10 natural Chinese sentences.
 Use 1-3 paragraphs separated by blank lines, with clear beginning, development, and ending.
 Passage must be plain text paragraphs separated by blank lines.
-Every target token must appear in article exactly as written.
-Use the most natural context-appropriate meaning for each word in the exact scene.
-Coverage is more important than naturalness.
-Do not remove a hard word just because it is awkward; integrate it as a short observation inside the same scene.
-If a word is difficult to place naturally, integrate it as a brief observation, classroom note, object, action, or reflection inside the same scene.
+Every protected token must appear in article exactly as written.
+Use the context-appropriate meaning from the protected token guide.
+Protected-token coverage is more important than naturalness.
+Do not remove a hard protected token just because it is awkward; integrate it as a short observation inside the same scene.
+If a protected token is difficult to place naturally, integrate it as a brief observation, classroom note, object, action, or reflection inside the same scene.
 Do not include sense markers in the article body.
 The output should read smoothly even for someone who ignores the vocabulary-learning purpose.
 Make title concise and natural.
-Vocabulary guide:
-{vocabGuide}
+Protected token guide:
+{protectedTargetGuide}
 Mandatory target-word placement plan:
 {requiredWordPlan}
-Exact target token checklist: {words}
+Exact protected token checklist: {protectedTokenList}
 Usage planning hints:
 {usagePlanGuide}
-{extraConstraint}
+{promptExtraConstraint}
 ```
 
 ## 6. 高密度混合模式追加约束：`mixed_dense` via `article`
 
 ```text
-Write high-density Chinese-English mixed word flow, not a complete long-form article.
+Write high-density Chinese mixed flow using protected tokens.
 Use high-density mixed flow: prefer 4-8 short sentences, not a long narrative paragraph.
 Use 4-8 short lines or short paragraphs, separated by blank lines when needed.
-Prefer 1-2 target words per sentence, and keep sentence units short.
-Keep Chinese bridge text between adjacent target words very short: ideal <=10 Chinese characters, hard limit <=18.
-Avoid long Chinese-only paragraphs that push target words far apart.
+Prefer 1-2 protected tokens per sentence, and keep sentence units short.
+Keep Chinese bridge text between adjacent protected tokens very short: ideal <=10 Chinese characters, hard limit <=18.
+Avoid long Chinese-only paragraphs that push protected tokens far apart.
 Prefer 4-8 short sentences instead of long paragraphs.
-The first sentence must contain at least one target word.
+The first sentence must contain at least one protected token.
 Do not begin with a standalone Chinese background paragraph.
-Prefer the first target word to appear within the first 12 Chinese characters.
+Prefer the first protected token to appear within the first 12 Chinese characters.
 Every sentence should be short and dense.
-Do not write scene setup before using target words.
+Do not write scene setup before using protected tokens.
 ```
 
 ## 7. 分块生成追加约束
