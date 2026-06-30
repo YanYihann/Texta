@@ -1560,7 +1560,9 @@ async function planMixedUsage(words, lexicon, quickMode, model) {
 
   const prompt = [
     "You are planning natural usage for a Chinese-first mixed-language passage.",
+    "The final target style is a fluent Chinese mini-scene with only the supplied English words embedded, e.g. 清晨，我们沿着由granite构成的山路前进，脚下的terrain起伏不平。",
     "Plan for DIRECT mixed-language writing. Do not plan a Chinese draft to be translated later.",
+    "Coverage has highest priority: every input word must have a natural slot in the final passage.",
     "First infer the overall theme of the word list. Examples: natural geography, weather/climate, emotion/psychology, campus life, technology/society, abstract concepts.",
     "If most words share a theme, choose one coherent scene around that theme.",
     "If the words are random, create one plausible story scene that can naturally contain all of them.",
@@ -1868,7 +1870,7 @@ async function generateArticlePackage(
   const lengthRule = isMixedMode
     ? isDenseMixedMode
       ? "Use high-density mixed flow: prefer 4-8 short sentences, not a long narrative paragraph."
-      : "Write one coherent short scene of 8-14 natural Chinese sentences."
+      : "Write one coherent short scene of 6-10 natural Chinese sentences."
     : quickMode
       ? "Length: 120-180 words."
       : words.length > 16
@@ -1904,52 +1906,31 @@ async function generateArticlePackage(
   const modeRules = isMixedMode
     ? [
         isDenseMixedMode
-          ? "Write high-density Chinese-English mixed word flow, not a complete long-form article."
-          : "Write a Chinese-first mixed-language narrative passage, not isolated example sentences.",
-        "Generate the mixed passage directly. Do not first write a Chinese-only passage and then replace words.",
-        "Before writing, internally infer the common domain of the target words. If they share a domain, build the whole passage around that domain.",
-        "If the target words do not share a clear domain, create one believable story scene that can naturally contain them.",
-        "Example for random words apple/thunder/library/dragon/nervous/machine: 在library复习时外面响起thunder，学生吃apple，读到dragon故事，旁边machine发声，让他nervous.",
-        "Order target words by narrative logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
-        "Place every target word in a grammatically natural slot based on its POS.",
-        "The passage must have one continuous real-world scene and a clear timeline.",
-        "Prefer a field trip, travel, weather observation, school activity, or daily-life event when it fits the target words.",
-        "The tone must be natural, concrete, and story-like.",
-        "The main body should be fluent natural Chinese, with target words inserted in English only.",
-        "All non-target content in the article body must be Chinese.",
-        "The target words are the ONLY allowed Latin-alphabet tokens in the article body.",
-        "Do not use any extra English words such as weather, stress, IELTS, travel, field, class, or story unless they are in the target word list.",
-        "The JSON title should be Chinese in mixed mode.",
-        "You must use every target word exactly as an English surface token at least once.",
-        "Before finalizing, scan the article body and verify each exact target token appears.",
-        "Insert target words as part of sentence rhythm, not as explanations or glossary items.",
-        isDenseMixedMode ? "Prefer 1-2 target words per sentence, and keep sentence units short." : "Use 1-3 target words per sentence only when they naturally belong to the same event.",
-        isDenseMixedMode ? "Keep Chinese bridge text between adjacent target words very short: ideal <=10 Chinese characters, hard limit <=18." : "Allow enough Chinese context to make the scene coherent; do not sacrifice story flow for density.",
-        isDenseMixedMode ? "Avoid long Chinese-only paragraphs that push target words far apart." : "Avoid sentence-by-sentence unrelated examples such as '今天...感觉...' repeated for each word.",
-        isDenseMixedMode ? "Prefer 4-8 short sentences instead of long paragraphs." : "The result should read like one complete mini-essay, not a vocabulary drill.",
-        isDenseMixedMode ? "The first sentence must contain at least one target word." : "",
-        isDenseMixedMode ? "Do not begin with a standalone Chinese background paragraph." : "",
-        isDenseMixedMode ? "Prefer the first target word to appear within the first 12 Chinese characters." : "",
-        isDenseMixedMode ? "Every sentence should be short and dense." : "",
-        isDenseMixedMode ? "Do not write scene setup before using target words." : "",
-        "For each target word, use exactly the original input form (no plural/past/ing).",
-        "Coverage is validated by exact literal English surface forms.",
-        "Chinese translation does NOT count as usage.",
-        "Never replace a target word with Chinese-only wording.",
-        "Every target word must appear in the final passage as the exact English token from input.",
-        'If the target word is "Derive", "Sterility", "Plume", "Bristle", "Cricket", etc., do not translate it away.',
-        "Each target word should appear once if possible, and never more than twice.",
-        "Prefer one target word per short clause, but allow multiple target words in one sentence when natural.",
-        "Do not break sentences awkwardly just to isolate target words.",
-        "Keep Chinese background concise, but do not make it sound like a drill or exercise.",
-        "Do NOT use glossary parentheses style such as 中文（word） or 中文（word + meaning）.",
-        "Do NOT output Chinese gloss + English word pairs such as 板球 cricket / 无菌 sterility.",
-        "When Chinese characters directly connect with a target word, keep compact form like 打cricket / 的sterility (no extra spaces).",
-        "Avoid duplicate Chinese+English semantics around the same blank: use 非常cruel, not 非常残忍cruel.",
-        "Do NOT output keyword list sections such as '片段1：补充关键词 ...'.",
-        "Do NOT output standalone dictionary lines such as 'n. xxx' in the body.",
-        isDenseMixedMode ? "If one single story feels forced, you may write a sequence of small daily-life moments, but the voice must stay natural and consistent." : "Do not split into unrelated micro-scenes unless the word list is extremely long.",
-        "Naturalness and spoken flow are more important than showing off difficult writing."
+          ? "Write high-density Chinese-English mixed word flow."
+          : "Write a Chinese-first mixed-language short passage similar to: 清晨，我们沿着由granite构成的山路前进，脚下的terrain起伏不平。",
+        "Return ONLY valid JSON. Do not output markdown or explanations.",
+        "HARD RULES, highest priority:",
+        "1) Every target token must appear in article exactly as written.",
+        "2) Do not change spelling, capitalization, plural form, tense, or word form.",
+        "3) The target tokens are the ONLY allowed Latin-alphabet tokens in article.",
+        "4) All non-target content in article must be Chinese.",
+        "5) Chinese translation does not count as usage.",
+        "6) Coverage is more important than naturalness; improve naturalness only after all tokens are included.",
+        "7) The JSON title must be Chinese in mixed mode.",
+        "Writing goal:",
+        "Write one coherent Chinese mini-scene, not isolated example sentences.",
+        "First infer the common domain of the words. If they share a domain, build the whole passage around that domain.",
+        "If the words are random, create one believable daily-life, school, travel, field-trip, lab, or weather-observation scene that can contain them.",
+        "Arrange target tokens by story logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
+        "Place each target token in a natural grammar slot based on POS: noun as object/place/item/concept, verb as action/change, adjective before a Chinese noun, academic term in a class/research note, abstract word in reflection.",
+        isDenseMixedMode ? "Use 4-8 short Chinese sentences or short lines." : "Use 6-10 natural Chinese sentences.",
+        isDenseMixedMode ? "Prefer 1-2 target tokens per sentence." : "Prefer 1-3 target tokens per sentence when they naturally belong together.",
+        "Do not add long Chinese-only setup before the first target token.",
+        "Do not use glossary parentheses such as 中文（word）.",
+        "Do not output Chinese meaning + English word duplicates such as 残忍cruel or 无菌sterility.",
+        "Do not output word lists, keyword sections, dictionary lines, or standalone examples.",
+        "When Chinese characters directly connect with a target token, keep compact form like 看到granite or 感到shiver.",
+        "If a token is hard to place naturally, add a brief observation, notebook sentence, classroom remark, object, action, or feeling inside the same scene."
       ]
     : ["Write an English IELTS-style article."];
   const bodyLabel = isMixedMode ? "Passage" : "Article";
@@ -1962,10 +1943,10 @@ async function generateArticlePackage(
     lengthRule,
     paragraphRule,
     `${bodyLabel} must be plain text paragraphs separated by blank lines.`,
-    "Every target word must appear at least once.",
+    isMixedMode ? "Every target token must appear in article exactly as written." : "Every target word must appear at least once.",
     "Use the most natural context-appropriate meaning for each word in the exact scene.",
-    "Naturalness is more important than using default dictionary sense.",
-    "Do not force a target word into an unnatural sentence just for coverage.",
+    isMixedMode ? "Coverage is more important than naturalness." : "Naturalness is more important than using default dictionary sense.",
+    isMixedMode ? "Do not remove a hard word just because it is awkward; integrate it as a short observation inside the same scene." : "Do not force a target word into an unnatural sentence just for coverage.",
     isMixedMode ? "If a word is difficult to place naturally, integrate it as a brief observation, classroom note, object, action, or reflection inside the same scene." : "If a word is difficult to place naturally, put it in a separate short micro-scene.",
     "Do not include sense markers in the article body.",
     "The output should read smoothly even for someone who ignores the vocabulary-learning purpose.",
@@ -2020,6 +2001,55 @@ function appendMissingWordsSentence(article, missingWords, lexicon) {
     .map((w) => `${w}${markerMap.get(String(w).toLowerCase()) || "①"}`)
     .join(", ");
   return `${article}\n\nVocabulary focus: ${phrase}.`;
+}
+
+function appendMissingMixedSentence(article, missingWords) {
+  const cleanMissing = Array.from(
+    new Set(
+      (Array.isArray(missingWords) ? missingWords : [])
+        .map((w) => String(w || "").trim())
+        .filter(Boolean)
+    )
+  );
+  if (cleanMissing.length === 0) return String(article || "").trim();
+
+  const phrase = cleanMissing.join("、");
+  const source = String(article || "").trim();
+  const sentence = `整理记录时，我又把${phrase}补进同一段观察里，确保这些细节没有被漏掉。`;
+  return source ? `${source}\n\n${sentence}` : sentence;
+}
+
+function removeUnexpectedEnglishTokens(article, words) {
+  const allowed = new Set();
+  for (const rawWord of Array.isArray(words) ? words : []) {
+    const word = String(rawWord || "").trim().toLowerCase();
+    if (!word) continue;
+    allowed.add(word);
+    const pieces = word.match(/[a-z][a-z'-]*/gi) || [];
+    pieces.forEach((piece) => allowed.add(piece.toLowerCase()));
+  }
+
+  let text = String(article || "");
+  text = text.replace(/[A-Za-z][A-Za-z'-]*/g, (token) => (allowed.has(token.toLowerCase()) ? token : ""));
+  text = text.replace(/[ \t]{2,}/g, " ");
+  text = text.replace(/\s+([，。！？；：、])/g, "$1");
+  text = text.replace(/([，。！？；：、])\s+/g, "$1");
+  text = text.replace(/\n{3,}/g, "\n\n");
+  return text.trim();
+}
+
+function buildGenerationDiagnostics(article, words, generationMode, sparseFn) {
+  const mode = String(generationMode || "").toLowerCase();
+  const isMixed = mode === "mixed" || mode === "mixed_dense";
+  return {
+    missing: findMissingWords(article, words),
+    overused: isMixed ? findOverusedWords(article, words, 2) : [],
+    unexpectedEnglish: isMixed ? findUnexpectedEnglishTokens(article, words) : [],
+    sparseDiagnostics:
+      isMixed && typeof sparseFn === "function"
+        ? sparseFn(article)
+        : { betweenWordIssues: [], leadIssue: null, tailIssue: null }
+  };
 }
 
 function extractChineseCandidatesFromContextRow(row) {
@@ -3109,6 +3139,7 @@ async function rewriteAwkwardMixedClauses(article, reviewRows, lexicon, quickMod
     "Only rewrite clauses/sentences that are semantically awkward or collocation-wrong.",
     "Do not add glossary sections, keyword lists, or dictionary-style lines.",
     "Do not output Chinese gloss + English word duplicates (e.g., 残忍cruel / 无菌sterility with direct duplicate meaning).",
+    "Highest priority: keep every target word visible exactly as written; coverage is more important than style.",
     "Keep target words in their original form.",
     "Coverage is validated by exact literal English surface forms.",
     "Chinese translation does NOT count as usage.",
@@ -4169,6 +4200,8 @@ app.post("/api/generate", async (req, res) => {
           tailIssue: findTailWordGapFromRuns(runsForGapCheck, 120)
         };
       };
+      const recomputeDiagnostics = (articleText) =>
+        buildGenerationDiagnostics(articleText, words, generationMode, computeSparseIssues);
       const getChunkIndexByWord = (pack) => {
         const map = new Map();
         const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
@@ -4346,13 +4379,8 @@ app.post("/api/generate", async (req, res) => {
       if (generationMode === "mixed") {
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
       }
-      let missing = findMissingWords(articlePack.article, words);
-      let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
-      let unexpectedEnglish = generationMode === "mixed" ? findUnexpectedEnglishTokens(articlePack.article, words) : [];
-      let sparseDiagnostics =
-        generationMode === "mixed"
-          ? computeSparseIssues(articlePack.article)
-          : { betweenWordIssues: [], leadIssue: null, tailIssue: null };
+      let diagnostics = recomputeDiagnostics(articlePack.article);
+      let { missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics;
 
       const retryCount = generationMode === "mixed" ? 2 : quickMode ? 1 : 2;
       for (
@@ -4386,6 +4414,7 @@ app.post("/api/generate", async (req, res) => {
           sparseDiagnostics.tailIssue
             ? `Tail Chinese-only gap after last target word is too long (${sparseDiagnostics.tailIssue.chineseChars} chars).`
             : "",
+          "Highest priority: fix exact target-token coverage before improving style.",
           "Keep one coherent mixed Chinese-English short passage. Do not split into unrelated fragments.",
           "Preserve narrative order and story flow while fixing coverage issues.",
           "Chinese connects the story; only target words stay in English.",
@@ -4424,13 +4453,8 @@ app.post("/api/generate", async (req, res) => {
             articlePack.article = rebuildMixedArticleFromChunks(articlePack);
           }
         }
-        missing = findMissingWords(articlePack.article, words);
-        overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
-        unexpectedEnglish = generationMode === "mixed" ? findUnexpectedEnglishTokens(articlePack.article, words) : [];
-        sparseDiagnostics =
-          generationMode === "mixed"
-            ? computeSparseIssues(articlePack.article)
-            : { betweenWordIssues: [], leadIssue: null, tailIssue: null };
+        diagnostics = recomputeDiagnostics(articlePack.article);
+        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
       }
 
       let mixedSemanticRows = [];
@@ -4454,10 +4478,8 @@ app.post("/api/generate", async (req, res) => {
             ].join(" ");
             articlePack = await generateMainArticle(rewriteConstraint);
             articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-            missing = findMissingWords(articlePack.article, words);
-            overused = findOverusedWords(articlePack.article, words, 2);
-            unexpectedEnglish = findUnexpectedEnglishTokens(articlePack.article, words);
-            sparseDiagnostics = computeSparseIssues(articlePack.article);
+            diagnostics = recomputeDiagnostics(articlePack.article);
+            ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
           }
         }
       }
@@ -4467,9 +4489,8 @@ app.post("/api/generate", async (req, res) => {
       if (generationMode === "mixed" && shouldRunContextRefine(words, lexicon, generationMode, generationQuality, contextGlossesBeforeRefine)) {
         lexicon = await refineMixedLexiconByContext(words, lexicon, articlePack.article, quickMode, selectedModel);
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        missing = findMissingWords(articlePack.article, words);
-        overused = findOverusedWords(articlePack.article, words, 2);
-        sparseDiagnostics = computeSparseIssues(articlePack.article);
+        diagnostics = recomputeDiagnostics(articlePack.article);
+        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
       }
 
       if (
@@ -4493,9 +4514,8 @@ app.post("/api/generate", async (req, res) => {
             selectedModel
           );
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-          missing = findMissingWords(articlePack.article, words);
-          overused = findOverusedWords(articlePack.article, words, 2);
-          sparseDiagnostics = computeSparseIssues(articlePack.article);
+          diagnostics = recomputeDiagnostics(articlePack.article);
+          ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
         }
       }
 
@@ -4503,12 +4523,8 @@ app.post("/api/generate", async (req, res) => {
         articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
       }
       articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-      missing = findMissingWords(articlePack.article, words);
-      overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
-      sparseDiagnostics =
-        generationMode === "mixed"
-          ? computeSparseIssues(articlePack.article)
-          : { betweenWordIssues: [], leadIssue: null, tailIssue: null };
+      diagnostics = recomputeDiagnostics(articlePack.article);
+      ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
 
       if (generationMode === "mixed" && sparseDiagnostics.leadIssue !== null) {
         if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
@@ -4525,9 +4541,8 @@ app.post("/api/generate", async (req, res) => {
           );
           articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-          missing = findMissingWords(articlePack.article, words);
-          overused = findOverusedWords(articlePack.article, words, 2);
-          sparseDiagnostics = computeSparseIssues(articlePack.article);
+          diagnostics = recomputeDiagnostics(articlePack.article);
+          ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
         }
 
       }
@@ -4538,9 +4553,22 @@ app.post("/api/generate", async (req, res) => {
         if (softMissingIssues.length > 0) {
           articlePack.article = restoreEnglishIntoChinesePhrase(articlePack.article, softMissingIssues);
           articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-          missing = findMissingWords(articlePack.article, words);
-          unexpectedEnglish = findUnexpectedEnglishTokens(articlePack.article, words);
+          diagnostics = recomputeDiagnostics(articlePack.article);
+          ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
         }
+      }
+
+      if (generationMode === "mixed" && (missing.length > 0 || unexpectedEnglish.length > 0)) {
+        if (unexpectedEnglish.length > 0) {
+          articlePack.article = removeUnexpectedEnglishTokens(articlePack.article, words);
+        }
+        if (missing.length > 0) {
+          articlePack.article = appendMissingMixedSentence(articlePack.article, missing);
+        }
+        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        diagnostics = recomputeDiagnostics(articlePack.article);
+        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
       }
 
       if (generationMode === "mixed" && missing.length > 0) {
@@ -4549,7 +4577,14 @@ app.post("/api/generate", async (req, res) => {
         );
       }
       if (generationMode === "mixed" && unexpectedEnglish.length > 0) {
-        throw new Error(`Unexpected non-target English tokens remained: ${unexpectedEnglish.join(", ")}`);
+        articlePack.article = removeUnexpectedEnglishTokens(articlePack.article, words);
+        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
+        diagnostics = recomputeDiagnostics(articlePack.article);
+        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
+        if (unexpectedEnglish.length > 0) {
+          throw new Error(`Unexpected non-target English tokens remained: ${unexpectedEnglish.join(", ")}`);
+        }
       }
 
       const paragraphsEn = splitParagraphs(articlePack.article);
