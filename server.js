@@ -129,6 +129,23 @@ const MIXED_FORCE_ENGLISH_TEMPLATES = {
   }
 };
 
+const LOCAL_LEXICON_FALLBACKS = {
+  granite: { pos: "n.", meanings: ["花岗岩"], collocations: ["granite rock 花岗岩", "granite cliff 花岗岩悬崖"] },
+  terrain: { pos: "n.", meanings: ["地形；地势"], collocations: ["rough terrain 崎岖地形", "mountainous terrain 山地地形"] },
+  aratic: { pos: "adj.", meanings: ["疑似 Arctic：北极的；寒带的"], collocations: ["Arctic region 北极地区", "Arctic climate 北极气候"] },
+  arctic: { pos: "adj.", meanings: ["北极的；寒带的"], collocations: ["Arctic region 北极地区", "Arctic climate 北极气候"] },
+  deteriorate: { pos: "v.", meanings: ["恶化；变坏"], collocations: ["weather deteriorates 天气恶化", "conditions deteriorate 情况恶化"] },
+  gulf: { pos: "n.", meanings: ["海湾；鸿沟"], collocations: ["a wide gulf 宽阔海湾", "Gulf coast 海湾海岸"] },
+  meteorology: { pos: "n.", meanings: ["气象学"], collocations: ["meteorology class 气象学课", "study meteorology 学习气象学"] },
+  thermal: { pos: "adj.", meanings: ["热的；保温的"], collocations: ["thermal air current 热气流", "thermal energy 热能"] },
+  tropics: { pos: "n.", meanings: ["热带地区"], collocations: ["in the tropics 在热带", "near the tropics 靠近热带"] },
+  arid: { pos: "adj.", meanings: ["干旱的；干燥的"], collocations: ["arid climate 干旱气候", "arid land 干旱土地"] },
+  humid: { pos: "adj.", meanings: ["潮湿的；湿热的"], collocations: ["humid air 潮湿空气", "hot and humid 湿热的"] },
+  hail: { pos: "n.", meanings: ["冰雹"], collocations: ["hail storm 冰雹天气", "heavy hail 大冰雹"] },
+  thaw: { pos: "v.", meanings: ["融化；解冻"], collocations: ["snow begins to thaw 雪开始融化", "thaw after frost 霜冻后解冻"] },
+  shiver: { pos: "v.", meanings: ["发抖；打寒战"], collocations: ["shiver with cold 冷得发抖", "make someone shiver 让某人发抖"] }
+};
+
 const lexiconCache = new Map();
 const modelTraceStorage = new AsyncLocalStorage();
 
@@ -1286,8 +1303,9 @@ function normalizeLexicon(words, rawItems, detailLevel = "full") {
 
   return words.map((word) => {
     const found = itemMap.get(word.toLowerCase());
-    const pos = normalizePosTag(found?.pos || "");
-    const meanings = found?.meanings?.length ? found.meanings : ["常考义待完善"];
+    const fallback = LOCAL_LEXICON_FALLBACKS[word.toLowerCase()] || null;
+    const pos = normalizePosTag(found?.pos || fallback?.pos || "");
+    const meanings = found?.meanings?.length ? found.meanings : fallback?.meanings?.length ? fallback.meanings : ["词义生成失败，请重试"];
     const senses = meanings.map((meaning, idx) => ({
       marker: toCircledNumber(idx + 1),
       meaning
@@ -1299,7 +1317,7 @@ function normalizeLexicon(words, rawItems, detailLevel = "full") {
       usIpa: found?.usIpa || "",
       ukIpa: found?.ukIpa || "",
       senses,
-      collocations: found?.collocations?.length ? found.collocations : ["(暂无)"],
+      collocations: found?.collocations?.length ? found.collocations : fallback?.collocations?.length ? fallback.collocations : ["(暂无)"],
       wordFormation: found?.wordFormation || "(暂无)",
       synonyms: found?.synonyms?.length ? found.synonyms : ["(暂无)"],
       antonyms: found?.antonyms?.length ? found.antonyms : ["(暂无)"]
@@ -1456,14 +1474,20 @@ async function generateLexicon(words, quickMode, model, detailLevel = "full") {
     });
     let parsed = extractJsonArray(text);
 
-    if (!Array.isArray(parsed) && !isCore) {
+    if (!Array.isArray(parsed)) {
       const retryPrompt = [
         "Return ONLY JSON array, no markdown, no explanation.",
-        "Each item keys must be exactly: word,pos,us_ipa,uk_ipa,meanings,collocations,word_formation,synonyms,antonyms.",
+        isCore
+          ? "Each item keys must be exactly: word,pos,us_ipa,uk_ipa,meanings."
+          : "Each item keys must be exactly: word,pos,us_ipa,uk_ipa,meanings,collocations,word_formation,synonyms,antonyms.",
         "Keep same order as input words.",
         `Words: ${chunkWords.join(", ")}`
       ].join("\n");
-      const retryText = await callOpenAIText(retryPrompt, { maxTokens: quickMode ? 650 : 1300, model, step: "lexicon_retry" });
+      const retryText = await callOpenAIText(retryPrompt, {
+        maxTokens: isCore ? (quickMode ? 360 : 760) : quickMode ? 650 : 1300,
+        model,
+        step: isCore ? "lexicon_core_retry" : "lexicon_retry"
+      });
       parsed = extractJsonArray(retryText);
     }
 
@@ -1477,10 +1501,10 @@ async function generateLexicon(words, quickMode, model, detailLevel = "full") {
   let lexicon = chunkResults.flat();
 
   const failedWords = lexicon
-    .filter((x) => (x?.senses || []).some((s) => String(s?.meaning || "").includes("待完善")))
+    .filter((x) => (x?.senses || []).some((s) => isGeneratedLexiconFallbackMeaning(s?.meaning)))
     .map((x) => x.word);
 
-  if (failedWords.length > 0 && !isCore) {
+  if (failedWords.length > 0) {
     const retryChunks = chunkArray(failedWords, 4);
     let recoveredAll = [];
     for (const c of retryChunks) {
@@ -1488,13 +1512,19 @@ async function generateLexicon(words, quickMode, model, detailLevel = "full") {
         "You are an IELTS vocabulary assistant.",
         "Return ONLY JSON array.",
         "For each word provide practical IELTS meanings and basic word data.",
-        "Output format: {\"word\": string, \"pos\": string, \"us_ipa\": string, \"uk_ipa\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
+        isCore
+          ? "Output format: {\"word\": string, \"pos\": string, \"us_ipa\": string, \"uk_ipa\": string, \"meanings\": string[]}"
+          : "Output format: {\"word\": string, \"pos\": string, \"us_ipa\": string, \"uk_ipa\": string, \"meanings\": string[], \"collocations\": string[], \"word_formation\": string, \"synonyms\": string[], \"antonyms\": string[]}",
         "meanings[0] MUST be the most common IELTS sense.",
         "Order meanings by IELTS frequency descending.",
         "If a word is misspelled, infer the most likely intended word and still provide useful meanings for the given spelling.",
         `Words: ${c.join(", ")}`
       ].join("\n");
-      const fallbackText = await callOpenAIText(fallbackPrompt, { maxTokens: quickMode ? 700 : 1400, model, step: "lexicon_fallback" });
+      const fallbackText = await callOpenAIText(fallbackPrompt, {
+        maxTokens: isCore ? (quickMode ? 420 : 860) : quickMode ? 700 : 1400,
+        model,
+        step: isCore ? "lexicon_core_fallback" : "lexicon_fallback"
+      });
       const fallbackParsed = extractJsonArray(fallbackText);
       recoveredAll = recoveredAll.concat(normalizeLexicon(c, fallbackParsed, normalizedDetailLevel));
     }
@@ -1605,7 +1635,7 @@ function buildAllowedOrigins(raw) {
 
 function splitWordsForDenseChunks(words, minSize = 4, maxSize = 6) {
   const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
-  if (sourceWords.length <= 12) return [sourceWords];
+  if (sourceWords.length <= 24) return [sourceWords];
   if (sourceWords.length <= maxSize) return [sourceWords];
 
   const targetSize = Math.min(maxSize, Math.max(minSize, 5));
@@ -1845,7 +1875,7 @@ async function generateArticlePackage(
   const lengthRule = isMixedMode
     ? isDenseMixedMode
       ? "Use high-density mixed flow: prefer 4-8 short sentences, not a long narrative paragraph."
-      : "Keep it compact and easy to read, with short natural sentences."
+      : "Write one coherent short scene of 8-14 natural Chinese sentences."
     : quickMode
       ? "Length: 120-180 words."
       : words.length > 16
@@ -1854,7 +1884,7 @@ async function generateArticlePackage(
   const paragraphRule = isMixedMode
     ? isDenseMixedMode
       ? "Use 4-8 short lines or short paragraphs, separated by blank lines when needed."
-      : "Use 2-4 short paragraphs separated by blank lines."
+      : "Use 1-3 paragraphs separated by blank lines, with clear beginning, development, and ending."
     : quickMode
       ? "Use 2-3 short paragraphs separated by blank lines."
       : words.length > 16
@@ -1865,7 +1895,7 @@ async function generateArticlePackage(
     .map((item) => {
       const senses = Array.isArray(item?.senses) ? item.senses : [];
       const primary = senses[0];
-      const primaryText = primary ? `preferred: ${primary.meaning}` : "preferred: 常考义待完善";
+      const primaryText = primary ? `preferred: ${primary.meaning}` : "preferred: use the most natural context meaning";
       const alternates = senses
         .slice(1, 3)
         .map((s) => s.meaning)
@@ -1881,15 +1911,16 @@ async function generateArticlePackage(
     ? [
         isDenseMixedMode
           ? "Write high-density Chinese-English mixed word flow, not a complete long-form article."
-          : "Write a Chinese-first mixed-language passage, not a formal article.",
-        "The tone must be natural, conversational, and everyday-life based.",
-        "It should feel like a real person talking, sharing, complaining, reflecting, or reacting in daily life.",
+          : "Write a Chinese-first mixed-language narrative passage, not isolated example sentences.",
+        "The passage must have one continuous real-world scene and a clear timeline.",
+        "Prefer a field trip, travel, weather observation, school activity, or daily-life event when it fits the target words.",
+        "The tone must be natural, concrete, and story-like.",
         "The main body should be fluent natural Chinese, with target words inserted in English only.",
         "Insert target words as part of sentence rhythm, not as explanations or glossary items.",
-        "Prefer 1-2 target words per sentence, and keep sentence units short.",
-        "Keep Chinese bridge text between adjacent target words very short: ideal <=10 Chinese characters, hard limit <=18.",
-        "Avoid long Chinese-only paragraphs that push target words far apart.",
-        "Prefer 4-8 short sentences instead of long paragraphs.",
+        isDenseMixedMode ? "Prefer 1-2 target words per sentence, and keep sentence units short." : "Use 1-3 target words per sentence only when they naturally belong to the same event.",
+        isDenseMixedMode ? "Keep Chinese bridge text between adjacent target words very short: ideal <=10 Chinese characters, hard limit <=18." : "Allow enough Chinese context to make the scene coherent; do not sacrifice story flow for density.",
+        isDenseMixedMode ? "Avoid long Chinese-only paragraphs that push target words far apart." : "Avoid sentence-by-sentence unrelated examples such as '今天...感觉...' repeated for each word.",
+        isDenseMixedMode ? "Prefer 4-8 short sentences instead of long paragraphs." : "The result should read like one complete mini-essay, not a vocabulary drill.",
         isDenseMixedMode ? "The first sentence must contain at least one target word." : "",
         isDenseMixedMode ? "Do not begin with a standalone Chinese background paragraph." : "",
         isDenseMixedMode ? "Prefer the first target word to appear within the first 12 Chinese characters." : "",
@@ -1911,7 +1942,7 @@ async function generateArticlePackage(
         "Avoid duplicate Chinese+English semantics around the same blank: use 非常cruel, not 非常残忍cruel.",
         "Do NOT output keyword list sections such as '片段1：补充关键词 ...'.",
         "Do NOT output standalone dictionary lines such as 'n. xxx' in the body.",
-        "If one single story feels forced, you may write a sequence of small daily-life moments, but the voice must stay natural and consistent.",
+        isDenseMixedMode ? "If one single story feels forced, you may write a sequence of small daily-life moments, but the voice must stay natural and consistent." : "Do not split into unrelated micro-scenes unless the word list is extremely long.",
         "Naturalness and spoken flow are more important than showing off difficult writing."
       ]
     : ["Write an English IELTS-style article."];
@@ -2144,6 +2175,11 @@ function buildFallbackMixedUsagePlan(words, lexicon) {
       ...buildMustKeepEnglishHints(word, primaryMeaning || "词义待补充")
     };
   });
+}
+
+function isGeneratedLexiconFallbackMeaning(value) {
+  const text = String(value || "");
+  return text.includes("待完善") || text.includes("词义生成失败");
 }
 
 function normalizeMixedUsagePlan(rows, words, lexicon) {
@@ -4162,9 +4198,9 @@ app.post("/api/generate", async (req, res) => {
         }
         const runsForGapCheck = buildArticleRuns(articleText, words, []);
         return {
-          betweenWordIssues: findLargeWordGapsFromRuns(runsForGapCheck, 18),
-          leadIssue: findLeadWordGapFromRuns(runsForGapCheck, 12),
-          tailIssue: findTailWordGapFromRuns(runsForGapCheck, 20)
+          betweenWordIssues: findLargeWordGapsFromRuns(runsForGapCheck, 90),
+          leadIssue: findLeadWordGapFromRuns(runsForGapCheck, 80),
+          tailIssue: findTailWordGapFromRuns(runsForGapCheck, 120)
         };
       };
       const getChunkIndexByWord = (pack) => {
@@ -4331,6 +4367,9 @@ app.post("/api/generate", async (req, res) => {
       };
       const generateMainArticle = async (extraConstraint = "") => {
         if (generationMode === "mixed") {
+          if (words.length <= 24) {
+            return generateArticlePackage(words, level, quickMode, lexicon, generationMode, extraConstraint, selectedModel, mixedUsagePlan);
+          }
           return generateMixedDenseArticleByChunks(
             words,
             level,

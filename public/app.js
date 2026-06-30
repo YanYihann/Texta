@@ -128,6 +128,8 @@ const LIBRARY_SYNC_DELAY_MS = 800;
 const LIBRARY_SYNC_RETRY_BASE_MS = 2500;
 const LIBRARY_SYNC_RETRY_MAX_MS = 60000;
 const NOTEBOOK_HYDRATION_RETRY_MS = 2 * 60 * 1000;
+const AUTH_REQUEST_TIMEOUT_MS = 25000;
+const AUTH_RETRY_COUNT = 2;
 const themeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 if ("speechSynthesis" in window && typeof window.speechSynthesis?.addEventListener === "function") {
   window.speechSynthesis.addEventListener("voiceschanged", () => {
@@ -137,6 +139,32 @@ if ("speechSynthesis" in window && typeof window.speechSynthesis?.addEventListen
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function isRetriableStatus(status) {
+  return [408, 429, 500, 502, 503, 504].includes(Number(status));
+}
+
+function isRetriableFetchError(error) {
+  return error?.name === "AbortError" || error instanceof TypeError;
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 0) {
+  if (!timeoutMs) {
+    return fetch(url, options);
+  }
+
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 function isMobileLayout() {
@@ -204,11 +232,34 @@ function syncActionButtonStates() {
 }
 
 async function apiFetch(path, options = {}) {
+  const retryCount = Number(options.retryCount || 0);
+  const timeoutMs = Number(options.timeoutMs || 0);
+  const retryDelayMs = Number(options.retryDelayMs || 900);
+  const { retryCount: _retryCount, timeoutMs: _timeoutMs, retryDelayMs: _retryDelayMs, ...fetchOptions } = options;
   const headers = { ...(options.headers || {}) };
   if (authToken) {
     headers.Authorization = `Bearer ${authToken}`;
   }
-  return fetch(apiUrl(path), { ...options, headers });
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retryCount; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(apiUrl(path), { ...fetchOptions, headers }, timeoutMs);
+      if (attempt < retryCount && isRetriableStatus(response.status)) {
+        await wait(retryDelayMs * (attempt + 1));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retryCount || !isRetriableFetchError(error)) {
+        throw error;
+      }
+      await wait(retryDelayMs * (attempt + 1));
+    }
+  }
+
+  throw lastError || new Error("Network request failed");
 }
 
 function setAuthToken(token) {
@@ -505,7 +556,11 @@ async function loadMe() {
   }
 
   try {
-    const response = await apiFetch("/api/auth/me");
+    const response = await apiFetch("/api/auth/me", {
+      retryCount: AUTH_RETRY_COUNT,
+      timeoutMs: AUTH_REQUEST_TIMEOUT_MS,
+      retryDelayMs: 1200
+    });
     if (!response.ok) {
       setAuthToken("");
       currentUser = null;
@@ -1043,7 +1098,11 @@ async function hydrateLibraryFromServer() {
     vocabPrefs: { ...vocabPrefs }
   };
   try {
-    const response = await apiFetch("/api/library");
+    const response = await apiFetch("/api/library", {
+      retryCount: 1,
+      timeoutMs: 12000,
+      retryDelayMs: 1200
+    });
     if (!response.ok) return;
     const remote = await response.json();
     const merged = mergeLibrary(localState, {
@@ -3648,7 +3707,6 @@ async function init() {
   loadHistoryEntries();
   loadVocabPrefs();
   loadNotebookEntries();
-  await hydrateLibraryFromServer();
   renderSpelling();
   applyReadingFontSize();
   applyReadingMode();
@@ -3657,6 +3715,11 @@ async function init() {
   setLibraryMode(currentLibraryMode, { navigate: false, focusArticle: Boolean(latestArticle) });
   syncGlossaryFooterButton();
   refreshMobileNav();
+  void hydrateLibraryFromServer().then(() => {
+    renderNotebookView();
+    renderLibraryList();
+    syncGlossaryFooterButton();
+  });
   if (shouldAutoOpenGuide(currentUser)) {
     window.setTimeout(() => openGuideModal(true), 120);
   }

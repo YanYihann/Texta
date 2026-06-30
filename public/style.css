@@ -2296,12 +2296,13 @@ body:not(.auth-page) {
 }
 
 body:not(.auth-page) .app-shell {
-  width: min(100%, 1380px);
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   height: auto;
   min-height: 100vh;
   padding: 18px;
-  grid-template-columns: 310px minmax(520px, 1fr) 340px;
+  grid-template-columns: clamp(300px, 20vw, 420px) minmax(0, 1fr) clamp(320px, 22vw, 460px);
   gap: 14px;
   overflow: visible;
 }
@@ -2831,7 +2832,7 @@ body:not(.auth-page):not(.admin-page).reading-mode .input-panel {
 }
 
 body:not(.auth-page):not(.admin-page).reading-mode .app-shell {
-  grid-template-columns: 310px minmax(520px, 1fr) 340px;
+  grid-template-columns: clamp(300px, 20vw, 420px) minmax(0, 1fr) clamp(320px, 22vw, 460px);
 }
 
 body:not(.auth-page):not(.admin-page).reading-mode .result-panel {
@@ -2840,6 +2841,23 @@ body:not(.auth-page):not(.admin-page).reading-mode .result-panel {
 
 body:not(.auth-page):not(.admin-page).reading-mode .glossary-panel {
   grid-column: 3 / 4;
+}
+
+@media (max-width: 1200px) {
+  body:not(.auth-page):not(.admin-page).reading-mode .app-shell {
+    grid-template-columns: 280px 1fr;
+  }
+
+  body:not(.auth-page):not(.admin-page).reading-mode .result-panel,
+  body:not(.auth-page):not(.admin-page).reading-mode .glossary-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 860px) {
+  body:not(.auth-page):not(.admin-page).reading-mode .app-shell {
+    grid-template-columns: 1fr;
+  }
 }
 
 body.admin-page .app-shell {
