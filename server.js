@@ -1916,6 +1916,10 @@ async function generateArticlePackage(
         "Prefer a field trip, travel, weather observation, school activity, or daily-life event when it fits the target words.",
         "The tone must be natural, concrete, and story-like.",
         "The main body should be fluent natural Chinese, with target words inserted in English only.",
+        "All non-target content in the article body must be Chinese.",
+        "The target words are the ONLY allowed Latin-alphabet tokens in the article body.",
+        "Do not use any extra English words such as weather, stress, IELTS, travel, field, class, or story unless they are in the target word list.",
+        "The JSON title should be Chinese in mixed mode.",
         "Insert target words as part of sentence rhythm, not as explanations or glossary items.",
         isDenseMixedMode ? "Prefer 1-2 target words per sentence, and keep sentence units short." : "Use 1-3 target words per sentence only when they naturally belong to the same event.",
         isDenseMixedMode ? "Keep Chinese bridge text between adjacent target words very short: ideal <=10 Chinese characters, hard limit <=18." : "Allow enough Chinese context to make the scene coherent; do not sacrifice story flow for density.",
@@ -2879,6 +2883,30 @@ function buildArticleRuns(article, words, contextGlosses) {
   }
 
   return runs.filter((run) => String(run?.text || run?.word || "").length > 0);
+}
+
+function findUnexpectedEnglishTokens(article, words) {
+  const allowed = new Set();
+  for (const rawWord of Array.isArray(words) ? words : []) {
+    const word = String(rawWord || "").trim().toLowerCase();
+    if (!word) continue;
+    allowed.add(word);
+    const pieces = word.match(/[a-z][a-z'-]*/gi) || [];
+    pieces.forEach((piece) => allowed.add(piece.toLowerCase()));
+  }
+
+  const source = String(article || "").replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
+  const tokens = source.match(/[A-Za-z][A-Za-z'-]*/g) || [];
+  const unexpected = [];
+  const seen = new Set();
+  for (const token of tokens) {
+    const key = token.toLowerCase();
+    if (allowed.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    unexpected.push(token);
+    if (unexpected.length >= 12) break;
+  }
+  return unexpected;
 }
 
 function shouldRunContextRefine(words, lexicon, generationMode, generationQuality, contextGlosses) {
@@ -4389,6 +4417,7 @@ app.post("/api/generate", async (req, res) => {
       }
       let missing = findMissingWords(articlePack.article, words);
       let overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
+      let unexpectedEnglish = generationMode === "mixed" ? findUnexpectedEnglishTokens(articlePack.article, words) : [];
       let sparseDiagnostics =
         generationMode === "mixed"
           ? computeSparseIssues(articlePack.article)
@@ -4400,6 +4429,7 @@ app.post("/api/generate", async (req, res) => {
         i < retryCount &&
         (missing.length > 0 ||
           overused.length > 0 ||
+          unexpectedEnglish.length > 0 ||
           sparseDiagnostics.betweenWordIssues.length > 0 ||
           sparseDiagnostics.leadIssue !== null ||
           sparseDiagnostics.tailIssue !== null);
@@ -4410,6 +4440,9 @@ app.post("/api/generate", async (req, res) => {
           `Missing words: ${missing.join(", ")}.`,
           overused.length > 0
             ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
+            : "",
+          unexpectedEnglish.length > 0
+            ? `Unexpected non-target English tokens found: ${unexpectedEnglish.join(", ")}. Remove or translate them into Chinese. Only target words may remain in English.`
             : "",
           sparseDiagnostics.betweenWordIssues.length > 0
             ? `Large Chinese gap(s) between adjacent target words: ${summarizeBetweenWordIssues(
@@ -4429,6 +4462,7 @@ app.post("/api/generate", async (req, res) => {
           "Chinese translation does NOT count as usage.",
           "Never replace a target word with Chinese-only wording.",
           "Every target word must appear in the final passage as the exact English token from input.",
+          "All other words must be Chinese. Do not include any non-target English token in the article body.",
           "The passage must start with a target word in the first sentence.",
           "Do not write a long Chinese-only introduction before the first target word.",
           "Before the first target word, allow at most 12 Chinese characters.",
@@ -4462,6 +4496,7 @@ app.post("/api/generate", async (req, res) => {
         }
         missing = findMissingWords(articlePack.article, words);
         overused = generationMode === "mixed" ? findOverusedWords(articlePack.article, words, 2) : [];
+        unexpectedEnglish = generationMode === "mixed" ? findUnexpectedEnglishTokens(articlePack.article, words) : [];
         sparseDiagnostics =
           generationMode === "mixed"
             ? computeSparseIssues(articlePack.article)

@@ -1923,7 +1923,6 @@ function renderMixedWordRun(run) {
   const key = keyifyWord(run?.word || wordText);
   const posText = normalizePosTagLabel(run?.pos || "");
   const rawMeaning = sanitizeGlossTextForUi(run?.displayMeaning, 160);
-  console.log("[article-run]", run?.word, run?.pos, run?.displayMeaning);
   const note = /[\u4e00-\u9fff]/.test(rawMeaning) ? rawMeaning : "词义待补充";
 
   const wrap = document.createElement("span");
@@ -3185,13 +3184,13 @@ function applyArticleData(data) {
   const incomingBaseLexicon = (Array.isArray(data.baseLexicon) ? data.baseLexicon : []).map(sanitizeLexiconItemForUi);
   latestBaseLexicon = incomingBaseLexicon.length > 0 ? incomingBaseLexicon : incomingLexicon;
   latestContextLexicon = incomingLexicon.length > 0 ? incomingLexicon : latestBaseLexicon;
-  latestLexicon = latestBaseLexicon;
   latestContextGlosses = sanitizeContextGlossesForUi(data.contextGlosses);
   latestRuns = sanitizeRunsForUi(data.runs);
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
   latestGenerationMode = normalizeGenerationModeValue(data.generationMode || "standard");
+  latestLexicon = latestGenerationMode === "mixed" ? latestContextLexicon : latestBaseLexicon;
   latestGenerationQuality = normalizeGenerationQualityValue(data.generationQuality || "normal");
   if (generationModeSelect) {
     generationModeSelect.value = latestGenerationMode;
