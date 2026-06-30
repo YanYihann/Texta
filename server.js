@@ -1564,6 +1564,7 @@ async function planMixedUsage(words, lexicon, quickMode, model) {
     "First infer the overall theme of the word list. Examples: natural geography, weather/climate, emotion/psychology, campus life, technology/society, abstract concepts.",
     "If most words share a theme, choose one coherent scene around that theme.",
     "If the words are random, create one plausible story scene that can naturally contain all of them.",
+    "For random words like apple/thunder/library/dragon/nervous/machine, a good scene is: a student studies in a library during thunder, eats an apple, reads a dragon story, hears a machine, and feels nervous.",
     "Arrange words by story logic, not by input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
     "For each word, choose a grammar role matching its POS: nouns as objects/places/items, verbs as actions, adjectives modifying Chinese nouns, academic terms in class/research contexts, abstract words in reflection.",
     "Return ONLY JSON array in the same order as input words.",
@@ -1898,6 +1899,7 @@ async function generateArticlePackage(
     })
     .join("\n");
   const usagePlanGuide = isMixedMode ? buildMixedUsagePlanGuide(usagePlan, words) : "";
+  const requiredWordPlan = isMixedMode ? buildMixedRequiredWordPlan(words, lexicon, usagePlan) : "";
 
   const modeRules = isMixedMode
     ? [
@@ -1907,6 +1909,7 @@ async function generateArticlePackage(
         "Generate the mixed passage directly. Do not first write a Chinese-only passage and then replace words.",
         "Before writing, internally infer the common domain of the target words. If they share a domain, build the whole passage around that domain.",
         "If the target words do not share a clear domain, create one believable story scene that can naturally contain them.",
+        "Example for random words apple/thunder/library/dragon/nervous/machine: 在library复习时外面响起thunder，学生吃apple，读到dragon故事，旁边machine发声，让他nervous.",
         "Order target words by narrative logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
         "Place every target word in a grammatically natural slot based on its POS.",
         "The passage must have one continuous real-world scene and a clear timeline.",
@@ -1917,6 +1920,8 @@ async function generateArticlePackage(
         "The target words are the ONLY allowed Latin-alphabet tokens in the article body.",
         "Do not use any extra English words such as weather, stress, IELTS, travel, field, class, or story unless they are in the target word list.",
         "The JSON title should be Chinese in mixed mode.",
+        "You must use every target word exactly as an English surface token at least once.",
+        "Before finalizing, scan the article body and verify each exact target token appears.",
         "Insert target words as part of sentence rhythm, not as explanations or glossary items.",
         isDenseMixedMode ? "Prefer 1-2 target words per sentence, and keep sentence units short." : "Use 1-3 target words per sentence only when they naturally belong to the same event.",
         isDenseMixedMode ? "Keep Chinese bridge text between adjacent target words very short: ideal <=10 Chinese characters, hard limit <=18." : "Allow enough Chinese context to make the scene coherent; do not sacrifice story flow for density.",
@@ -1967,6 +1972,9 @@ async function generateArticlePackage(
     "Make title concise and natural.",
     "Vocabulary guide:",
     vocabGuide,
+    isMixedMode ? "Mandatory target-word placement plan:" : "",
+    isMixedMode ? requiredWordPlan : "",
+    isMixedMode ? `Exact target token checklist: ${words.map((w) => `"${w}"`).join(", ")}` : "",
     isMixedMode ? "Usage planning hints:" : "",
     isMixedMode ? usagePlanGuide : "",
     extraConstraint
@@ -2257,6 +2265,36 @@ function buildMixedUsagePlanGuide(usagePlan, wordsFilter) {
     });
 
   return lines.join("\n");
+}
+
+function describeGrammarSlot(pos) {
+  const normalized = normalizePosTag(pos).toLowerCase();
+  if (normalized.startsWith("n")) return "noun slot: subject, object, place, item, or concept in a Chinese sentence";
+  if (normalized.startsWith("v")) return "verb slot: the visible action or change in the sentence";
+  if (normalized.startsWith("adj")) return "adjective slot: modify a Chinese noun directly, e.g. target + 中文名词";
+  if (normalized.startsWith("adv")) return "adverb slot: modify a Chinese action or state";
+  return "natural grammar slot based on context";
+}
+
+function buildMixedRequiredWordPlan(words, lexicon, usagePlan) {
+  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
+  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  const planMap = new Map((Array.isArray(usagePlan) ? usagePlan : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
+  return sourceWords
+    .map((word, index) => {
+      const key = word.toLowerCase();
+      const item = lexMap.get(key) || {};
+      const plan = planMap.get(key) || {};
+      const pos = normalizePosTag(plan?.pos || item?.pos || "");
+      const meaning =
+        String(plan?.meaning || "").trim() ||
+        (Array.isArray(item?.senses) ? item.senses.map((s) => String(s?.meaning || "").trim()).find(Boolean) : "") ||
+        "context meaning";
+      const scene = String(plan?.scene || "").trim();
+      const pattern = String(plan?.allowedPattern || plan?.allowed_pattern || "").trim();
+      return `${index + 1}. "${word}" (${pos || "-"}) => ${meaning}; ${describeGrammarSlot(pos)}${scene ? `; scene: ${scene}` : ""}${pattern ? `; usage: ${pattern}` : ""}`;
+    })
+    .join("\n");
 }
 
 function splitWordsForMixedScenes(words, usagePlan) {
@@ -4316,7 +4354,7 @@ app.post("/api/generate", async (req, res) => {
           ? computeSparseIssues(articlePack.article)
           : { betweenWordIssues: [], leadIssue: null, tailIssue: null };
 
-      const retryCount = generationMode === "mixed" ? (quickMode ? 0 : 1) : quickMode ? 1 : 2;
+      const retryCount = generationMode === "mixed" ? 2 : quickMode ? 1 : 2;
       for (
         let i = 0;
         i < retryCount &&
@@ -4402,20 +4440,25 @@ app.post("/api/generate", async (req, res) => {
           articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
           missing = findMissingWords(articlePack.article, words);
         } else {
-          const missingBeforeRewrite = missing.slice();
-          const rewriteConstraint = [
-            "Rewrite the entire mixed passage from scratch as one coherent scene.",
-            `The previous attempt missed these exact target English tokens: ${missingBeforeRewrite.join(", ")}.`,
-            "Do not append a supplement paragraph. Do not add standalone example sentences.",
-            "Use every target word naturally inside the story.",
-            "All non-target content must be Chinese. Only target words may appear in English."
-          ].join(" ");
-          articlePack = await generateMainArticle(rewriteConstraint);
-          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-          missing = findMissingWords(articlePack.article, words);
-          overused = findOverusedWords(articlePack.article, words, 2);
-          sparseDiagnostics = computeSparseIssues(articlePack.article);
-
+          for (let repairAttempt = 1; repairAttempt <= 3 && missing.length > 0; repairAttempt += 1) {
+            const missingBeforeRewrite = missing.slice();
+            const rewriteConstraint = [
+              `Whole-passage repair attempt ${repairAttempt}.`,
+              "Rewrite the entire mixed passage from scratch as one coherent scene.",
+              `The previous attempt missed these exact target English tokens: ${missingBeforeRewrite.join(", ")}.`,
+              `Required exact target tokens: ${words.map((w) => `"${w}"`).join(", ")}.`,
+              "Do not append a supplement paragraph. Do not add standalone example sentences.",
+              "Use every target word naturally inside the story.",
+              "All non-target content must be Chinese. Only target words may appear in English.",
+              "Final self-check before output: every required exact target token must be visibly present in the article body."
+            ].join(" ");
+            articlePack = await generateMainArticle(rewriteConstraint);
+            articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
+            missing = findMissingWords(articlePack.article, words);
+            overused = findOverusedWords(articlePack.article, words, 2);
+            unexpectedEnglish = findUnexpectedEnglishTokens(articlePack.article, words);
+            sparseDiagnostics = computeSparseIssues(articlePack.article);
+          }
         }
       }
 
