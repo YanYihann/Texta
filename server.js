@@ -1941,7 +1941,11 @@ async function generateArticlePackage(
         "When Chinese characters directly connect with a protected token, keep compact form like 看到⟦T1⟧ or 感到⟦T2⟧.",
         "If a protected token is hard to place naturally, add a brief observation, notebook sentence, classroom remark, object, action, or feeling inside the same scene."
       ]
-    : ["Write an English IELTS-style article."];
+    : [
+        "Write an English IELTS-style article.",
+        "The JSON title and article body must be English only.",
+        "Do not output Chinese characters in the title or article body; Chinese translation is generated separately later."
+      ];
   const bodyLabel = isMixedMode ? "Passage" : "Article";
 
   const prompt = [
@@ -1959,7 +1963,7 @@ async function generateArticlePackage(
     isMixedMode ? "If a protected token is difficult to place naturally, integrate it as a brief observation, classroom note, object, action, or reflection inside the same scene." : "If a word is difficult to place naturally, put it in a separate short micro-scene.",
     "Do not include sense markers in the article body.",
     "The output should read smoothly even for someone who ignores the vocabulary-learning purpose.",
-    "Make title concise and natural.",
+    isMixedMode ? "Make title concise and natural." : "Make title concise, natural, and English-only.",
     isMixedMode ? "Protected token guide:" : "Vocabulary guide:",
     isMixedMode ? protectedTargetGuide : vocabGuide,
     isMixedMode ? "Mandatory target-word placement plan:" : "",
@@ -2824,6 +2828,10 @@ function mergeLexiconWithContextMeanings(lexicon, contextRows) {
 
 function hasChineseChars(value) {
   return /[\u4e00-\u9fff]/.test(String(value || ""));
+}
+
+function hasStandardEnglishLanguageIssue(articlePack) {
+  return hasChineseChars(articlePack?.title) || hasChineseChars(articlePack?.article);
 }
 
 function buildBaseLexiconForResponse(lexicon) {
@@ -4279,7 +4287,7 @@ app.post("/api/generate", async (req, res) => {
     const rawWords = String(req.body.words || "");
     const level = String(req.body.level || "中级");
     const quickMode = Boolean(req.body.quickMode);
-    const generationMode = String(req.body.generationMode || "standard").toLowerCase() === "mixed" ? "mixed" : "standard";
+    const generationMode = String(req.body.generationMode || "mixed").toLowerCase() === "mixed" ? "mixed" : "standard";
     if (!looksLikeWordListOnlyInput(rawWords)) {
       return res.status(400).json({ error: "Please provide a word list only, not a full article or paragraph." });
     }
@@ -4508,6 +4516,7 @@ app.post("/api/generate", async (req, res) => {
       }
       let diagnostics = recomputeDiagnostics(articlePack.article);
       let { missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics;
+      let standardLanguageIssue = generationMode !== "mixed" && hasStandardEnglishLanguageIssue(articlePack);
 
       const retryCount = generationMode === "mixed" ? 2 : quickMode ? 1 : 2;
       for (
@@ -4518,44 +4527,60 @@ app.post("/api/generate", async (req, res) => {
           unexpectedEnglish.length > 0 ||
           sparseDiagnostics.betweenWordIssues.length > 0 ||
           sparseDiagnostics.leadIssue !== null ||
-          sparseDiagnostics.tailIssue !== null);
+          sparseDiagnostics.tailIssue !== null ||
+          standardLanguageIssue);
         i += 1
       ) {
-        const retryConstraint = [
-          `Important fix (round ${i + 1}): ALL target words must be included.`,
-          `Missing words: ${missing.join(", ")}.`,
-          overused.length > 0
-            ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
-            : "",
-          unexpectedEnglish.length > 0
-            ? `Unexpected non-target English tokens found: ${unexpectedEnglish.join(", ")}. Remove or translate them into Chinese. Only target words may remain in English.`
-            : "",
-          sparseDiagnostics.betweenWordIssues.length > 0
-            ? `Large Chinese gap(s) between adjacent target words: ${summarizeBetweenWordIssues(
-                sparseDiagnostics.betweenWordIssues
-              )}.`
-            : "",
-          sparseDiagnostics.leadIssue
-            ? `Lead Chinese-only gap before first target word is too long (${sparseDiagnostics.leadIssue.chineseChars} chars).`
-            : "",
-          sparseDiagnostics.tailIssue
-            ? `Tail Chinese-only gap after last target word is too long (${sparseDiagnostics.tailIssue.chineseChars} chars).`
-            : "",
-          "Highest priority: fix exact target-token coverage before improving style.",
-          "Keep one coherent mixed Chinese-English short passage. Do not split into unrelated fragments.",
-          "Preserve narrative order and story flow while fixing coverage issues.",
-          "Chinese connects the story; only target words stay in English.",
-          "Coverage is validated by exact literal English surface forms.",
-          "Chinese translation does NOT count as usage.",
-          "Never replace a target word with Chinese-only wording.",
-          "Every target word must appear in the final passage as the exact English token from input.",
-          "All other words must be Chinese. Do not include any non-target English token in the article body.",
-          "A short Chinese setup is allowed if it improves coherence.",
-          "Do not add dictionary explanations, word lists, or standalone example sentences.",
-          "The final article should feel like a complete scene rather than a vocabulary exercise."
-        ]
-          .filter(Boolean)
-          .join(" ");
+        const retryConstraint =
+          generationMode === "mixed"
+            ? [
+                `Important fix (round ${i + 1}): ALL target words must be included.`,
+                `Missing words: ${missing.join(", ")}.`,
+                overused.length > 0
+                  ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
+                  : "",
+                unexpectedEnglish.length > 0
+                  ? `Unexpected non-target English tokens found: ${unexpectedEnglish.join(", ")}. Remove or translate them into Chinese. Only target words may remain in English.`
+                  : "",
+                sparseDiagnostics.betweenWordIssues.length > 0
+                  ? `Large Chinese gap(s) between adjacent target words: ${summarizeBetweenWordIssues(
+                      sparseDiagnostics.betweenWordIssues
+                    )}.`
+                  : "",
+                sparseDiagnostics.leadIssue
+                  ? `Lead Chinese-only gap before first target word is too long (${sparseDiagnostics.leadIssue.chineseChars} chars).`
+                  : "",
+                sparseDiagnostics.tailIssue
+                  ? `Tail Chinese-only gap after last target word is too long (${sparseDiagnostics.tailIssue.chineseChars} chars).`
+                  : "",
+                "Highest priority: fix exact target-token coverage before improving style.",
+                "Keep one coherent mixed Chinese-English short passage. Do not split into unrelated fragments.",
+                "Preserve narrative order and story flow while fixing coverage issues.",
+                "Chinese connects the story; only target words stay in English.",
+                "Coverage is validated by exact literal English surface forms.",
+                "Chinese translation does NOT count as usage.",
+                "Never replace a target word with Chinese-only wording.",
+                "Every target word must appear in the final passage as the exact English token from input.",
+                "All other words must be Chinese. Do not include any non-target English token in the article body.",
+                "A short Chinese setup is allowed if it improves coherence.",
+                "Do not add dictionary explanations, word lists, or standalone example sentences.",
+                "The final article should feel like a complete scene rather than a vocabulary exercise."
+              ]
+                .filter(Boolean)
+                .join(" ")
+            : [
+                `Important fix (round ${i + 1}): write a complete English IELTS-style article.`,
+                missing.length > 0 ? `Missing target words that must appear in English: ${missing.join(", ")}.` : "",
+                standardLanguageIssue ? "The previous title or article contained Chinese. Rewrite it in English only." : "",
+                "The JSON title must be English only.",
+                "The article body must be English only.",
+                "Do not output any Chinese characters in title or article.",
+                "Use every target word naturally in the English article.",
+                "Do not add Chinese explanations, Chinese translations, glossary lines, or vocabulary-list sections.",
+                "Chinese paragraph translations are generated separately after this step."
+              ]
+                .filter(Boolean)
+                .join(" ");
 
         if (generationMode === "mixed" && Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
           const retryChunkIndexes = pickRetryChunkIndexes(
@@ -4582,6 +4607,7 @@ app.post("/api/generate", async (req, res) => {
         }
         diagnostics = recomputeDiagnostics(articlePack.article);
         ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
+        standardLanguageIssue = generationMode !== "mixed" && hasStandardEnglishLanguageIssue(articlePack);
       }
 
       let mixedSemanticRows = [];
@@ -4589,7 +4615,9 @@ app.post("/api/generate", async (req, res) => {
       if (missing.length > 0) {
         if (generationMode !== "mixed") {
           articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
-          missing = findMissingWords(articlePack.article, words);
+          diagnostics = recomputeDiagnostics(articlePack.article);
+          ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
+          standardLanguageIssue = hasStandardEnglishLanguageIssue(articlePack);
         } else {
           for (let repairAttempt = 1; repairAttempt <= 3 && missing.length > 0; repairAttempt += 1) {
             const missingBeforeRewrite = missing.slice();
@@ -4715,6 +4743,28 @@ app.post("/api/generate", async (req, res) => {
         ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
         if (unexpectedEnglish.length > 0) {
           throw new Error(`Unexpected non-target English tokens remained: ${unexpectedEnglish.join(", ")}`);
+        }
+      }
+      if (generationMode !== "mixed" && hasChineseChars(articlePack.title)) {
+        articlePack.title = defaultTitleByDate(words.length);
+      }
+      if (generationMode !== "mixed" && hasChineseChars(articlePack.article)) {
+        articlePack = await generateMainArticle(
+          [
+            "Final English-only repair.",
+            "Rewrite the entire article in English only.",
+            "The title and article body must not contain any Chinese characters.",
+            `Required target words: ${words.join(", ")}.`,
+            "Do not include Chinese translations, Chinese explanations, glossary sections, or word lists."
+          ].join(" ")
+        );
+        diagnostics = recomputeDiagnostics(articlePack.article);
+        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
+        if (hasChineseChars(articlePack.title)) {
+          articlePack.title = defaultTitleByDate(words.length);
+        }
+        if (hasChineseChars(articlePack.article)) {
+          throw new Error("Standard mode generated Chinese text in the English article. Please retry.");
         }
       }
 

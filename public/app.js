@@ -77,7 +77,7 @@ let latestParagraphsEn = [];
 let latestParagraphsZh = [];
 let latestAlignment = [];
 let latestUsage = null;
-let latestGenerationMode = "standard";
+let latestGenerationMode = "mixed";
 let latestGenerationQuality = "normal";
 let showChinese = true;
 let pendingExportType = "pdf";
@@ -3189,7 +3189,7 @@ function applyArticleData(data) {
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
-  latestGenerationMode = normalizeGenerationModeValue(data.generationMode || "standard");
+  latestGenerationMode = normalizeGenerationModeValue(data.generationMode || "mixed");
   latestLexicon = latestGenerationMode === "mixed" ? latestContextLexicon : latestBaseLexicon;
   latestGenerationQuality = normalizeGenerationQualityValue(data.generationQuality || "normal");
   if (generationModeSelect) {
@@ -3319,7 +3319,7 @@ function saveCurrentArticleToHistory() {
 generateBtn.addEventListener("click", async () => {
   const wordsText = wordsInput.value.trim();
   const level = levelSelect.value;
-  const generationMode = String(generationModeSelect?.value || "standard");
+  const generationMode = String(generationModeSelect?.value || "mixed");
   const generationQuality = String(generationQualitySelect?.value || "normal").toLowerCase() === "advanced" ? "advanced" : "normal";
   const quickMode = Boolean(quickModeInput.checked);
 

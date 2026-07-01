@@ -103,6 +103,8 @@ Lexicon candidates:
 
 ```text
 Write an English IELTS-style article.
+The JSON title and article body must be English only.
+Do not output Chinese characters in the title or article body; Chinese translation is generated separately later.
 Return ONLY JSON object:
 {"title":"...", "article":"..."}
 Level: {level}.
@@ -116,7 +118,7 @@ Do not force a target word into an unnatural sentence just for coverage.
 If a word is difficult to place naturally, put it in a separate short micro-scene.
 Do not include sense markers in the article body.
 The output should read smoothly even for someone who ignores the vocabulary-learning purpose.
-Make title concise and natural.
+Make title concise, natural, and English-only.
 Vocabulary guide:
 {vocabGuide}
 {extraConstraint}
