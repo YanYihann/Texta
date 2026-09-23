@@ -258,6 +258,13 @@ npm run dev
 - `NotebookEntry`
 - `UserVocabPref`
 
+## Project Status and Boundaries
+
+- The production links above describe the current deployment shape but may change independently of this repository.
+- Vocabulary and generated text may be sent to the configured OpenAI-compatible provider. Review that provider's privacy and retention terms before submitting sensitive content.
+- Admin credentials, API keys, database URLs, and session secrets belong only in environment variables; never commit them.
+- The React/Next.js frontend is a migration in progress, while `public/` remains the deployed frontend documented here.
+
 ## Roadmap
 
 - [x] User authentication and session handling
@@ -290,6 +297,10 @@ If you are improving UX or study flow, it helps a lot to include:
 - the exact user problem,
 - before/after screenshots or behavior notes,
 - and any API or data-model impact.
+
+## License
+
+No `LICENSE` file is currently included. Add an explicit license before treating the repository as open source or accepting broad reuse.
 
 ## Contact
 
