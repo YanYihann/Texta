@@ -1,7 +1,7 @@
 {
-  "name": "ielts-vocab-writer",
+  "name": "texta",
   "version": "1.0.0",
-  "description": "Input words and generate an article that uses all of them.",
+  "description": "Bilingual IELTS vocabulary writing assistant with generation, study, and account workflows.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
