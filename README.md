@@ -1,196 +1,101 @@
-<a id="top"></a>
+<a id="readme-top"></a>
 
-<!-- PROJECT SHIELDS -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![Last Commit][last-commit-shield]][last-commit-url]
-
-<!-- PROJECT LOGO -->
-<br />
 <div align="center">
   <a href="https://github.com/YanYihann/Texta">
-    <img src="public/logo.svg" alt="Texta Logo" width="180">
+    <img src="public/logo.svg" alt="Texta logo" width="168" />
   </a>
 
-  <h3 align="center">Texta</h3>
+  # Texta
 
-  <p align="center">
-    An IELTS vocabulary writing assistant that turns word lists into bilingual, study-ready output.
-    <br />
-    一个面向雅思词汇记忆与写作练习的智能辅助平台。
-    <br />
-    <br />
-    <a href="https://github.com/YanYihann/Texta"><strong>Explore the Repository »</strong></a>
-    <br />
-    <br />
-    <a href="https://yanyihann.github.io/Texta/">Live Demo</a>
-    ·
-    <a href="https://api-texta.yanyihan.top/api/health">API Health</a>
-    ·
-    <a href="https://github.com/YanYihann/Texta/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/YanYihann/Texta/issues">Request Feature</a>
-  </p>
+  **Turn IELTS vocabulary lists into bilingual, study-ready reading material.**
+
+  输入目标词汇，生成英文文章、中文对照、词义标记与可复习词汇表。
+
+  [Live Demo](https://yanyihann.github.io/Texta/) · [API Health](https://api-texta.yanyihan.top/api/health) · [Report Bug](https://github.com/YanYihann/Texta/issues/new?labels=bug) · [Request Feature](https://github.com/YanYihann/Texta/issues/new?labels=enhancement)
+
+  [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+  [![Express](https://img.shields.io/badge/Express-4-000000?logo=express&logoColor=white)](https://expressjs.com/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Prisma-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+  [![Last commit](https://img.shields.io/github/last-commit/YanYihann/Texta)](https://github.com/YanYihann/Texta/commits/main)
 </div>
 
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li><a href="#about-the-project">About The Project</a></li>
-    <li><a href="#why-texta">Why Texta</a></li>
-    <li><a href="#built-with">Built With</a></li>
-    <li><a href="#architecture">Architecture</a></li>
-    <li><a href="#getting-started">Getting Started</a></li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#project-structure">Project Structure</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
+## Overview
 
-## About The Project
+Texta is a full-stack IELTS vocabulary writing assistant. Instead of asking learners to memorize isolated words, it turns a target list into a connected English article, aligned Chinese translation, highlighted usage, and a detailed glossary. Users can then save useful results, move unfamiliar words into a notebook, track mastery, and export material for later review.
 
-Texta is a full-stack IELTS vocabulary writing assistant designed to make vocabulary practice less fragmented and more actionable.
+The current production frontend lives in `public/` and is deployed through GitHub Pages. The Express API runs separately with Prisma and PostgreSQL. `frontend-react/` contains an in-progress Next.js interface rewrite.
 
-Instead of memorizing isolated words, users can submit a word list and generate:
+## Highlights
 
-- an English article that tries to cover the target vocabulary,
-- a Chinese translation aligned to the English content,
-- highlighted word usage with meaning markers,
-- a glossary panel with parts of speech, senses, collocations, synonyms, antonyms, and word formation,
-- exportable study output for review and revision.
+| Area | What Texta provides |
+| --- | --- |
+| Generation | Vocabulary-aware English content with aligned Chinese output |
+| Word learning | Part of speech, senses, collocations, synonyms, antonyms, and word formation |
+| Review loop | Favorites, notebook entries, mastery preferences, and saved content |
+| Quality control | Spellcheck before generation and highlighted word-to-meaning mapping |
+| Accounts | Registration, login, sessions, and profile lookup |
+| Plans | Daily quotas, free/VIP/admin tiers, and VIP approval workflow |
+| Export | PDF and Word export from the frontend |
+| Operations | Admin usage overview and account-plan management |
 
-The project also includes a complete account system, daily usage limits, VIP approval flow, favorites, notebook synchronization, and an admin dashboard for operation and usage tracking.
-
-Production currently serves the static frontend from `public/` on GitHub Pages, while the Node.js + Express API is deployed on Render behind a custom domain. The `frontend-react/` directory contains an in-progress Next.js rewrite for a more modern frontend experience.
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-## Why Texta
-
-What makes Texta different from a simple "input words, get passage" tool:
-
-- Vocabulary-first workflow: the product is built around target-word retention, not generic essay generation.
-- Bilingual alignment: English and Chinese content are connected through visual highlighting and sense markers.
-- Study loop support: favorites, notebook entries, mastery states, and history reduce one-off usage.
-- Real product mechanics: login, plans, quotas, VIP request review, and admin endpoints make it usable beyond a local demo.
-- Progressive frontend evolution: the current production UI is stable, while `frontend-react/` prepares a richer React/Next.js experience.
-
-## Built With
-
-- [Node.js](https://nodejs.org/)
-- [Express](https://expressjs.com/)
-- [Prisma](https://www.prisma.io/)
-- [PostgreSQL](https://www.postgresql.org/)
-- [OpenAI API](https://platform.openai.com/)
-- [GitHub Pages](https://pages.github.com/)
-- [Render](https://render.com/)
-- [Next.js](https://nextjs.org/) for the ongoing frontend rewrite
-
-## Architecture
+## How it works
 
 ```mermaid
 flowchart LR
-    A["GitHub Pages<br/>Static Frontend"] --> B["Express API<br/>server.js"]
-    B --> C["Prisma ORM"]
-    C --> D["PostgreSQL"]
-    B --> E["OpenAI API"]
-    F["Admin Panel"] --> B
-    G["Favorites / Notebook / Sync"] --> B
+  U["Learner"] --> W["Static web app<br/>public/"]
+  W --> A["Express API<br/>server.js"]
+  A --> O["OpenAI-compatible API"]
+  A --> P["Prisma ORM"]
+  P --> D[(PostgreSQL)]
+  A --> L["Favorites · Notebook · Usage · Admin"]
 ```
 
-### Current deployment shape
-
-- `public/`: production static frontend uploaded to GitHub Pages
-- `server.js`: Express backend handling auth, usage, library sync, admin flows, spellcheck, and generation
-- `prisma/schema.prisma`: PostgreSQL schema for users, sessions, usage, favorites, notebook entries, vocab preferences, and VIP requests
-- `frontend-react/`: Next.js rewrite under active development
-
-### Core backend capabilities
-
-- Authentication: register, login, logout, profile session lookup
-- Usage control: free, VIP, and admin quotas
-- Generation pipeline: vocabulary-aware article generation with model selection
-- Vocab detail API: richer word-level explanation and glossary enrichment
-- Spellcheck: input vocabulary validation before generation
-- Library sync: favorites, notebook entries, and vocab mastery synchronization
-- Admin operations: VIP review, usage overview, user plan adjustment
-
-## Getting Started
+## Quick start
 
 ### Prerequisites
 
-- Node.js 18+ recommended
+- Node.js 18 or newer
 - npm
-- PostgreSQL database
+- PostgreSQL
 - An OpenAI-compatible API key
 
 ### Installation
 
-1. Clone the repository.
+```bash
+git clone https://github.com/YanYihann/Texta.git
+cd Texta
+npm install
+```
 
-   ```bash
-   git clone https://github.com/YanYihann/Texta.git
-   cd Texta
-   ```
+Create a local environment file from the included example:
 
-2. Install backend dependencies.
+```powershell
+Copy-Item .env.example .env
+```
 
-   ```bash
-   npm install
-   ```
+On macOS or Linux, use `cp .env.example .env`.
 
-3. Create your environment file.
+At minimum, configure the database and model provider:
 
-   ```bash
-   copy .env.example .env
-   ```
+```env
+DATABASE_URL=postgresql://postgres:password@localhost:5432/texta?schema=public
+OPENAI_API_KEY=your_key
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+FRONTEND_ORIGIN=http://localhost:3000
+PORT=3000
+```
 
-4. Update `.env` with your own values.
+Initialize the schema and start the app:
 
-   ```env
-   OPENAI_API_KEY=<your_openai_api_key>
-   DATABASE_URL=postgresql://postgres:password@localhost:5432/texta?schema=public
-   OPENAI_MODEL=gpt-4o-mini
-   OPENAI_MODEL_NORMAL=gpt-4o-mini
-   OPENAI_MODEL_ADVANCED=gpt-4o
-   ADVANCED_USAGE_COST=5
-   OPENAI_API_MODE=chat
-   OPENAI_BASE_URL=https://api.openai.com/v1
-   OPENAI_TIMEOUT_MS=30000
-   OPENAI_RETRY_COUNT=2
-   FRONTEND_ORIGIN=http://localhost:3000,https://yanyihann.github.io
-   AUTH_TOKEN_TTL_MS=604800000
-   ADMIN_EMAIL=admin@example.com
-   ADMIN_NAME=Admin
-   ADMIN_PASSWORD=change_this_password
-   PORT=3000
-   ```
+```bash
+npm run db:push --skip-generate
+npm start
+```
 
-5. Sync the Prisma schema to your database.
+Open `http://localhost:3000`.
 
-   ```bash
-   npm run db:push --skip-generate
-   ```
-
-6. Start the backend.
-
-   ```bash
-   npm start
-   ```
-
-7. Open the local app.
-
-- Static frontend pages are served by Express from `public/`
-- Default local address: `http://localhost:3000`
-
-### Optional: run the Next.js rewrite
-
-If you want to work on the new React frontend:
+### Optional Next.js frontend
 
 ```bash
 cd frontend-react
@@ -198,131 +103,79 @@ npm install
 npm run dev
 ```
 
-## Usage
+The Next.js version is under development and is not yet the production frontend.
 
-### Main study flow
+## Study workflow
 
-1. Register an account or sign in.
-2. Enter vocabulary items separated by newlines or commas.
-3. Let Texta spellcheck the list before generation.
-4. Generate an article and review bilingual highlighting.
-5. Open single-word details to inspect senses, collocations, and word formation.
-6. Save useful results to favorites or send unfamiliar words into the notebook.
-7. Export the final result as PDF or Word for later review.
+1. Register or sign in.
+2. Paste vocabulary separated by commas or new lines.
+3. Review spellcheck suggestions.
+4. Generate an article and its aligned Chinese translation.
+5. Inspect highlighted words, meanings, collocations, and word formation.
+6. Save the article or add unfamiliar words to the notebook.
+7. Export the result for offline review.
 
-### Built-in product features
+## Deployment
 
-| Area | What it does |
+| Component | Current target |
 | --- | --- |
-| Auth | User registration, login, session-based access |
-| Usage control | Free users get daily quotas, VIP gets expanded limits, admin is unrestricted |
-| Generation | Creates vocabulary-aware content from a word list |
-| Alignment | Connects English and Chinese sections through highlighted mapping |
-| Glossary | Shows POS, senses, collocations, synonyms, antonyms, and word formation |
-| Library | Favorites, history-like saved content, notebook entries, mastery preferences |
-| Export | PDF and Word export flow from the frontend |
-| Admin | VIP review queue, usage overview, manual plan changes |
+| Static frontend | GitHub Pages |
+| Express API | Render / custom API domain |
+| Database | PostgreSQL through Prisma |
+| Next frontend | Development only in `frontend-react/` |
 
-### Production endpoints
+Production endpoints documented by the repository:
 
-- Frontend: [https://yanyihann.github.io/Texta/](https://yanyihann.github.io/Texta/)
-- Backend API base: [https://api-texta.yanyihan.top](https://api-texta.yanyihan.top)
-- Health check: [https://api-texta.yanyihan.top/api/health](https://api-texta.yanyihan.top/api/health)
+- Frontend: <https://yanyihann.github.io/Texta/>
+- API: <https://api-texta.yanyihan.top>
+- Health: <https://api-texta.yanyihan.top/api/health>
 
-## Project Structure
+Availability can change independently of the source repository.
+
+## Repository map
 
 ```text
-.
-├── .github/workflows/deploy-pages.yml   # GitHub Pages deployment
-├── data/                                # Local data or auxiliary assets
-├── frontend-react/                      # Next.js rewrite
-├── prisma/
-│   └── schema.prisma                    # Database schema
-├── public/                              # Production static frontend
-├── scripts/                             # Helper scripts
-├── tools/                               # Extra tooling and submodules
-├── .env.example                         # Environment variable template
-├── package.json                         # Backend scripts and deps
-├── render.yaml                          # Render deployment config
-└── server.js                            # Main API server
+Texta/
+├── public/                 # Production static frontend
+├── frontend-react/        # Next.js rewrite in progress
+├── prisma/schema.prisma   # PostgreSQL models
+├── scripts/               # Project utilities
+├── tools/                 # Additional tooling and submodules
+├── server.js              # Express API entry point
+├── .env.example           # Environment-variable reference
+└── render.yaml            # Render deployment definition
 ```
 
-### Database models
+## Privacy and security
 
-- `User`
-- `Session`
-- `UsageDaily`
-- `UsageLog`
-- `VipRequest`
-- `FavoriteArticle`
-- `NotebookEntry`
-- `UserVocabPref`
-
-## Project Status and Boundaries
-
-- The production links above describe the current deployment shape but may change independently of this repository.
-- Vocabulary and generated text may be sent to the configured OpenAI-compatible provider. Review that provider's privacy and retention terms before submitting sensitive content.
-- Admin credentials, API keys, database URLs, and session secrets belong only in environment variables; never commit them.
-- The React/Next.js frontend is a migration in progress, while `public/` remains the deployed frontend documented here.
+- Submitted vocabulary and generated content may be sent to the configured AI provider. Do not submit confidential or personal information without authorization.
+- Keep API keys, database URLs, admin credentials, and session secrets in environment variables only.
+- Replace all example admin credentials before deployment.
+- Review provider retention terms, CORS origins, cookie settings, database backups, and account deletion requirements before public use.
 
 ## Roadmap
 
-- [x] User authentication and session handling
-- [x] Daily quota system with free / VIP / admin tiers
-- [x] VIP request submission and admin review flow
-- [x] Vocabulary-aware bilingual article generation
-- [x] Rich glossary and single-word detail enhancement
-- [x] Favorites, notebook, and cloud sync endpoints
-- [x] PDF / Word export flow
-- [ ] Complete the `frontend-react/` migration
-- [ ] Add automated tests for critical backend flows
-- [ ] Improve deployment docs and developer onboarding
-
-See the [open issues](https://github.com/YanYihann/Texta/issues) for a full list of proposed features and known problems.
+- [x] Bilingual vocabulary-aware generation
+- [x] Account sessions and daily quota tiers
+- [x] Favorites, notebook, and mastery synchronization
+- [x] VIP request and admin review flow
+- [x] PDF and Word export
+- [ ] Complete the Next.js frontend migration
+- [ ] Add automated tests for authentication, quotas, and generation
+- [ ] Expand deployment and recovery documentation
 
 ## Contributing
 
-Contributions, issues, and feature ideas are welcome.
-
-If you'd like to help:
-
-1. Fork the project
-2. Create your feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m "Add some amazing feature"`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-If you are improving UX or study flow, it helps a lot to include:
-
-- the exact user problem,
-- before/after screenshots or behavior notes,
-- and any API or data-model impact.
+Issues and pull requests are welcome. For product or UX changes, include the user problem, expected behavior, screenshots when relevant, and any API or data-model impact.
 
 ## License
 
-No `LICENSE` file is currently included. Add an explicit license before treating the repository as open source or accepting broad reuse.
-
-## Contact
-
-- GitHub: [@YanYihann](https://github.com/YanYihann)
-- Project Link: [https://github.com/YanYihann/Texta](https://github.com/YanYihann/Texta)
-- Issues: [https://github.com/YanYihann/Texta/issues](https://github.com/YanYihann/Texta/issues)
+No `LICENSE` file is currently included. Add an explicit license before treating this repository as open-source software or redistributing it.
 
 ## Acknowledgments
 
-- [Best-README-Template](https://github.com/othneildrew/Best-README-Template) for the README structure inspiration
-- [Shields.io](https://shields.io/) for repository badges
-- [Prisma](https://www.prisma.io/) for database tooling
-- [Render](https://render.com/) and [GitHub Pages](https://pages.github.com/) for easy deployment
+README structure is inspired by [Best-README-Template](https://github.com/othneildrew/Best-README-Template) and the examples curated in [awesome-readme](https://github.com/matiassingers/awesome-readme).
 
-<!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/YanYihann/Texta.svg?style=for-the-badge
-[contributors-url]: https://github.com/YanYihann/Texta/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/YanYihann/Texta.svg?style=for-the-badge
-[forks-url]: https://github.com/YanYihann/Texta/network/members
-[stars-shield]: https://img.shields.io/github/stars/YanYihann/Texta.svg?style=for-the-badge
-[stars-url]: https://github.com/YanYihann/Texta/stargazers
-[issues-shield]: https://img.shields.io/github/issues/YanYihann/Texta.svg?style=for-the-badge
-[issues-url]: https://github.com/YanYihann/Texta/issues
-[last-commit-shield]: https://img.shields.io/github/last-commit/YanYihann/Texta.svg?style=for-the-badge
-[last-commit-url]: https://github.com/YanYihann/Texta/commits/main
+<p align="right"><a href="#readme-top">Back to top</a></p>
+
+
