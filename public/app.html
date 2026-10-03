@@ -1,182 +1,80 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script>
-      (function () {
-        const hostname = String(location.hostname || "").toLowerCase();
-        const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
-        if (!isLocalhost && location.protocol === "http:") {
-          location.replace(`https://${location.host}${location.pathname}${location.search}${location.hash}`);
-        }
-      })();
-    </script>
-    <title>Texta</title>
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="shortcut icon" href="./favicon.svg" />
-    <link rel="stylesheet" href="./style.css?v=2026.06.30.120000" />
-  </head>
-  <body>
-    <main class="app-shell">
-      <section class="panel input-panel">
-        <div class="brand">
-          <h1>Texta</h1>
-        </div>
-        <div class="user-row">
-          <span id="userBadge" class="user-badge">未登录</span>
-          <button id="logoutBtn" type="button" class="logout-fx-btn hidden" aria-label="退出登录" title="退出登录">
-            <span class="logout-fx-sign" aria-hidden="true">
-              <svg viewBox="0 0 512 512">
-                <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z" />
-              </svg>
-            </span>
-            <span class="logout-fx-text">Logout</span>
-          </button>
-        </div>
-        <div id="usageCard" class="usage-card">
-          <div id="usageText" class="usage-text">今日剩余次数：-</div>
-          <a id="upgradeVipBtn" class="upgrade-link hidden" href="./pay.html">升级VIP（10元/日50次）</a>
-          <a id="adminReviewLink" class="upgrade-link hidden" href="./admin.html">VIP审核中心</a>
-          <a id="adminUsageLink" class="upgrade-link hidden" href="./admin-usage.html">用户使用查看</a>
-        </div>
-        <label for="words" class="field-note-label">单词/短语列表（换行、逗号分隔，空格会保留在短语内）</label>
-        <textarea id="words" placeholder="例如: catastrophic, evaporate, drain, drip"></textarea>
-        <input id="wordFileInput" type="file" class="hidden" accept=".txt,.md,.csv,.json" />
-        <div class="file-tools-row">
-          <button id="uploadWordsBtn" type="button" class="ghost-btn">上传文件识别单词</button>
-          <button id="clearWordsBtn" type="button" class="ghost-btn">清空输入</button>
-        </div>
-        <p id="fileImportHint" class="file-import-hint hidden"></p>
-        <div id="spellHints" class="spell-hints hidden"></div>
-        <div id="wordChips" class="word-chips"></div>
-        <section class="guide-card" aria-label="使用说明">
-          <div class="guide-card-head">
-            <h3>使用说明</h3>
-            <button id="openGuideBtn" type="button" class="ghost-btn">查看完整说明</button>
-          </div>
-          <ol class="guide-steps">
-            <li>输入英文单词或短语（支持逗号、换行，最多 120 个）。</li>
-            <li>可选择生成模式、生成档位、快速模式后点击“生成文章”。</li>
-            <li>点击文中高亮词可跳转到词汇释义，标记“陌生”可加入生词本。</li>
-            <li>支持收藏、跨端同步、导出 PDF/Word。</li>
-          </ol>
-        </section>
-
-        <label for="level">难度等级</label>
-        <select id="level">
-          <option value="初级">初级</option>
-          <option value="中级" selected>中级</option>
-          <option value="高级">高级</option>
-        </select>
-
-        <label for="generationMode">生成模式</label>
-        <select id="generationMode">
-          <option value="standard">普通模式（英文文章 + 中文翻译）</option>
-          <option value="mixed" selected>中英混合模式</option>
-        </select>
-
-        <label for="generationQuality">生成档位</label>
-        <select id="generationQuality">
-          <option value="normal" selected>普通生成（消耗 1 次）</option>
-          <option value="advanced">高级生成（消耗 5 次）</option>
-        </select>
-
-        <label class="quick-row" for="quickMode">
-          <input id="quickMode" type="checkbox" />
-          快速模式（生成更短文章，速度较快）
-        </label>
-
-        <button id="generateBtn" class="primary-btn">生成文章</button>
-        <p id="status"></p>
-        <section id="adminDiagPanel" class="admin-diag-panel hidden" aria-label="管理员模型诊断">
-          <div class="admin-diag-head">
-            <h3>模型请求诊断（管理员）</h3>
-            <span id="adminDiagSummary" class="admin-diag-summary"></span>
-          </div>
-          <div id="adminDiagBars" class="admin-diag-bars"></div>
-        </section>
-
-        <div class="library-head">
-          <h3 class="fav-title">内容库</h3>
-          <div class="library-tabs" aria-label="内容切换">
-            <button id="libraryFavoritesBtn" type="button" class="library-tab active">收藏夹</button>
-            <button id="libraryNotebookBtn" type="button" class="library-tab">生词本</button>
-          </div>
-        </div>
-        <div id="favoritesList" class="favorites-list"></div>
-      </section>
-
-      <section id="resultSection" class="panel result-panel hidden">
-        <div id="articleView" class="result-view">
-          <div class="top-actions">
-            <h2>文章生成结果</h2>
-            <div class="actions">
-              <button id="readingModeBtn" type="button">阅读模式</button>
-              <button id="toggleZhBtn" type="button">隐藏中文</button>
-              <button id="favoriteBtn" type="button">收藏文章</button>
-              <button id="exportPdfBtn" type="button" disabled>导出 PDF</button>
-              <button id="exportWordBtn" type="button" disabled>导出 Word</button>
-            </div>
-          </div>
-
-          <div class="article-tools-row">
-            <div class="reading-size-control">
-              <label for="fontSizeSelect">阅读字号</label>
-              <select id="fontSizeSelect">
-                <option value="small" selected>小</option>
-                <option value="medium">中</option>
-                <option value="large">大</option>
-              </select>
-            </div>
-          </div>
-
-          <label for="exportTitle">导出标题（默认自动生成，可修改）</label>
-          <input id="exportTitle" type="text" placeholder="Vocabulary YYYY-MM-DD (N words)" />
-
-          <p id="missingWords" class="warning"></p>
-
-          <section id="exportArea" class="export-area">
-            <h3 id="articleTitle" class="article-title"></h3>
-            <div id="articleBlocks" class="article-blocks"></div>
-          </section>
-        </div>
-
-        <div id="notebookView" class="result-view notebook-view hidden">
-          <div class="notebook-view-head">
-            <div>
-              <h2>生词本</h2>
-              <p class="subtitle">这里会记录你标记为陌生并加入生词本的单词。</p>
-            </div>
-            <span id="notebookCount" class="notebook-count">0 个单词</span>
-          </div>
-          <div class="notebook-toolbar">
-            <input id="notebookSearchInput" type="text" placeholder="搜索单词、释义或搭配" />
-            <select id="notebookPosFilter">
-              <option value="all">全部词性</option>
-            </select>
-          </div>
-          <div id="notebookEntries" class="notebook-entries"></div>
-        </div>
-      </section>
-
-      <section id="glossaryPanel" class="panel glossary-panel hidden">
-        <h2>生词中文释义</h2>
-        <p class="subtitle">包含词性、常考义项、短语搭配、词根词缀、同近义词。</p>
-        <div id="glossary" class="glossary"></div>
-        <div class="glossary-footer">
-          <button id="addUnknownToNotebookBtn" type="button" class="glossary-footer-btn">将陌生词添加到生词本</button>
-        </div>
-      </section>
-    </main>
-
-    <nav id="mobileBottomNav" class="mobile-bottom-nav hidden" aria-label="移动端底部导航">
-      <button type="button" class="mobile-nav-btn" data-target="home">主页</button>
-      <button type="button" class="mobile-nav-btn" data-target="article">文章</button>
-      <button type="button" class="mobile-nav-btn" data-target="glossary">词汇</button>
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f7f4"><title>Texta · 词汇学习</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./workspace.css?v=20261004">
+  <script src="./i18n.js?v=20261004" defer></script>
+</head>
+<body class="workspace-page">
+  <a class="skip-link" href="#words">跳到词汇输入</a>
+  <header class="site-header">
+    <a class="wordmark" href="./app.html" aria-label="Texta 主页">Texta</a>
+    <nav class="library-tabs" aria-label="学习导航">
+      <button id="workspaceHomeBtn" class="library-tab active" type="button">文章生成</button>
+      <button id="libraryFavoritesBtn" class="library-tab" type="button">收藏夹</button>
+      <button id="libraryNotebookBtn" class="library-tab" type="button">生词本</button>
+      <button id="libraryHistoryBtn" class="library-tab" type="button">历史记录</button>
     </nav>
-
-    <section id="guideModal" class="modal hidden" aria-hidden="true">
+    <div class="header-tools">
+      <button class="language-toggle" type="button" aria-label="切换界面语言">中文 / EN</button>
+      <details class="account-menu">
+        <summary><span class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg></span><span>账户</span></summary>
+        <div class="account-popover">
+          <div class="brand hidden"><span>Texta</span></div>
+          <div class="user-row"><span id="userBadge" class="user-badge">连接账户中…</span><button id="logoutBtn" class="hidden" type="button">退出登录</button></div>
+          <div id="usageCard" class="usage-card"><div id="usageText">今日剩余次数：—</div><a id="upgradeVipBtn" class="hidden" href="./pay.html">升级 VIP（10 元，每日 50 次）</a><a id="adminReviewLink" class="hidden" href="./admin.html">VIP 审核</a><a id="adminUsageLink" class="hidden" href="./admin-usage.html">用户使用查看</a></div>
+          <button id="openGuideBtn" type="button">使用说明</button>
+          <div id="themeTools"></div>
+        </div>
+      </details>
+    </div>
+  </header>
+  <main class="app-shell">
+    <section class="input-panel" aria-label="文章生成设置">
+      <div class="word-entry">
+        <div class="section-heading"><label for="words">输入词汇</label><button id="exampleWordsBtn" type="button" class="text-btn">填入示例词汇</button></div>
+        <textarea id="words" aria-describedby="inputHelp wordCount" placeholder="输入英文单词或短语，用逗号或换行分隔"></textarea>
+        <div class="input-tools"><span id="wordCount" class="count">0 / 120 个词</span><div class="file-tools-row"><button id="uploadWordsBtn" type="button">导入文件</button><button id="clearWordsBtn" type="button">清空</button></div></div>
+        <p id="inputHelp" class="field-help sr-only">短语中的空格会保留。支持 TXT、Markdown、CSV 和 JSON 文件。</p>
+        <input id="wordFileInput" type="file" class="hidden" accept=".txt,.md,.csv,.json">
+        <p id="fileImportHint" class="file-import-hint hidden" role="status"></p>
+        <div id="spellHints" class="spell-hints hidden"></div><div id="wordChips" class="word-chips" aria-label="输入的词汇"></div>
+      </div>
+      <div class="generation-settings">
+        <div class="setting-row"><label for="level">难度等级</label><select id="level"><option value="初级">初级</option><option value="中级" selected>中级</option><option value="高级">高级</option></select></div>
+        <div class="setting-row"><label for="generationMode">生成模式</label><select id="generationMode"><option value="standard">英文文章 + 中文翻译</option><option value="mixed" selected>中英混合</option></select></div>
+        <div class="setting-row"><label for="generationQuality">生成档位</label><select id="generationQuality"><option value="normal" selected>普通生成 · 1 次</option><option value="advanced">高级生成 · 5 次</option></select></div>
+        <div class="setting-row"><label for="quickMode">快速模式</label><label class="switch-label"><input id="quickMode" type="checkbox" role="switch"><span>生成更短文章</span></label></div>
+        <button id="generateBtn" class="primary-btn" type="button">生成文章</button>
+      </div>
+    </section>
+    <div class="status-row"><p id="status" role="status" aria-live="polite"></p><span id="generationProgress" class="hidden">正在生成，请稍候…</span></div>
+    <section id="adminDiagPanel" class="admin-diag-panel hidden"><div class="admin-diag-head"><h2>模型请求诊断</h2><span id="adminDiagSummary"></span></div><div id="adminDiagBars"></div></section>
+    <section id="libraryPanel" class="library-panel hidden" aria-label="学习内容库"><div class="section-heading"><h2 id="libraryHeading">收藏夹</h2><button id="backToArticleBtn" type="button">返回文章</button></div><div id="favoritesList" class="favorites-list"></div></section>
+    <div class="reading-workspace">
+      <section id="emptyState" class="empty-state">
+        <h2>文章阅读</h2>
+        <div class="empty-body"><svg class="empty-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 12C17 7 9 8 5 10v28c6-3 12-3 19 2 7-5 13-5 19-2V10c-4-2-12-3-19 2Zm0 0v28"/></svg><h3>输入词汇，生成学习文章</h3><p>点击文章中的高亮词查看释义，标记陌生词后加入生词本。</p><button id="previewExampleBtn" type="button">查看示例文章</button></div>
+      </section>
+      <section id="resultSection" class="result-panel hidden">
+        <div id="articleView" class="result-view">
+          <div class="top-actions"><h2>文章阅读</h2><div class="actions"><button id="readingModeBtn" type="button">阅读模式</button><button id="toggleZhBtn" type="button">隐藏中文</button><button id="favoriteBtn" type="button">收藏文章</button><details class="export-menu"><summary>导出</summary><div class="export-popover"><button id="exportPdfBtn" type="button" disabled>导出 PDF</button><button id="exportWordBtn" type="button" disabled>导出 Word</button><label for="fontSizeSelect">阅读字号</label><select id="fontSizeSelect"><option value="small">小</option><option value="medium" selected>中</option><option value="large">大</option></select><label for="exportTitle">导出标题</label><input id="exportTitle" type="text"></div></details></div></div>
+          <p id="missingWords" class="warning"></p>
+          <section id="exportArea" class="export-area"><h3 id="articleTitle" class="article-title"></h3><div id="articleBlocks" class="article-blocks"></div><p id="sampleArticleNotice" class="sample-notice hidden">示例文章</p></section>
+        </div>
+        <div id="notebookView" class="result-view notebook-view hidden"><div class="notebook-view-head"><h2>生词本</h2><span id="notebookCount">0 个单词</span></div><div class="notebook-toolbar"><label class="sr-only" for="notebookSearchInput">搜索生词</label><input id="notebookSearchInput" type="search" placeholder="搜索单词、释义或搭配"><label class="sr-only" for="notebookPosFilter">筛选词性</label><select id="notebookPosFilter"><option value="all">全部词性</option></select></div><div id="notebookEntries" class="notebook-entries"></div></div>
+      </section>
+      <aside id="glossaryPanel" class="glossary-panel hidden" aria-label="词汇解析">
+        <div class="glossary-heading"><h2>词汇解析</h2><div class="definition-pagination"><button id="previousWordBtn" type="button" aria-label="上一个单词"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><span id="definitionCount">—</span><button id="nextWordBtn" type="button" aria-label="下一个单词"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div></div>
+        <label class="sr-only" for="glossaryWordSelect">选择单词</label><select id="glossaryWordSelect" class="hidden"></select><div id="glossary" class="glossary"></div>
+        <div class="glossary-footer"><button id="addUnknownToNotebookBtn" type="button">将陌生词添加到生词本</button></div>
+      </aside>
+    </div>
+  </main>
+  <nav id="mobileBottomNav" class="mobile-bottom-nav hidden" aria-label="移动端学习导航"><button type="button" class="mobile-nav-btn" data-target="home">输入</button><button type="button" class="mobile-nav-btn" data-target="article">文章</button><button type="button" class="mobile-nav-btn" data-target="glossary">词汇</button></nav>
+    <section id="guideModal" class="modal hidden" role="dialog" aria-modal="true" tabindex="-1" aria-hidden="true">
       <div class="modal-card guide-modal-card">
         <div class="modal-head">
           <h3>Texta 使用说明</h3>
@@ -185,7 +83,7 @@
 
         <div class="guide-modal-content">
           <ol class="guide-steps">
-            <li>先在左侧输入单词，建议每次 6-15 个，命中率和可读性更稳定。</li>
+            <li>先在上方输入单词，建议每次 6-15 个，命中率和可读性更稳定。</li>
             <li>普通生成用于日常练习；高级生成质量更高但消耗次数更多。</li>
             <li>中英混合模式适合“中文语境 + 英文挖空词”记忆；普通模式适合整篇阅读。</li>
             <li>文章生成后可点击高亮词查看释义，并把陌生词加入生词本。</li>
@@ -204,7 +102,7 @@
       </div>
     </section>
 
-    <section id="exportModal" class="modal hidden" aria-hidden="true">
+    <section id="exportModal" class="modal hidden" role="dialog" aria-modal="true" tabindex="-1" aria-hidden="true">
       <div class="modal-card">
         <div class="modal-head">
           <h3>导出前预览</h3>
@@ -237,8 +135,4 @@
       </div>
     </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-    <script src="./site-config.js?v=2026.04.11.111500"></script>
-    <script src="./app.js?v=2026.06.30.130000"></script>
-  </body>
-</html>
+<script src="./site-config.js?v=20261004"></script><script src="./app.js?v=20261004"></script><script src="./workspace.js?v=20261004"></script></body></html>

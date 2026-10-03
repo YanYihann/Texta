@@ -10,13 +10,13 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL_NORMAL = process.env.OPENAI_MODEL_NORMAL || process.env.OPENAI_MODEL || "gpt-4o-mini";
-const OPENAI_MODEL_ADVANCED = process.env.OPENAI_MODEL_ADVANCED || "gpt-4o";
+const OPENAI_MODEL_NORMAL = process.env.OPENAI_MODEL_NORMAL || process.env.OPENAI_MODEL || "deepseek-v3.2";
+const OPENAI_MODEL_ADVANCED = process.env.OPENAI_MODEL_ADVANCED || OPENAI_MODEL_NORMAL;
 const ADVANCED_USAGE_COST = Math.max(1, Number(process.env.ADVANCED_USAGE_COST || 5));
-const OPENAI_API_MODE = String(process.env.OPENAI_API_MODE || "responses").toLowerCase();
+const OPENAI_API_MODE = String(process.env.OPENAI_API_MODE || "chat").toLowerCase();
 
 function normalizeBaseUrl(raw) {
-  const fallback = "https://api.openai.com/v1";
+  const fallback = "https://api.302.ai/v1";
   if (!raw || typeof raw !== "string") {
     return fallback;
   }
@@ -31,7 +31,7 @@ function normalizeBaseUrl(raw) {
 
   try {
     const parsed = new URL(value);
-    const normalizedPath = parsed.pathname.replace(/\/$/, "") || "/v1";
+    const normalizedPath = parsed.pathname.replace(/\/(?:chat\/completions|responses)\/?$/, "").replace(/\/$/, "") || "/v1";
     return `${parsed.origin}${normalizedPath}`;
   } catch {
     return fallback;

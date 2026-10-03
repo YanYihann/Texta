@@ -91,7 +91,7 @@ let currentFavoriteId = "";
 let authToken = localStorage.getItem("texta_auth_token") || "";
 let currentUser = null;
 let currentMobilePage = "home";
-let currentFontSize = localStorage.getItem("texta_font_size") || "small";
+let currentFontSize = localStorage.getItem("texta_font_size") || "medium";
 let currentLibraryMode = "favorites";
 let currentNotebookFocusKey = "";
 let notebookSearchTerm = "";
@@ -111,7 +111,7 @@ let favorites = [];
 let historyEntries = [];
 let vocabPrefs = {};
 let notebookEntries = [];
-let themePreference = localStorage.getItem(THEME_PREF_KEY) || "system";
+let themePreference = localStorage.getItem(THEME_PREF_KEY) || "light";
 let librarySyncTimer = null;
 let librarySyncInFlight = false;
 let librarySyncPending = false;
@@ -204,9 +204,10 @@ function actionIconSvg(name) {
 
 function setButtonContent(button, html, title) {
   if (!button) return;
-  button.innerHTML = html;
-  button.setAttribute("aria-label", title);
-  button.title = title;
+  button.innerHTML = html.includes("<") ? html : (window.TextaI18n?.text(html) || html);
+  const label = window.TextaI18n?.text(title) || title;
+  button.setAttribute("aria-label", label);
+  button.title = label;
 }
 
 function applyReadingFontSize() {
@@ -370,6 +371,7 @@ function syncThemeToggleState() {
 
 function applyThemePreference() {
   const resolved = resolveTheme(themePreference);
+  document.documentElement.dataset.theme = resolved;
   document.body.classList.toggle("theme-dark", resolved === "dark");
   document.body.classList.toggle("theme-light", resolved !== "dark");
   syncThemeToggleState();
@@ -424,6 +426,10 @@ function ensureThemeToggle(containerEl) {
 
 function mountGuideButtonNearUser() {
   if (!openGuideBtn || !userRowEl) return;
+  if (document.body.classList.contains("workspace-page")) {
+    ensureThemeToggle(document.getElementById("themeTools"));
+    return;
+  }
 
   if (guideCardEl) {
     guideCardEl.classList.add("hidden");
@@ -1387,11 +1393,11 @@ function normalizeWordToken(raw) {
 }
 
 function extractWordsFromText(rawText) {
-  const matches = String(rawText || "").match(/[A-Za-z][A-Za-z-]{1,29}/g) || [];
+  const matches = String(rawText || "").split(/[\n,，;；\t]+/).map(normalizeInputWordToken).filter(Boolean);
   const out = [];
   const seen = new Set();
   for (const raw of matches) {
-    const token = normalizeWordToken(raw);
+    const token = raw;
     if (!token) continue;
     const key = token.toLowerCase();
     if (seen.has(key)) continue;
@@ -1432,7 +1438,14 @@ async function handleWordFileImport(file) {
 
   try {
     const text = await readTextFile(file);
-    const words = extractWordsFromText(text);
+    let source = text;
+    if (lower.endsWith(".json")) {
+      const parsed = JSON.parse(text);
+      const rows = Array.isArray(parsed) ? parsed : parsed.words || parsed.vocabulary || parsed.entries;
+      if (!Array.isArray(rows)) throw new Error("JSON 文件需要包含单词数组。");
+      source = rows.map(row => typeof row === "string" ? row : row?.word || "").join("\n");
+    }
+    const words = extractWordsFromText(source);
     if (words.length === 0) {
       showFileImportHint("未识别到英文单词，请检查文件内容。", true);
       return;
@@ -1441,19 +1454,22 @@ async function handleWordFileImport(file) {
     const current = splitWords(wordsInput.value);
     const merged = [...current];
     const seen = new Set(current.map((x) => x.toLowerCase()));
+    let added = 0;
     for (const word of words) {
+      if (merged.length >= 120) break;
       const key = word.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
       merged.push(word);
-      if (merged.length >= 120) break;
+      added++;
     }
 
     wordsInput.value = merged.join(", ");
     scheduleSpellcheck();
     renderSpelling();
-    showFileImportHint(`已从 ${name} 识别并导入 ${Math.min(words.length, 120)} 个单词。`);
-    statusEl.textContent = `文件识别完成，当前共 ${merged.length} 个单词。`;
+    showFileImportHint(`已从 ${name} 新增 ${added} 个词汇（最多 120 个）。`);
+    statusEl.textContent = "";
+    document.dispatchEvent(new CustomEvent("texta:imported"));
   } catch (error) {
     showFileImportHint(error.message || "文件解析失败。", true);
   }
@@ -2075,6 +2091,8 @@ function updateMobileNavActive(target = "") {
   if (!mobileNavBtnEls.length) return;
   mobileNavBtnEls.forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-target") === target);
+    if (btn.getAttribute("data-target") === target) btn.setAttribute("aria-current", "page");
+    else btn.removeAttribute("aria-current");
   });
 }
 
@@ -2130,7 +2148,7 @@ function setMobilePage(target) {
   currentMobilePage = target;
   applyMobilePageLayout();
   if (isMobileLayout()) {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 }
 
@@ -2138,7 +2156,7 @@ function focusMobileResultAfterGenerate() {
   if (!isMobileLayout()) return;
   currentMobilePage = "article";
   applyMobilePageLayout();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 
 function syncActionButtonLabels() {
@@ -2178,7 +2196,7 @@ function focusNotebookEntry(key) {
   const target = notebookEntriesEl.querySelector(`.glossary-item[data-word-key="${key}"]`);
   if (!target) return;
   target.classList.add("active");
-  target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
 }
 
 function setLibraryMode(mode, options = {}) {
@@ -2202,8 +2220,9 @@ function setLibraryMode(mode, options = {}) {
     const targetPage = options.mobilePage === "glossary" ? "glossary" : "article";
     currentMobilePage = targetPage;
     applyMobilePageLayout();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
+  document.dispatchEvent(new CustomEvent("texta:library", { detail: currentLibraryMode }));
 }
 
 function ensureHistoryTabButton() {
@@ -2322,7 +2341,7 @@ function stopGenerationElapsedTimer() {
 
 function formatElapsedSeconds(ms) {
   const total = Math.max(0, Math.floor(Number(ms || 0) / 1000));
-  return `${total}秒`;
+  return window.TextaI18n?.language === "en" ? `${total}s` : `${total}秒`;
 }
 
 function startGenerationElapsedTimer(baseText) {
@@ -2363,6 +2382,7 @@ function setWordMastery(item, mastery) {
 }
 
 function updateGlossaryFollow(wordKeys) {
+  if (Array.isArray(wordKeys) && wordKeys[0]) document.dispatchEvent(new CustomEvent("texta:word", {detail: wordKeys[0]}));
   const keys = Array.from(wordKeys || []).filter(Boolean);
   const all = glossaryEl.querySelectorAll(".glossary-item[data-word-key]");
   all.forEach((el) => el.classList.remove("active"));
@@ -2381,7 +2401,7 @@ function updateGlossaryFollow(wordKeys) {
 
   if (target && lastActiveGlossaryKey !== keys[0]) {
     lastActiveGlossaryKey = keys[0];
-    target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
   }
 }
 
@@ -2391,7 +2411,7 @@ function jumpToGlossaryKey(key) {
   if (isMobileLayout()) {
     currentMobilePage = "glossary";
     applyMobilePageLayout();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     window.requestAnimationFrame(() => updateGlossaryFollow([key]));
     return;
   }
@@ -2809,7 +2829,7 @@ function buildStudyControls(item) {
   return wrap;
 }
 
-function renderLexiconCard(item) {
+function renderLexiconCard(item, showContext = false) {
   const word = String(item?.word || "").trim();
   const key = keyifyWord(item?.word || item?.key || "");
   const pos = normalizePosTagLabel(item?.pos) || "";
@@ -2868,6 +2888,20 @@ function renderLexiconCard(item) {
   head.appendChild(headActions);
   card.appendChild(head);
 
+  const summary = document.createElement("p");
+  summary.className = "definition-summary";
+  summary.textContent = sanitizeGlossTextForUi(item.summary || senses[0]?.meaning || "", 220).split(/[；;]/)[0];
+  if (summary.textContent) card.appendChild(summary);
+  card.appendChild(buildStudyControls(item));
+
+  const createSection = (label) => {
+    const section = document.createElement("section");
+    section.className = "definition-section";
+    const heading = document.createElement("h3"); heading.textContent = label;
+    section.appendChild(heading); card.appendChild(section);
+    return section;
+  };
+  const meaningsSection = createSection("词义");
   senses.forEach((sense) => {
     const line = document.createElement("div");
     line.className = "sense-line";
@@ -2880,8 +2914,44 @@ function renderLexiconCard(item) {
       line.appendChild(document.createTextNode(" "));
     }
     line.appendChild(document.createTextNode(sanitizeGlossTextForUi(sense?.meaning, 220) || "词义待补充"));
-    card.appendChild(line);
+    meaningsSection.appendChild(line);
   });
+  if (!senses.length) meaningsSection.appendChild(document.createTextNode("词义待补充"));
+
+  const collocationsSection = createSection("常见搭配");
+  const collocationList = document.createElement("ul"); collocationList.className = "collocation-list";
+  for (const collocation of collocations) {
+    const row = document.createElement("li"); row.className = "collocation-row";
+    const parts = String(collocation || "").split(/\s*[·：:]\s*/);
+    const english = document.createElement("span"); english.textContent = parts.shift() || "";
+    row.appendChild(english);
+    if (parts.length) { const meaning = document.createElement("span"); meaning.className = "collocation-meaning"; meaning.textContent = parts.join(" · "); row.appendChild(meaning); }
+    collocationList.appendChild(row);
+  }
+  collocationsSection.appendChild(collocationList);
+  if (!collocations.length) collocationsSection.appendChild(document.createTextNode("(暂无)"));
+
+  if (showContext) {
+    const matchesWord = text => { const pattern = buildWordRegex(word); return pattern.test(text); };
+    const paragraphIndex = latestParagraphsEn.findIndex(matchesWord);
+    if (paragraphIndex >= 0) {
+      const paragraph = latestParagraphsEn[paragraphIndex];
+      const sentence = paragraph.split(/(?<=[.!?。！？])\s*/u).find(matchesWord) || paragraph;
+      const context = createSection("在本文中");
+      const sentenceEl = document.createElement("p"); sentenceEl.className = "context-sentence"; sentenceEl.textContent = sentence;
+      context.appendChild(sentenceEl);
+      const translation = String(latestParagraphsZh[paragraphIndex] || "").trim();
+      if (translation) {
+        const label = document.createElement("div"); label.className = "context-translation-label"; label.textContent = "所在段落译文";
+        const translationEl = document.createElement("p"); translationEl.className = "context-translation"; translationEl.textContent = translation;
+        context.appendChild(label); context.appendChild(translationEl);
+      }
+    }
+  }
+
+  const extras = document.createElement("details"); extras.className = "lexicon-extras";
+  const extrasSummary = document.createElement("summary"); extrasSummary.textContent = "词汇扩展";
+  extras.appendChild(extrasSummary); card.appendChild(extras);
 
   const appendExtraLabel = (label) => {
     const line = document.createElement("div");
@@ -2890,21 +2960,14 @@ function renderLexiconCard(item) {
     labelSpan.className = "extra-label";
     labelSpan.textContent = label;
     line.appendChild(labelSpan);
-    card.appendChild(line);
+    extras.appendChild(line);
   };
   const appendExtraTextLine = (text) => {
     const line = document.createElement("div");
     line.className = "extra-line extra-value";
     line.textContent = text;
-    card.appendChild(line);
+    extras.appendChild(line);
   };
-
-  appendExtraLabel("短语搭配:");
-  if (collocations.length > 0) {
-    collocations.forEach((c) => appendExtraTextLine(`• ${String(c || "").trim()}`));
-  } else {
-    appendExtraTextLine("(暂无)");
-  }
 
   const formationLine = document.createElement("div");
   formationLine.className = "extra-line";
@@ -2916,7 +2979,7 @@ function renderLexiconCard(item) {
   formationValue.className = "extra-value";
   formationValue.textContent = wordFormation || "(暂无)";
   formationLine.appendChild(formationValue);
-  card.appendChild(formationLine);
+  extras.appendChild(formationLine);
 
   appendExtraLabel("同近义词:");
   appendExtraTextLine(synonyms.length > 0 ? synonyms.join(", ") : "(暂无)");
@@ -2932,7 +2995,6 @@ function renderLexiconCard(item) {
     card.appendChild(tipLine);
   }
 
-  card.appendChild(buildStudyControls(item));
   return card;
 }
 
@@ -2946,9 +3008,10 @@ function renderGlossary(lexicon) {
 
   pronunciationMap = new Map();
   const frag = document.createDocumentFragment();
-  lexicon.forEach((item) => frag.appendChild(renderLexiconCard(item)));
+  lexicon.forEach((item) => frag.appendChild(renderLexiconCard(item, true)));
   glossaryEl.replaceChildren(frag);
   lastActiveGlossaryKey = "";
+  document.dispatchEvent(new CustomEvent("texta:glossary"));
 }
 
 function renderNotebookView() {
@@ -3145,13 +3208,12 @@ function exportWordFromPreview() {
 
 async function exportPdfFromPreview() {
   const title = ensurePreviewTitle();
-  if (!title) {
-    return;
-  }
-
+  if (!title || confirmExportBtn.disabled) return;
+  try {
+    confirmExportBtn.disabled = true;
+    await window.TextaExports.ensurePdf();
   if (typeof window.html2pdf !== "function") {
-    statusEl.textContent = "PDF 库加载失败，请刷新后重试。";
-    return;
+    throw new Error("PDF library unavailable");
   }
 
   const margin = Number(previewMarginSelect.value || "12");
@@ -3175,6 +3237,11 @@ async function exportPdfFromPreview() {
   exportTitleInput.value = title;
   statusEl.textContent = "PDF 已导出。";
   closeExportPreview();
+  } catch {
+    statusEl.textContent = "PDF 导出失败，请重试。";
+  } finally {
+    confirmExportBtn.disabled = false;
+  }
 }
 
 function applyArticleData(data) {
@@ -3240,13 +3307,14 @@ function applyArticleData(data) {
   exportWordBtn.disabled = false;
   focusMobileResultAfterGenerate();
   refreshMobileNav();
+  document.dispatchEvent(new CustomEvent("texta:article"));
 }
 
 function renameFavoriteById(id) {
   const index = favorites.findIndex((x) => x.id === id);
   if (index < 0) return;
   const oldTitle = String(favorites[index].title || "").trim() || "未命名文章";
-  const nextTitleRaw = window.prompt("请输入新的收藏标题：", oldTitle);
+  const nextTitleRaw = window.prompt(window.TextaI18n?.language === "en" ? "Enter a new article title:" : "请输入新的收藏标题：", oldTitle);
   if (nextTitleRaw === null) return;
   const nextTitle = String(nextTitleRaw).trim();
   if (!nextTitle) {
@@ -3317,6 +3385,7 @@ function saveCurrentArticleToHistory() {
 }
 
 generateBtn.addEventListener("click", async () => {
+  if (generateBtn.disabled) return;
   const wordsText = wordsInput.value.trim();
   const level = levelSelect.value;
   const generationMode = String(generationModeSelect?.value || "mixed");
@@ -3328,28 +3397,34 @@ generateBtn.addEventListener("click", async () => {
     return;
   }
 
+  const requestedWords = splitWords(wordsText);
+  if (requestedWords.length > 120) {
+    statusEl.textContent = "输入超过 120 个词，请删减后重试。";
+    wordsInput.focus();
+    return;
+  }
   generateBtn.disabled = true;
+  generateBtn.classList.add("is-loading");
+  generateBtn.setAttribute("aria-busy", "true");
+  document.dispatchEvent(new CustomEvent("texta:generation", {detail: true}));
   exportPdfBtn.disabled = true;
   exportWordBtn.disabled = true;
-  resultSection.classList.add("hidden");
-  glossaryPanelEl.classList.add("hidden");
+  // Keep the previous article readable while a new request is pending.
   missingWordsEl.textContent = "";
   renderAdminDiagnostics(null);
-  const qualityLabel = generationQuality === "advanced" ? "高级生成（消耗5次）" : "普通生成（消耗1次）";
-  const pendingStatus = quickMode
-    ? `${qualityLabel} + 快速模式生成中...`
-    : `AI 正在${qualityLabel}，请稍等（大约10-15秒）...`;
+  const pendingStatus = "正在生成…";
   startGenerationElapsedTimer(pendingStatus);
 
   try {
-    latestWords = splitWords(wordsText);
-    exportTitleInput.value = defaultTitleByWords(latestWords);
+
     if (!API_BASE && location.hostname.includes("github.io")) {
       throw new Error("GitHub Pages 仅托管前端。请先在 public/site-config.js 配置后端 API 地址（TEXTA_API_BASE）。");
     }
 
     const response = await apiFetch("/api/generate", {
       method: "POST",
+      retryCount: 0,
+      timeoutMs: 300000,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ words: wordsText, level, quickMode, generationMode, generationQuality })
     });
@@ -3371,7 +3446,7 @@ generateBtn.addEventListener("click", async () => {
         throw new Error((data && (data.detail || data.error)) || "请求失败");
       }
 
-      applyArticleData({ ...data, words: latestWords });
+      applyArticleData({ ...data, words: requestedWords });
       saveCurrentArticleToHistory();
       void prefetchVocabDetailEntriesForCurrentArticle();
       const usedCost = Number(data?.usageCost || (generationQuality === "advanced" ? 5 : 1));
@@ -3385,6 +3460,11 @@ generateBtn.addEventListener("click", async () => {
     } finally {
       stopGenerationElapsedTimer();
       generateBtn.disabled = false;
+      generateBtn.classList.remove("is-loading");
+      generateBtn.removeAttribute("aria-busy");
+      exportPdfBtn.disabled = !latestArticle;
+      exportWordBtn.disabled = !latestArticle;
+      document.dispatchEvent(new CustomEvent("texta:generation", {detail: false}));
   }
 });
 
@@ -3719,9 +3799,8 @@ async function init() {
     renderLibraryList();
     syncGlossaryFooterButton();
   });
-  if (shouldAutoOpenGuide(currentUser)) {
-    window.setTimeout(() => openGuideModal(true), 120);
-  }
+  // Help is available on demand; first use does not interrupt the study task.
+  document.dispatchEvent(new CustomEvent("texta:ready"));
 }
 
 if (themeMediaQuery) {

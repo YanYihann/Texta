@@ -7,22 +7,25 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="shortcut icon" href="./favicon.svg" />
     <link rel="stylesheet" href="./style.css" />
-  </head>
-  <body class="auth-page">
+  <link rel="stylesheet" href="./workspace.css?v=20261004" />
+<script src="./i18n.js?v=20261004" defer></script>
+</head>
+  <body class="auth-page payment-page">
+<header class="site-header"><a class="wordmark" href="./app.html">Texta</a><div class="header-tools"><a href="./app.html">返回主页面</a><button class="language-toggle" type="button" aria-label="切换界面语言">中文 / EN</button></div></header>
     <main class="auth-page-wrap">
       <section class="auth-card solo pay-card">
-        <div class="auth-brand">Texta VIP</div>
+        <h1>升级 VIP</h1>
         <p class="auth-subtitle">支付 10 元可升级 VIP（每日 50 次）</p>
 
         <div class="pay-box">
           <div class="pay-title">收款码</div>
           <div class="pay-qr-placeholder">
-            <img id="payQrImage" src="./assets/pay-qr.jpg" alt="收款码占位图" />
+            <img id="payQrImage" src="./assets/pay-qr.jpg" alt="收款码" />
           </div>
-          <p class="pay-tip">若图片未显示，请按文末路径上传收款码图片。</p>
+          <p class="pay-tip">扫码付款后，提交支付凭证供管理员审核。</p>
         </div>
 
-        <div id="payMsg" class="auth-msg"></div>
+        <div id="payMsg" class="auth-msg" role="status" aria-live="polite"></div>
         <label for="payerName">付款人昵称</label>
         <input id="payerName" type="text" placeholder="例如：张三" />
         <label for="proofCode">支付凭证号（可选）</label>

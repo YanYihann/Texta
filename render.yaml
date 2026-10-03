@@ -11,13 +11,17 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
-        value: gpt-4o-mini
+        value: deepseek-v3.2
+      - key: OPENAI_MODEL_NORMAL
+        value: deepseek-v3.2
+      - key: OPENAI_MODEL_ADVANCED
+        value: deepseek-v3.2
       - key: OPENAI_API_MODE
         value: chat
       - key: OPENAI_BASE_URL
-        value: https://api.openai-proxy.org/v1
+        value: https://api.302.ai/v1
       - key: OPENAI_TIMEOUT_MS
-        value: "30000"
+        value: "60000"
       - key: OPENAI_RETRY_COUNT
         value: "2"
       - key: FRONTEND_ORIGIN

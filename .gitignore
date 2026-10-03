@@ -1,5 +1,11 @@
 ﻿node_modules/
 .env
+env.txt
+.playwright-cli/
+output/
+.impeccable/mocks/
+.impeccable/build/
+.impeccable/review/
 .DS_Store
 Thumbs.db
 npm-debug.log*

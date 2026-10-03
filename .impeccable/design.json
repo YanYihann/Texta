@@ -1,0 +1,592 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T22:37:03.697981Z",
+  "title": "Design System: Texta",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Warm Ground",
+        "tonalRamp": [
+          "oklch(15.0% 0.00409 121.56)",
+          "oklch(26.4% 0.00409 121.56)",
+          "oklch(37.9% 0.00409 121.56)",
+          "oklch(49.3% 0.00409 121.56)",
+          "oklch(60.7% 0.00409 121.56)",
+          "oklch(72.1% 0.00409 121.56)",
+          "oklch(83.6% 0.00409 121.56)",
+          "oklch(95.0% 0.00409 121.56)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Paper Surface",
+        "tonalRamp": [
+          "oklch(15.0% 0.00263 106.45)",
+          "oklch(26.4% 0.00263 106.45)",
+          "oklch(37.9% 0.00263 106.45)",
+          "oklch(49.3% 0.00263 106.45)",
+          "oklch(60.7% 0.00263 106.45)",
+          "oklch(72.1% 0.00263 106.45)",
+          "oklch(83.6% 0.00263 106.45)",
+          "oklch(95.0% 0.00263 106.45)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Green Ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.00905 159.43)",
+          "oklch(26.4% 0.00905 159.43)",
+          "oklch(37.9% 0.00905 159.43)",
+          "oklch(49.3% 0.00905 159.43)",
+          "oklch(60.7% 0.00905 159.43)",
+          "oklch(72.1% 0.00905 159.43)",
+          "oklch(83.6% 0.00905 159.43)",
+          "oklch(95.0% 0.00905 159.43)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Quiet Ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.01445 156.68)",
+          "oklch(26.4% 0.01445 156.68)",
+          "oklch(37.9% 0.01445 156.68)",
+          "oklch(49.3% 0.01445 156.68)",
+          "oklch(60.7% 0.01445 156.68)",
+          "oklch(72.1% 0.01445 156.68)",
+          "oklch(83.6% 0.01445 156.68)",
+          "oklch(95.0% 0.01445 156.68)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Quiet Rule",
+        "tonalRamp": [
+          "oklch(15.0% 0.01142 141.26)",
+          "oklch(26.4% 0.01142 141.26)",
+          "oklch(37.9% 0.01142 141.26)",
+          "oklch(49.3% 0.01142 141.26)",
+          "oklch(60.7% 0.01142 141.26)",
+          "oklch(72.1% 0.01142 141.26)",
+          "oklch(83.6% 0.01142 141.26)",
+          "oklch(95.0% 0.01142 141.26)"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Study Sage",
+        "tonalRamp": [
+          "oklch(15.0% 0.06904 154.48)",
+          "oklch(26.4% 0.06904 154.48)",
+          "oklch(37.9% 0.06904 154.48)",
+          "oklch(49.3% 0.06904 154.48)",
+          "oklch(60.7% 0.06904 154.48)",
+          "oklch(72.1% 0.06904 154.48)",
+          "oklch(83.6% 0.06904 154.48)",
+          "oklch(95.0% 0.06904 154.48)"
+        ]
+      },
+      "primary-press": {
+        "role": "primary",
+        "displayName": "Pressed Sage",
+        "tonalRamp": [
+          "oklch(15.0% 0.05828 155.26)",
+          "oklch(26.4% 0.05828 155.26)",
+          "oklch(37.9% 0.05828 155.26)",
+          "oklch(49.3% 0.05828 155.26)",
+          "oklch(60.7% 0.05828 155.26)",
+          "oklch(72.1% 0.05828 155.26)",
+          "oklch(83.6% 0.05828 155.26)",
+          "oklch(95.0% 0.05828 155.26)"
+        ]
+      },
+      "soft": {
+        "role": "primary",
+        "displayName": "Sage Wash",
+        "tonalRamp": [
+          "oklch(15.0% 0.01465 142.23)",
+          "oklch(26.4% 0.01465 142.23)",
+          "oklch(37.9% 0.01465 142.23)",
+          "oklch(49.3% 0.01465 142.23)",
+          "oklch(60.7% 0.01465 142.23)",
+          "oklch(72.1% 0.01465 142.23)",
+          "oklch(83.6% 0.01465 142.23)",
+          "oklch(95.0% 0.01465 142.23)"
+        ]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Field Paper",
+        "tonalRamp": [
+          "oklch(15.0% 0.00283 128.49)",
+          "oklch(26.4% 0.00283 128.49)",
+          "oklch(37.9% 0.00283 128.49)",
+          "oklch(49.3% 0.00283 128.49)",
+          "oklch(60.7% 0.00283 128.49)",
+          "oklch(72.1% 0.00283 128.49)",
+          "oklch(83.6% 0.00283 128.49)",
+          "oklch(95.0% 0.00283 128.49)"
+        ]
+      },
+      "warning": {
+        "role": "neutral",
+        "displayName": "Warning Clay",
+        "tonalRamp": [
+          "oklch(15.0% 0.12835 34.75)",
+          "oklch(26.4% 0.12835 34.75)",
+          "oklch(37.9% 0.12835 34.75)",
+          "oklch(49.3% 0.12835 34.75)",
+          "oklch(60.7% 0.12835 34.75)",
+          "oklch(72.1% 0.12835 34.75)",
+          "oklch(83.6% 0.12835 34.75)",
+          "oklch(95.0% 0.12835 34.75)"
+        ],
+        "purpose": "Semantic warning/destructive state."
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Action Foreground",
+        "tonalRamp": [
+          "oklch(15.0% 0.00000 89.88)",
+          "oklch(26.4% 0.00000 89.88)",
+          "oklch(37.9% 0.00000 89.88)",
+          "oklch(49.3% 0.00000 89.88)",
+          "oklch(60.7% 0.00000 89.88)",
+          "oklch(72.1% 0.00000 89.88)",
+          "oklch(83.6% 0.00000 89.88)",
+          "oklch(95.0% 0.00000 89.88)"
+        ]
+      },
+      "overlay": {
+        "role": "neutral",
+        "displayName": "Modal Backdrop",
+        "tonalRamp": [
+          "oklch(15.0% 0.02025 162.81)",
+          "oklch(26.4% 0.02025 162.81)",
+          "oklch(37.9% 0.02025 162.81)",
+          "oklch(49.3% 0.02025 162.81)",
+          "oklch(60.7% 0.02025 162.81)",
+          "oklch(72.1% 0.02025 162.81)",
+          "oklch(83.6% 0.02025 162.81)",
+          "oklch(95.0% 0.02025 162.81)"
+        ]
+      },
+      "highlight-en": {
+        "role": "primary",
+        "displayName": "English Highlight",
+        "tonalRamp": [
+          "oklch(15.0% 0.03062 136.15)",
+          "oklch(26.4% 0.03062 136.15)",
+          "oklch(37.9% 0.03062 136.15)",
+          "oklch(49.3% 0.03062 136.15)",
+          "oklch(60.7% 0.03062 136.15)",
+          "oklch(72.1% 0.03062 136.15)",
+          "oklch(83.6% 0.03062 136.15)",
+          "oklch(95.0% 0.03062 136.15)"
+        ]
+      },
+      "highlight-zh": {
+        "role": "primary",
+        "displayName": "Translation Highlight",
+        "tonalRamp": [
+          "oklch(15.0% 0.02171 130.02)",
+          "oklch(26.4% 0.02171 130.02)",
+          "oklch(37.9% 0.02171 130.02)",
+          "oklch(49.3% 0.02171 130.02)",
+          "oklch(60.7% 0.02171 130.02)",
+          "oklch(72.1% 0.02171 130.02)",
+          "oklch(83.6% 0.02171 130.02)",
+          "oklch(95.0% 0.02171 130.02)"
+        ]
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "Dark Warm Ground",
+        "tonalRamp": [
+          "oklch(15.0% 0.01153 156.27)",
+          "oklch(26.4% 0.01153 156.27)",
+          "oklch(37.9% 0.01153 156.27)",
+          "oklch(49.3% 0.01153 156.27)",
+          "oklch(60.7% 0.01153 156.27)",
+          "oklch(72.1% 0.01153 156.27)",
+          "oklch(83.6% 0.01153 156.27)",
+          "oklch(95.0% 0.01153 156.27)"
+        ]
+      },
+      "dark-panel": {
+        "role": "neutral",
+        "displayName": "Dark Paper Surface",
+        "tonalRamp": [
+          "oklch(15.0% 0.01785 151.77)",
+          "oklch(26.4% 0.01785 151.77)",
+          "oklch(37.9% 0.01785 151.77)",
+          "oklch(49.3% 0.01785 151.77)",
+          "oklch(60.7% 0.01785 151.77)",
+          "oklch(72.1% 0.01785 151.77)",
+          "oklch(83.6% 0.01785 151.77)",
+          "oklch(95.0% 0.01785 151.77)"
+        ]
+      },
+      "dark-field": {
+        "role": "neutral",
+        "displayName": "Dark Field Paper",
+        "tonalRamp": [
+          "oklch(15.0% 0.01757 151.86)",
+          "oklch(26.4% 0.01757 151.86)",
+          "oklch(37.9% 0.01757 151.86)",
+          "oklch(49.3% 0.01757 151.86)",
+          "oklch(60.7% 0.01757 151.86)",
+          "oklch(72.1% 0.01757 151.86)",
+          "oklch(83.6% 0.01757 151.86)",
+          "oklch(95.0% 0.01757 151.86)"
+        ]
+      },
+      "dark-text": {
+        "role": "neutral",
+        "displayName": "Dark Green Ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.01071 136.56)",
+          "oklch(26.4% 0.01071 136.56)",
+          "oklch(37.9% 0.01071 136.56)",
+          "oklch(49.3% 0.01071 136.56)",
+          "oklch(60.7% 0.01071 136.56)",
+          "oklch(72.1% 0.01071 136.56)",
+          "oklch(83.6% 0.01071 136.56)",
+          "oklch(95.0% 0.01071 136.56)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Dark Quiet Ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.02184 140.89)",
+          "oklch(26.4% 0.02184 140.89)",
+          "oklch(37.9% 0.02184 140.89)",
+          "oklch(49.3% 0.02184 140.89)",
+          "oklch(60.7% 0.02184 140.89)",
+          "oklch(72.1% 0.02184 140.89)",
+          "oklch(83.6% 0.02184 140.89)",
+          "oklch(95.0% 0.02184 140.89)"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Dark Quiet Rule",
+        "tonalRamp": [
+          "oklch(15.0% 0.02800 146.96)",
+          "oklch(26.4% 0.02800 146.96)",
+          "oklch(37.9% 0.02800 146.96)",
+          "oklch(49.3% 0.02800 146.96)",
+          "oklch(60.7% 0.02800 146.96)",
+          "oklch(72.1% 0.02800 146.96)",
+          "oklch(83.6% 0.02800 146.96)",
+          "oklch(95.0% 0.02800 146.96)"
+        ]
+      },
+      "dark-primary": {
+        "role": "primary",
+        "displayName": "Dark Study Sage",
+        "tonalRamp": [
+          "oklch(15.0% 0.07068 140.51)",
+          "oklch(26.4% 0.07068 140.51)",
+          "oklch(37.9% 0.07068 140.51)",
+          "oklch(49.3% 0.07068 140.51)",
+          "oklch(60.7% 0.07068 140.51)",
+          "oklch(72.1% 0.07068 140.51)",
+          "oklch(83.6% 0.07068 140.51)",
+          "oklch(95.0% 0.07068 140.51)"
+        ]
+      },
+      "dark-primary-press": {
+        "role": "primary",
+        "displayName": "Dark Pressed Sage",
+        "tonalRamp": [
+          "oklch(15.0% 0.05722 138.75)",
+          "oklch(26.4% 0.05722 138.75)",
+          "oklch(37.9% 0.05722 138.75)",
+          "oklch(49.3% 0.05722 138.75)",
+          "oklch(60.7% 0.05722 138.75)",
+          "oklch(72.1% 0.05722 138.75)",
+          "oklch(83.6% 0.05722 138.75)",
+          "oklch(95.0% 0.05722 138.75)"
+        ]
+      },
+      "dark-soft": {
+        "role": "primary",
+        "displayName": "Dark Sage Wash",
+        "tonalRamp": [
+          "oklch(15.0% 0.03446 149.43)",
+          "oklch(26.4% 0.03446 149.43)",
+          "oklch(37.9% 0.03446 149.43)",
+          "oklch(49.3% 0.03446 149.43)",
+          "oklch(60.7% 0.03446 149.43)",
+          "oklch(72.1% 0.03446 149.43)",
+          "oklch(83.6% 0.03446 149.43)",
+          "oklch(95.0% 0.03446 149.43)"
+        ]
+      },
+      "dark-white": {
+        "role": "neutral",
+        "displayName": "Dark Action Foreground",
+        "tonalRamp": [
+          "oklch(15.0% 0.02491 149.43)",
+          "oklch(26.4% 0.02491 149.43)",
+          "oklch(37.9% 0.02491 149.43)",
+          "oklch(49.3% 0.02491 149.43)",
+          "oklch(60.7% 0.02491 149.43)",
+          "oklch(72.1% 0.02491 149.43)",
+          "oklch(83.6% 0.02491 149.43)",
+          "oklch(95.0% 0.02491 149.43)"
+        ]
+      },
+      "dark-warning": {
+        "role": "neutral",
+        "displayName": "Dark Warning Clay",
+        "tonalRamp": [
+          "oklch(15.0% 0.09052 34.18)",
+          "oklch(26.4% 0.09052 34.18)",
+          "oklch(37.9% 0.09052 34.18)",
+          "oklch(49.3% 0.09052 34.18)",
+          "oklch(60.7% 0.09052 34.18)",
+          "oklch(72.1% 0.09052 34.18)",
+          "oklch(83.6% 0.09052 34.18)",
+          "oklch(95.0% 0.09052 34.18)"
+        ],
+        "purpose": "Semantic warning/destructive state."
+      },
+      "dark-highlight-en": {
+        "role": "primary",
+        "displayName": "Dark English Highlight",
+        "tonalRamp": [
+          "oklch(15.0% 0.06538 135.97)",
+          "oklch(26.4% 0.06538 135.97)",
+          "oklch(37.9% 0.06538 135.97)",
+          "oklch(49.3% 0.06538 135.97)",
+          "oklch(60.7% 0.06538 135.97)",
+          "oklch(72.1% 0.06538 135.97)",
+          "oklch(83.6% 0.06538 135.97)",
+          "oklch(95.0% 0.06538 135.97)"
+        ]
+      },
+      "dark-highlight-zh": {
+        "role": "primary",
+        "displayName": "Dark Translation Highlight",
+        "tonalRamp": [
+          "oklch(15.0% 0.04454 149.17)",
+          "oklch(26.4% 0.04454 149.17)",
+          "oklch(37.9% 0.04454 149.17)",
+          "oklch(49.3% 0.04454 149.17)",
+          "oklch(60.7% 0.04454 149.17)",
+          "oklch(72.1% 0.04454 149.17)",
+          "oklch(83.6% 0.04454 149.17)",
+          "oklch(95.0% 0.04454 149.17)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Article title."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "Texta identity."
+      },
+      "definition-word": {
+        "displayName": "Definition Word",
+        "purpose": "Selected vocabulary word."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heading and vocabulary label."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Interface text."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "English article paragraphs."
+      },
+      "translation": {
+        "displayName": "Translation",
+        "purpose": "Chinese article paragraphs."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-surface",
+        "value": "0 16px 44px #17271c18",
+        "purpose": "Account/export popovers and modal cards; CSS --shadow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(.22,1,.36,1)",
+        "purpose": "State, underline and reveal motion."
+      },
+      {
+        "name": "fast",
+        "value": "160ms",
+        "purpose": "Control color/border transitions and press feedback."
+      },
+      {
+        "name": "normal",
+        "value": "260ms",
+        "purpose": "Tab underline and floating reveal."
+      },
+      {
+        "name": "definition-focus",
+        "value": "700ms",
+        "purpose": "Selected definition-word background fades to transparent."
+      },
+      {
+        "name": "loading-spin",
+        "value": "800ms linear infinite",
+        "purpose": "Generation progress spinner."
+      },
+      {
+        "name": "reveal-shift",
+        "value": "translateY(6px)",
+        "purpose": "Floating reveal starting position."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important",
+        "purpose": "Applies when prefers-reduced-motion is reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1600px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      },
+      {
+        "name": "mobile",
+        "value": "860px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Filled generation and principal actions.",
+      "html": "<button class=\"ds-primary\">生成文章</button>",
+      "css": ".ds-primary{font:15px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);min-height:44px;padding:8px 18px;border:1px solid var(--line,#d8ded7);border-radius:var(--radius,8px);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background var(--fast,160ms),border-color var(--fast,160ms),color var(--fast,160ms),transform var(--fast,160ms) var(--ease-out,cubic-bezier(.22,1,.36,1));background:var(--primary,#386548);border-color:var(--primary,#386548);color:var(--white,#fff);font-weight:600;}.ds-primary:hover:not(:disabled){background:var(--primary-press,#294e37);border-color:var(--primary-press,#294e37);}.ds-primary:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}.ds-primary:active:not(:disabled){transform:translateY(1px);}.ds-primary:disabled{cursor:not-allowed;opacity:.5;}@media(prefers-reduced-motion:reduce){.ds-primary{animation:none;transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Bordered import, clear and supporting actions.",
+      "html": "<button class=\"ds-secondary\">导入文件</button>",
+      "css": ".ds-secondary{font:15px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);min-height:44px;padding:8px 18px;border:1px solid var(--line,#d8ded7);border-radius:var(--radius,8px);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background var(--fast,160ms),border-color var(--fast,160ms),color var(--fast,160ms),transform var(--fast,160ms) var(--ease-out,cubic-bezier(.22,1,.36,1));background:transparent;color:var(--text,#222724);}.ds-secondary:hover:not(:disabled){background:var(--soft,#e8f0e7);border-color:var(--muted,#606963);}.ds-secondary:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}.ds-secondary:active:not(:disabled){transform:translateY(1px);}.ds-secondary:disabled{cursor:not-allowed;opacity:.5;}@media(prefers-reduced-motion:reduce){.ds-secondary{animation:none;transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Text Button",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Quiet functional actions alongside headings.",
+      "html": "<button class=\"ds-text\">填入示例词汇</button>",
+      "css": ".ds-text{font:15px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);min-height:44px;padding:8px 18px;border:1px solid var(--line,#d8ded7);border-radius:var(--radius,8px);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background var(--fast,160ms),border-color var(--fast,160ms),color var(--fast,160ms),transform var(--fast,160ms) var(--ease-out,cubic-bezier(.22,1,.36,1));padding:4px 8px;border-color:transparent;background:transparent;color:var(--primary,#386548);}.ds-text:hover:not(:disabled){background:var(--soft,#e8f0e7);border-color:var(--muted,#606963);}.ds-text:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}.ds-text:active:not(:disabled){transform:translateY(1px);}.ds-text:disabled{cursor:not-allowed;opacity:.5;}@media(prefers-reduced-motion:reduce){.ds-text{animation:none;transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Vocabulary Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "English words or phrases in a resizable reading-font field.",
+      "html": "<label class=\"ds-input-label\" for=\"ds-words\">输入词汇</label><textarea class=\"ds-words\" id=\"ds-words\" placeholder=\"输入英文单词或短语，用逗号或换行分隔\">resilient, adapt, perspective</textarea>",
+      "css": ".ds-input-label{display:block;margin-bottom:12px;font:650 21px/1.4 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);color:var(--text,#222724);}.ds-words{width:100%;min-height:148px;padding:10px 14px;resize:vertical;font:20px/1.6 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);color:var(--text,#222724);background:var(--field,#fcfdfb);border:1px solid var(--line,#d8ded7);border-radius:var(--radius,8px);caret-color:var(--primary,#386548);transition:border-color var(--fast,160ms),background var(--fast,160ms);}.ds-words::placeholder{color:var(--muted,#606963);opacity:1;}.ds-words:focus{border-color:var(--primary,#386548);}.ds-words:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-words{animation:none;transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Learning Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-tab",
+      "description": "Active page uses ink and a sage underline.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"学习导航\"><button class=\"ds-tab ds-current\" aria-current=\"page\">文章生成</button><button class=\"ds-tab\">收藏夹</button><button class=\"ds-tab\">生词本</button></nav>",
+      "css": ".ds-nav{display:flex;gap:8px;border-bottom:1px solid var(--line,#d8ded7);overflow-x:auto;}.ds-tab{font:15px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);min-height:44px;padding:8px 18px;border:1px solid var(--line,#d8ded7);border-radius:var(--radius,8px);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background var(--fast,160ms),border-color var(--fast,160ms),color var(--fast,160ms),transform var(--fast,160ms) var(--ease-out,cubic-bezier(.22,1,.36,1));position:relative;border:0;border-radius:0;padding:18px 20px;color:var(--muted,#606963);background:transparent;white-space:nowrap;}.ds-tab::after{content:\"\";position:absolute;bottom:0;left:12px;right:12px;height:2px;background:var(--primary,#386548);transform:scaleX(0);transform-origin:left;transition:transform var(--normal,260ms) var(--ease-out,cubic-bezier(.22,1,.36,1));}.ds-current{color:var(--text,#222724);font-weight:650;}.ds-current::after{transform:scaleX(1);}.ds-tab:hover{background:var(--soft,#e8f0e7);}.ds-tab:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}.ds-tab:active{transform:translateY(1px);}@media(prefers-reduced-motion:reduce){.ds-tab,.ds-tab::after{animation:none;transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Vocabulary Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Source-backed input annotation; the current workspace chip wrapper is hidden.",
+      "html": "<span class=\"ds-chip\">resilient</span>",
+      "css": ".ds-chip{display:inline-block;font:13px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);padding:2px 8px;border-radius:5px;background:var(--soft,#e8f0e7);color:var(--primary,#386548);}"
+    },
+    {
+      "name": "Definition Panel",
+      "kind": "card",
+      "refersTo": "definition-panel",
+      "description": "Tonal study support with display word and quiet section rules.",
+      "html": "<section class=\"ds-definition\"><h2 class=\"ds-def-heading\">词汇解析</h2><div class=\"ds-def-word\">resilient</div><p class=\"ds-def-meaning\">有韧性的；能迅速恢复的</p><section class=\"ds-def-section\"><h3 class=\"ds-def-section-title\">常见搭配</h3><p class=\"ds-def-context\">a resilient community</p></section></section>",
+      "css": ".ds-definition{background:var(--soft,#e8f0e7);color:var(--text,#222724);padding:18px 24px 24px;border-radius:10px;font:15px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);}.ds-def-heading{font-weight:650;font-size:18px;line-height:1.4;margin:0 0 10px;}.ds-def-word{font:600 40px/1.15 var(--font-display,\"Texta Serif\",Georgia,\"Songti SC\",\"SimSun\",serif);color:var(--primary,#386548);}.ds-def-meaning{font-size:16px;margin:8px 0 16px;}.ds-def-section{padding-top:16px;margin-top:16px;border-top:1px solid var(--line,#d8ded7);}.ds-def-section-title{font-size:17px;margin:0 0 8px;}.ds-def-context{font:18px/1.5 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);margin:0;}"
+    },
+    {
+      "name": "Mastery Choices",
+      "kind": "button",
+      "refersTo": "mastery-selected",
+      "description": "Pill choices expose study state with aria-pressed.",
+      "html": "<div class=\"ds-mastery-group\" role=\"group\" aria-label=\"单词掌握状态\"><button class=\"ds-mastery ds-selected\" aria-pressed=\"true\">已掌握</button><button class=\"ds-mastery\" aria-pressed=\"false\">陌生</button></div>",
+      "css": ".ds-mastery-group{display:flex;gap:10px;flex-wrap:wrap;}.ds-mastery{font:15px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);min-height:44px;padding:8px 18px;border:1px solid var(--line,#d8ded7);border-radius:var(--radius,8px);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background var(--fast,160ms),border-color var(--fast,160ms),color var(--fast,160ms),transform var(--fast,160ms) var(--ease-out,cubic-bezier(.22,1,.36,1));min-width:118px;border-radius:24px;color:var(--text,#222724);background:transparent;}.ds-mastery.ds-selected{color:var(--white,#fff);background:var(--primary,#386548);border-color:var(--primary,#386548);}.ds-mastery:hover{background:var(--soft,#e8f0e7);border-color:var(--muted,#606963);}.ds-mastery:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}.ds-mastery:active{transform:translateY(1px);}@media(prefers-reduced-motion:reduce){.ds-mastery{animation:none;transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Reading Vocabulary Mark",
+      "kind": "custom",
+      "refersTo": "vocabulary-highlight",
+      "description": "Inline vocabulary control linked to the selected definition.",
+      "html": "<p class=\"ds-reading\">We can build a <mark class=\"ds-vocab\" role=\"button\" tabindex=\"0\" aria-label=\"词汇解析: resilient\">resilient</mark> community.</p>",
+      "css": ".ds-reading{font:22px/1.5 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);color:var(--text,#222724);margin:0;}.ds-vocab{background:var(--highlight-en,#dae8d4);color:var(--primary,#386548);border-radius:3px;padding:0 3px;cursor:pointer;transition:background var(--fast,160ms);}.ds-vocab:hover,.ds-vocab:focus-visible{background:var(--highlight-zh,#e3ebdc);text-decoration:underline;}.ds-vocab:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-vocab{animation:none;transition-duration:.01ms;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Annotated bilingual reading edition",
+    "overview": "The confirmed direction favors open space, clear study actions and visible links between vocabulary in the article and its selected definition. Interface copy names actions or explains actual state. Chinese is the default interface language with a persistent English switch; learning content keeps its own language.",
+    "keyCharacteristics": [
+      "Warm neutral ground with sage action and selection colors.",
+      "Display serif for identity and English titles; Georgia for reading.",
+      "Broad content areas, quiet dividers and restrained controls.",
+      "Functional state changes with short motion and reduced-motion support."
+    ],
+    "rules": [
+      {
+        "name": "The Study State Rule",
+        "body": "Use sage to identify an action, selected study state or vocabulary relationship; carry meaning with text and state attributes as well as color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Language Role Rule",
+        "body": "Keep display lettering, English reading and Chinese interface text in their assigned stacks. The interface-language toggle does not rewrite the article.",
+        "section": "typography"
+      },
+      {
+        "name": "The Reading Plane Rule",
+        "body": "Keep article paragraphs on the page plane. Use tonal containers for study support and ambient elevation for floating controls.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** preserve the warm neutral, ink and sage roles across themes.",
+      "**Do** use the display, reading and interface font roles for their documented purposes.",
+      "**Do** preserve generous reading space and collapse the study grid for narrow screens.",
+      "**Do** pair selected vocabulary, mastery and navigation colors with readable text and accessible state.",
+      "**Do** use direct functional copy in the current interface language and retain learning-content language.",
+      "**Do** retain visible keyboard focus and respect reduced-motion preferences."
+    ],
+    "donts": [
+      "**Don't** add slogans, decorative microcopy or diagonal arrows.",
+      "**Don't** crowd the chosen study composition with a navigation sidebar or extra ornamental panels.",
+      "**Don't** turn prose paragraphs into a repeated field of raised cards.",
+      "**Don't** claim invented study statistics, testimonials, sentence translations or visual-fidelity approval."
+    ]
+  }
+}

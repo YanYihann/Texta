@@ -97,6 +97,10 @@ function setAuthMode(mode) {
   tabRegisterEl.classList.toggle("active", isRegister);
   loginFormEl.classList.toggle("hidden", isRegister);
   registerFormEl.classList.toggle("hidden", !isRegister);
+  tabLoginEl.setAttribute("aria-selected", String(!isRegister));
+  tabRegisterEl.setAttribute("aria-selected", String(isRegister));
+  const title = document.querySelector(".auth-card h1");
+  if (title) title.textContent = isRegister ? "注册 Texta" : "登录 Texta";
   setAuthMessage("");
 }
 
@@ -111,7 +115,9 @@ authHelpBtnEl?.addEventListener("click", () => {
   setAuthMessage("使用邮箱注册或登录，进入后即可生成单词文章。", false);
 });
 
-loginBtnEl.addEventListener("click", async () => {
+loginFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (loginBtnEl.disabled) return;
   const email = String(loginEmailEl.value || "").trim();
   const password = String(loginPasswordEl.value || "");
   if (!email || !password) {
@@ -147,7 +153,9 @@ loginBtnEl.addEventListener("click", async () => {
   }
 });
 
-registerBtnEl.addEventListener("click", async () => {
+registerFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (registerBtnEl.disabled) return;
   const name = String(registerNameEl.value || "").trim();
   const email = String(registerEmailEl.value || "").trim();
   const password = String(registerPasswordEl.value || "");
@@ -156,6 +164,11 @@ registerBtnEl.addEventListener("click", async () => {
     return;
   }
 
+  if (password.length < 6) {
+    setAuthMessage("密码至少需要 6 位。");
+    registerPasswordEl.focus();
+    return;
+  }
   registerBtnEl.disabled = true;
   setAuthMessage("注册中...如果后端刚启动，首次连接可能需要稍等。", false);
   try {
@@ -199,3 +212,20 @@ registerBtnEl.addEventListener("click", async () => {
 
 setAuthMode("login");
 void warmupApi();
+
+document.querySelectorAll(".password-toggle").forEach(button => {
+  button.addEventListener("click", () => {
+    const input = document.getElementById(button.dataset.passwordTarget);
+    const showing = input.type === "password";
+    input.type = showing ? "text" : "password";
+    button.setAttribute("aria-label", window.TextaI18n?.text(showing ? "隐藏密码" : "显示密码") || (showing ? "隐藏密码" : "显示密码"));
+    button.setAttribute("aria-pressed", String(showing));
+  });
+});
+[tabLoginEl,tabRegisterEl].forEach(tab => tab.addEventListener("keydown", event => {
+  if (["ArrowLeft","ArrowRight"].includes(event.key)) {
+    event.preventDefault();
+    const next = tab === tabLoginEl ? tabRegisterEl : tabLoginEl;
+    next.click(); next.focus();
+  }
+}));
