@@ -11,7 +11,7 @@
 
   输入目标词汇，生成英文文章、中文对照、词义标记与可复习词汇表。
 
-  [Live Demo](https://yanyihann.github.io/Texta/) · [API Health](https://api-texta.yanyihan.top/api/health) · [Report Bug](https://github.com/YanYihann/Texta/issues/new?labels=bug) · [Request Feature](https://github.com/YanYihann/Texta/issues/new?labels=enhancement)
+  [Live Demo](https://texta.yanyihan.top/) · [API Health](https://api-texta.yanyihan.top/api/health) · [Report Bug](https://github.com/YanYihann/Texta/issues/new?labels=bug) · [Request Feature](https://github.com/YanYihann/Texta/issues/new?labels=enhancement)
 
   [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
   [![Express](https://img.shields.io/badge/Express-4-000000?logo=express&logoColor=white)](https://expressjs.com/)
@@ -33,6 +33,7 @@ The current production frontend lives in `public/` and is deployed through GitHu
 | Word learning | Part of speech, senses, collocations, synonyms, antonyms, and word formation |
 | Review loop | Favorites, notebook entries, mastery preferences, and saved content |
 | Quality control | Spellcheck before generation and highlighted word-to-meaning mapping |
+| Workspace | Chinese by default, persistent English switch, input drafts, and mobile reading tabs |
 | Accounts | Registration, login, sessions, and profile lookup |
 | Plans | Daily quotas, free/VIP/admin tiers, and VIP approval workflow |
 | Export | PDF and Word export from the frontend |
@@ -44,7 +45,7 @@ The current production frontend lives in `public/` and is deployed through GitHu
 flowchart LR
   U["Learner"] --> W["Static web app<br/>public/"]
   W --> A["Express API<br/>server.js"]
-  A --> O["OpenAI-compatible API"]
+  A --> O["302.ai · DeepSeek V3.2"]
   A --> P["Prisma ORM"]
   P --> D[(PostgreSQL)]
   A --> L["Favorites · Notebook · Usage · Admin"]
@@ -80,8 +81,12 @@ At minimum, configure the database and model provider:
 ```env
 DATABASE_URL=postgresql://postgres:password@localhost:5432/texta?schema=public
 OPENAI_API_KEY=your_key
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=deepseek-v3.2
+OPENAI_MODEL_NORMAL=deepseek-v3.2
+OPENAI_MODEL_ADVANCED=deepseek-v3.2
+OPENAI_API_MODE=chat
+OPENAI_BASE_URL=https://api.302.ai/v1
+OPENAI_TIMEOUT_MS=60000
 FRONTEND_ORIGIN=http://localhost:3000
 PORT=3000
 ```
@@ -108,10 +113,10 @@ The Next.js version is under development and is not yet the production frontend.
 ## Study workflow
 
 1. Register or sign in.
-2. Paste vocabulary separated by commas or new lines.
+2. Paste vocabulary or phrases separated by commas or new lines, or import a TXT, Markdown, CSV, or JSON list.
 3. Review spellcheck suggestions.
 4. Generate an article and its aligned Chinese translation.
-5. Inspect highlighted words, meanings, collocations, and word formation.
+5. Select a highlighted word to inspect its meanings, collocations, and sentence from the article; expand additional dictionary details when needed.
 6. Save the article or add unfamiliar words to the notebook.
 7. Export the result for offline review.
 
@@ -126,9 +131,13 @@ The Next.js version is under development and is not yet the production frontend.
 
 Production endpoints documented by the repository:
 
-- Frontend: <https://yanyihann.github.io/Texta/>
+- Frontend: <https://texta.yanyihan.top/>
 - API: <https://api-texta.yanyihan.top>
 - Health: <https://api-texta.yanyihan.top/api/health>
+
+The backend uses the 302.ai OpenAI-compatible chat endpoint with `deepseek-v3.2`. Keep the provider key in backend environment variables; the static frontend calls the Express API. The configured base URL may also include `/chat/completions`; the server normalizes that suffix.
+
+The implemented interface tokens, typography, motion, and interaction rules are documented in [DESIGN.md](DESIGN.md). Product requirements are in [PRODUCT.md](PRODUCT.md).
 
 Availability can change independently of the source repository.
 
