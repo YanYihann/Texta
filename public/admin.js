@@ -107,6 +107,7 @@ function bindActions() {
       if (!id || !action) return;
 
       btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
       try {
         await reviewRequest(id, action);
         adminStatusEl.textContent = action === "approve" ? "已通过申请。" : "已驳回申请。";
@@ -115,6 +116,7 @@ function bindActions() {
         adminStatusEl.textContent = `操作失败：${error.message}`;
       } finally {
         btn.disabled = false;
+        btn.removeAttribute("aria-busy");
       }
     });
   });
@@ -162,10 +164,15 @@ async function loadRequests() {
 }
 
 refreshBtnEl.addEventListener("click", async () => {
+  refreshBtnEl.disabled = true;
+  refreshBtnEl.setAttribute("aria-busy", "true");
   try {
     await loadRequests();
   } catch (error) {
     adminStatusEl.textContent = `刷新失败：${error.message}`;
+  } finally {
+    refreshBtnEl.disabled = false;
+    refreshBtnEl.removeAttribute("aria-busy");
   }
 });
 

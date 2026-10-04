@@ -125,9 +125,15 @@ typography:
     fontWeight: 700
     lineHeight: "inherit"
 rounded:
-  control: "8px"
-  panel: "10px"
-  floating: "12px"
+  control: "10px"
+  panel: "14px"
+  floating: "14px"
+  segmented: "12px"
+  auth-card: "16px"
+  option: "7px"
+  checkbox: "6px"
+  switch: "20px"
+  progress: "2px"
   chip: "5px"
   highlight: "3px"
   mastery: "24px"
@@ -191,6 +197,18 @@ components:
 ---
 
 # Design System: Texta
+
+## Shared control refinement — 2026-10-05
+
+`public/controls.css` is the final shared control layer on all six production pages. It preserves the reading layout, typography and six palettes while updating buttons, native selects, checkbox/switch controls, segmented views, search fields, account/export popovers, notebook cards, authentication forms and asynchronous states. `theme.js` applies the saved theme before paint on account, payment and administration pages as well as the workspace. The payment and administration pages now use the shared styles directly, with their necessary form/chart layouts in `controls.css`; they no longer load the legacy `style.css` that overrode themes and forced nested viewport scrolling.
+
+The control border mixes 72% muted ink with the existing line color for legible field boundaries. Hover mixes 7% primary into the panel surface. Selected buttons retain their foreground and background on hover; a visible check supplements selected theme color. Keyboard outlines use the existing primary role. Primary actions, destructive actions and disabled controls retain distinct states. Cards use 14px corners; the authentication form uses a 16px framed surface. Checkbox and select checkmarks are small control glyphs, not decorative side borders.
+
+Native selects use `appearance: base-select` only behind feature detection: the enhanced picker has padded options, a checkmark and rotating chevron, while unsupported browsers retain their native picker and keyboard interaction. Native checkbox semantics remain intact, with platform controls restored in forced-colors mode. Mobile text fields use at least 16px text to avoid automatic input zoom. Animation respects reduced motion. Busy indicators are driven by explicit `aria-busy`, separately from unavailable/disabled states. Login, registration, generation, PDF export, payment-proof submission and administrator actions expose this state. Account/export menus support Arrow Down, Escape with focus return and closing when focus leaves. Ordinary dictionary disclosures stay open when working elsewhere.
+
+References consulted: [Uiverse buttons](https://uiverse.io/buttons), [checkboxes](https://uiverse.io/checkboxes) and [loaders](https://uiverse.io/loaders) for control states; [21st.dev](https://21st.dev/) for composed controls; [getdesign.md](https://getdesign.md/) for a consistent documented visual vocabulary. Implementations are authored for Texta rather than copied snippets. Coolors was requested but returned an access error, so the existing palette is retained. No new component library or remote runtime dependency is required.
+
+Verification uses the production HTML/CSS/JavaScript with local API fixtures for account and administration flows. Desktop, tablet and phone layouts, theme variants, keyboard controls, checkbox/switch changes, generation failure recovery, library views and export preview are checked in Playwright. This verifies the interface; live model quality, real payments and production account mutations are not exercised. The Impeccable scan still reports pre-existing legacy-style/token advisories; it is not represented as a clean whole-repository audit.
 
 ## Overview
 

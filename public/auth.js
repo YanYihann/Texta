@@ -99,6 +99,8 @@ function setAuthMode(mode) {
   registerFormEl.classList.toggle("hidden", !isRegister);
   tabLoginEl.setAttribute("aria-selected", String(!isRegister));
   tabRegisterEl.setAttribute("aria-selected", String(isRegister));
+  tabLoginEl.tabIndex = isRegister ? -1 : 0;
+  tabRegisterEl.tabIndex = isRegister ? 0 : -1;
   const title = document.querySelector(".auth-card h1");
   if (title) title.textContent = isRegister ? "注册 Texta" : "登录 Texta";
   setAuthMessage("");
@@ -126,6 +128,7 @@ loginFormEl.addEventListener("submit", async (event) => {
   }
 
   loginBtnEl.disabled = true;
+  loginBtnEl.setAttribute("aria-busy", "true");
   setAuthMessage("登录中...如果后端刚启动，首次连接可能需要稍等。", false);
   try {
     await Promise.race([warmupApi(), wait(5000)]);
@@ -150,6 +153,7 @@ loginFormEl.addEventListener("submit", async (event) => {
     setAuthMessage(message);
   } finally {
     loginBtnEl.disabled = false;
+    loginBtnEl.removeAttribute("aria-busy");
   }
 });
 
@@ -170,6 +174,7 @@ registerFormEl.addEventListener("submit", async (event) => {
     return;
   }
   registerBtnEl.disabled = true;
+  registerBtnEl.setAttribute("aria-busy", "true");
   setAuthMessage("注册中...如果后端刚启动，首次连接可能需要稍等。", false);
   try {
     await Promise.race([warmupApi(), wait(5000)]);
@@ -207,6 +212,7 @@ registerFormEl.addEventListener("submit", async (event) => {
     setAuthMessage(message);
   } finally {
     registerBtnEl.disabled = false;
+    registerBtnEl.removeAttribute("aria-busy");
   }
 });
 

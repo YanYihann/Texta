@@ -4,7 +4,7 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f7f4"><title>Texta · 词汇学习</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./workspace.css?v=20261004-clean11">
+  <link rel="stylesheet" href="./workspace.css?v=20261004-clean11"><link rel="stylesheet" href="./controls.css?v=20261005-controls1"><script src="./theme.js?v=20261005-controls1"></script>
   <script src="./i18n.js?v=20261004-clean11" defer></script>
 </head>
 <body class="workspace-page">
@@ -51,7 +51,7 @@
         <button id="returnToReadingBtn" class="text-btn hidden" type="button">返回文章</button>
       </div>
     </section>
-    <div class="status-row"><p id="status" role="status" aria-live="polite"></p><span id="generationProgress" class="hidden">正在生成，请稍候…</span></div>
+    <div class="status-row"><p id="status" role="status" aria-live="polite"></p><span id="generationProgress" class="hidden" role="status">正在生成，请稍候…</span></div>
     <section id="libraryPanel" class="library-panel hidden" aria-label="学习内容库"><div class="section-heading"><h2 id="libraryHeading">收藏夹</h2><button id="backToArticleBtn" type="button">返回文章</button></div><div id="favoritesControls" class="library-controls">
  <div class="library-search-row"><label class="sr-only" for="favoritesSearchInput">搜索收藏文章</label><input id="favoritesSearchInput" type="search" placeholder="搜索标题、文章或词汇"><label class="sr-only" for="favoritesSort">收藏排序</label><select id="favoritesSort"><option value="az">A–Z 字母排序</option><option value="newest">加入时间 · 最新在前</option><option value="oldest">加入时间 · 最早在前</option></select></div>
  <div class="folder-toolbar"><label class="sr-only" for="favoriteFolderFilter">选择文件夹</label><select id="favoriteFolderFilter"><option value="all">全部文章</option><option value="">未分类</option></select><button id="newFolderBtn" type="button">＋ 新建文件夹</button><button id="renameFolderBtn" type="button" disabled>重命名</button><button id="deleteFolderBtn" type="button" disabled>删除文件夹</button><span id="favoritesCount" class="library-count"></span></div>
@@ -102,7 +102,7 @@
             <input id="guideDontShow" type="checkbox" checked />
             下次不再自动弹出
           </label>
-          <button id="closeGuideFooterBtn" type="button">我知道了</button>
+          <button id="closeGuideFooterBtn" class="primary-btn" type="button">我知道了</button>
         </div>
       </div>
     </section>
@@ -137,9 +137,9 @@
         </div>
 
         <div class="modal-actions">
-          <button id="confirmExportBtn" type="button">确认导出</button>
+          <button id="confirmExportBtn" class="primary-btn" type="button">确认导出</button>
         </div>
       </div>
     </section>
 
-<script src="./site-config.js?v=20261004-clean11"></script><script src="./app.js?v=20261004-clean11"></script><script src="./library.js?v=20261004-clean11"></script><script src="./workspace.js?v=20261004-clean11"></script></body></html>
+<script src="./site-config.js?v=20261004-clean11"></script><script src="./app.js?v=20261005-controls1"></script><script src="./library.js?v=20261004-clean11"></script><script src="./workspace.js?v=20261005-controls1"></script></body></html>

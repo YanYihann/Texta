@@ -116,7 +116,7 @@ function renderPlanAction(user) {
       data-plan-toggle="1"
       data-user-id="${escapeHtml(userId)}"
       data-target-plan="${getPlanActionTarget(user)}"
-      ${isBusy ? "disabled" : ""}
+      ${isBusy ? 'disabled aria-busy="true"' : ""}
     >
       ${isBusy ? "Processing..." : getPlanActionLabel(user)}
     </button>
@@ -303,10 +303,15 @@ usageRoleFilterEl.addEventListener("change", filterUsers);
 usageSortSelectEl?.addEventListener("change", filterUsers);
 
 refreshUsageBtnEl.addEventListener("click", async () => {
+  refreshUsageBtnEl.disabled = true;
+  refreshUsageBtnEl.setAttribute("aria-busy", "true");
   try {
     await loadUsageOverview();
   } catch (error) {
     usageStatusEl.textContent = `Refresh failed: ${error.message}`;
+  } finally {
+    refreshUsageBtnEl.disabled = false;
+    refreshUsageBtnEl.removeAttribute("aria-busy");
   }
 });
 

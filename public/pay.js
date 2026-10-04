@@ -79,6 +79,7 @@ submitVipRequestBtnEl.addEventListener("click", async () => {
   };
 
   submitVipRequestBtnEl.disabled = true;
+  submitVipRequestBtnEl.setAttribute("aria-busy", "true");
   payMsgEl.textContent = "提交中...";
   try {
     const response = await fetch(apiUrl("/api/upgrade/request"), {
@@ -98,6 +99,7 @@ submitVipRequestBtnEl.addEventListener("click", async () => {
     payMsgEl.textContent = `提交失败：${error.message}`;
   } finally {
     submitVipRequestBtnEl.disabled = false;
+    submitVipRequestBtnEl.removeAttribute("aria-busy");
   }
 });
 

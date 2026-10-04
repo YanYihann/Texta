@@ -240,6 +240,9 @@ function syncActionButtonStates() {
   readingModeBtn.classList.toggle("is-active", readingMode);
   toggleZhBtn.classList.toggle("is-active", !showChinese);
   favoriteBtn.classList.toggle("is-active", isCurrentArticleFavorited());
+  readingModeBtn.setAttribute("aria-pressed", String(readingMode));
+  toggleZhBtn.setAttribute("aria-pressed", String(!showChinese));
+  favoriteBtn.setAttribute("aria-pressed", String(isCurrentArticleFavorited()));
 }
 
 async function apiFetch(path, options = {}) {
@@ -3256,6 +3259,7 @@ async function exportPdfFromPreview() {
   let renderHost, canvas;
   try {
     confirmExportBtn.disabled = true;
+    confirmExportBtn.setAttribute("aria-busy", "true");
     await window.TextaExports.ensurePdf();
     if (typeof window.html2canvas !== "function" || !window.jspdf?.jsPDF) throw new Error("PDF library unavailable");
     const paper = buildExportBundle(title, Boolean(previewIncludeZhInput.checked));
@@ -3295,6 +3299,7 @@ async function exportPdfFromPreview() {
     renderHost?.remove();
     if (canvas) { canvas.width = 0; canvas.height = 0; }
     confirmExportBtn.disabled = false;
+    confirmExportBtn.removeAttribute("aria-busy");
   }
 }
 

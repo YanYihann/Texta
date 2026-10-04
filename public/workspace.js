@@ -281,7 +281,10 @@
   syncStatusVisibility();
   document.addEventListener('keydown',event=>{
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && view === 'article' && !activeDialog && !generateBtn.disabled) { event.preventDefault(); generateBtn.click(); }
-    if (event.key === 'Escape') document.querySelectorAll('details[open]').forEach(detail=>detail.open=false);
+    if (event.key === 'Escape') document.querySelectorAll('.account-menu[open],.export-menu[open]').forEach(detail=>{
+      detail.open = false;
+      if (detail.contains(document.activeElement)) detail.querySelector('summary').focus();
+    });
     if (event.key === 'Escape' && readingMode && !activeDialog) { event.preventDefault(); exitReadingMode(); }
     if (event.key === 'Tab' && activeDialog) {
       const items = [...activeDialog.querySelectorAll('button,input,select,a[href],[tabindex="0"]')].filter(el=>!el.disabled && el.getClientRects().length);
@@ -294,7 +297,10 @@
     const heading = modal.querySelector('h3'); heading.id = `${modal.id}Title`; modal.setAttribute('aria-labelledby',heading.id);
     new MutationObserver(()=>{
       if (!modal.classList.contains('hidden') && activeDialog !== modal) {
-        dialogReturnFocus = document.activeElement; activeDialog = modal; document.body.style.overflow = 'hidden';
+        const sourceMenu = document.activeElement?.closest('.account-menu,.export-menu');
+        dialogReturnFocus = sourceMenu?.querySelector('summary') || document.activeElement;
+        if (sourceMenu) sourceMenu.open = false;
+        activeDialog = modal; document.body.style.overflow = 'hidden';
         modal.querySelector('button,input')?.focus();
       } else if (modal.classList.contains('hidden') && activeDialog === modal) {
         activeDialog = null; document.body.style.overflow = readingMode ? 'hidden' : ''; dialogReturnFocus?.focus();
@@ -302,7 +308,18 @@
     }).observe(modal,{attributes:true,attributeFilter:['class']});
   });
   document.addEventListener('click',event=>{
-    document.querySelectorAll('details[open]').forEach(detail=>{if(!detail.contains(event.target))detail.open=false;});
+    document.querySelectorAll('.account-menu[open],.export-menu[open]').forEach(detail=>{if(!detail.contains(event.target))detail.open=false;});
+  });
+  document.querySelectorAll('.account-menu,.export-menu').forEach(menu=>{
+    menu.addEventListener('focusout',()=>requestAnimationFrame(()=>{
+      if (!menu.contains(document.activeElement)) menu.open = false;
+    }));
+    menu.addEventListener('keydown',event=>{
+      if (event.key === 'ArrowDown' && event.target === menu.querySelector('summary')) {
+        event.preventDefault(); menu.open = true;
+        menu.querySelector('button:not(:disabled):not(.hidden),a:not(.hidden),select,input')?.focus();
+      }
+    });
   });
   let pdfPromise;
   function loadPdfScript(src) {

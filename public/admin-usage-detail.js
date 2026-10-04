@@ -1,6 +1,7 @@
 const detailContentEl = document.getElementById("detailContent");
 const detailSummaryRowEl = document.getElementById("detailSummaryRow");
 const detailRefreshBtnEl = document.getElementById("detailRefreshBtn");
+const detailStatusEl = document.getElementById("detailStatus");
 
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 
@@ -213,11 +214,21 @@ async function loadDetail() {
   renderDetail(item);
 }
 
-detailRefreshBtnEl.addEventListener("click", async () => {
-  await loadDetail();
-});
-
-ensureAdmin().then(async (user) => {
-  if (!user) return;
-  await loadDetail();
+async function refreshDetail() {
+  detailRefreshBtnEl.disabled = true;
+  detailRefreshBtnEl.setAttribute("aria-busy", "true");
+  detailStatusEl.textContent = "加载中...";
+  try {
+    await loadDetail();
+    detailStatusEl.textContent = "";
+  } catch (error) {
+    detailStatusEl.textContent = `加载失败：${error.message}`;
+  } finally {
+    detailRefreshBtnEl.disabled = false;
+    detailRefreshBtnEl.removeAttribute("aria-busy");
+  }
+}
+detailRefreshBtnEl.addEventListener("click", refreshDetail);
+ensureAdmin().then(user => { if (user) return refreshDetail(); }).catch(error => {
+  detailStatusEl.textContent = `加载失败：${error.message}`;
 });
