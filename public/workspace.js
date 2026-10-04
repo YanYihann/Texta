@@ -11,7 +11,8 @@
     cancelAnimationFrame(readingHeightFrame);
     readingHeightFrame = requestAnimationFrame(()=>{
       if (!reading.getClientRects().length) return;
-      const top = reading.getBoundingClientRect().top + window.scrollY + parseFloat(getComputedStyle(reading).paddingTop);
+      const style = getComputedStyle(reading);
+      const top = reading.getBoundingClientRect().top + window.scrollY + parseFloat(style.paddingTop) + parseFloat(style.borderTopWidth);
       const bottom = isMobileLayout() ? byId('mobileBottomNav').offsetHeight + 16 : 32;
       const height = Math.max(320, Math.floor(window.innerHeight - top - bottom));
       const value = `${height}px`;
@@ -23,12 +24,14 @@
   window.addEventListener('resize',sizeReadingPanels);
   window.visualViewport?.addEventListener('resize',sizeReadingPanels);
 
-  function showView(next) {
+  function showView(next, {edit = false} = {}) {
     view = next;
     const isArticle = next === 'article';
-    input.classList.toggle('hidden', !isArticle);
+    const isEditing = isArticle && (edit || !latestArticle);
+    input.classList.toggle('hidden', !isEditing);
+    byId('returnToReadingBtn').classList.toggle('hidden', !isEditing || !latestArticle);
     library.classList.toggle('hidden', isArticle || next === 'notebook');
-    reading.classList.toggle('hidden', !isArticle && next !== 'notebook');
+    reading.classList.toggle('hidden', (!isArticle && next !== 'notebook') || (isEditing && Boolean(latestArticle)));
     byId('status').parentElement.classList.toggle('hidden', !isArticle);
     if (!isArticle) document.body.classList.remove('reading-mode');
     if (next === 'notebook') {
@@ -47,16 +50,28 @@
       if (active) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current');
     }
     byId('libraryHeading').textContent = next === 'history' ? '历史记录' : '收藏夹';
-    if (next === 'article') { readingMode = false; currentMobilePage = 'home'; }
+    if (next === 'article') { readingMode = false; applyReadingMode(); currentMobilePage = isEditing ? 'home' : 'article'; }
     if (next === 'notebook' && isMobileLayout()) currentMobilePage = 'article';
     refreshMobileNav();
     window.TextaI18n?.apply();
     sizeReadingPanels();
   }
-  homeButton.addEventListener('click',()=>showView('article'));
+  function openWordEditor() {
+    showView('article', {edit:true});
+    window.scrollTo({top:0,behavior:reduceMotion()?'auto':'smooth'});
+    wordsInput.focus({preventScroll:true});
+  }
+  homeButton.addEventListener('click',openWordEditor);
+  byId('editWordsBtn').addEventListener('click',openWordEditor);
+  byId('returnToReadingBtn').addEventListener('click',()=>{
+    showView('article');
+    window.scrollTo({top:0,behavior:reduceMotion()?'auto':'smooth'});
+    exportAreaEl.focus({preventScroll:true});
+  });
   byId('backToArticleBtn').addEventListener('click',()=>showView('article'));
   byId('mobileBottomNav').addEventListener('click',event=>{
-    if (event.target.closest('.mobile-nav-btn') && view !== 'article') showView('article');
+    const button = event.target.closest('.mobile-nav-btn');
+    if (button) showView('article', {edit:button.dataset.target === 'home'});
   },true);
   document.addEventListener('texta:library', event => showView(event.detail));
   document.addEventListener('texta:article',()=>{
@@ -198,7 +213,7 @@
   });
   document.addEventListener('texta:generation',event=>{
     byId('generationProgress').classList.toggle('hidden',!event.detail);
-    if (event.detail) showView('article');
+    if (event.detail) showView('article', {edit:true});
     else updateWordCount();
   });
   const statusObserver = new MutationObserver(()=>statusEl.classList.toggle('is-error', /失败|超过|expired|failed|too many/i.test(statusEl.textContent)));

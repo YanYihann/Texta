@@ -103,7 +103,7 @@ summary::after { content: ""; width: 6px; height: 6px; border: solid currentColo
 .status-row { display: flex; justify-content: space-between; gap: var(--space-md); min-height: 0; margin: 8px 0; font-size: 13px; color: var(--muted); }
 #status { margin: 0; overflow-wrap: anywhere; }
 #status.is-error { color: var(--warning); }
-.reading-workspace { display: grid; grid-template-columns: minmax(0,2.15fr) minmax(310px,1fr); gap: 40px; padding: 24px 0 48px; border-top: 1px solid var(--line); }
+.reading-workspace { display: grid; grid-template-columns: minmax(0,2.15fr) minmax(310px,1fr); gap: 40px; padding: 24px 0 32px; border-top: 1px solid var(--line); }
 #articleView { display:flex; flex-direction:column; height:var(--reading-panel-height,calc(100dvh - 400px)); min-height:320px; }
 #exportArea,#glossary { overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; scrollbar-width:none; -webkit-overflow-scrolling:touch; min-height:0; flex:1; }
 #exportArea::-webkit-scrollbar,#glossary::-webkit-scrollbar { display:none; width:0; height:0; }
@@ -112,6 +112,8 @@ summary::after { content: ""; width: 6px; height: 6px; border: solid currentColo
 #missingWords:empty { display:none; }
 .top-actions { display: flex; align-items: center; gap: var(--space-lg); padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
 .top-actions h2 { white-space: nowrap; margin: 0; }
+.reading-heading { display:flex; align-items:center; gap:16px; }
+.reading-heading .text-btn { white-space:nowrap; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .actions button { font-size: 14px; padding: 8px 14px; }
 .actions button.is-active { background: var(--soft); color: var(--primary); }
@@ -267,10 +269,12 @@ body.admin-page input::placeholder,body.payment-page input::placeholder { color:
   .generation-settings { gap: 8px; }
   .setting-row { grid-template-columns: 90px minmax(0,1fr); }
   #words { min-height: 154px; font-size: 18px; }
-  .reading-workspace { display: block; padding-top: 22px; }
+  .reading-workspace { display: block; padding-top: 22px; padding-bottom:0; }
   .glossary-panel { position: static; margin-top: 0; }
   .top-actions { display: block; }
   .top-actions h2 { margin-bottom: 12px; }
+  .reading-heading { justify-content:space-between; margin-bottom:12px; }
+  .reading-heading h2 { margin-bottom:0; }
   .actions button { min-width: 44px; padding: 8px 12px; }
   .actions .action-icon { width: 22px; height: 22px; }
   .article-title { font-size: 36px; }
