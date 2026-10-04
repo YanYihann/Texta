@@ -283,9 +283,14 @@ body.admin-page input::placeholder,body.payment-page input::placeholder { color:
   .modal { padding: 12px; }
   .modal-card { padding: 20px; }
   .modal-row,.modal-actions { flex-wrap: wrap; }
-  .export-popover { right: auto; left: 0; width: min(280px,80vw); }
+  .top-actions { position: relative; }
+  .export-menu { position: static; }
+  .export-popover { right: 0; left: auto; width: min(300px,100%); max-height: min(420px,calc(100dvh - 180px)); overflow-y: auto; }
   .account-popover { width: min(300px,90vw); }
   .auth-page .site-header { padding-bottom: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 @media print { .site-header,.input-panel,.status-row,.actions,.mobile-bottom-nav { display: none !important; } body { background: var(--white); } .app-shell { width: 100%; } .reading-workspace { display: block; } .glossary-panel { position: static; } }
+
+.notebook-export-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+#articleView { scroll-margin-top:20px; }

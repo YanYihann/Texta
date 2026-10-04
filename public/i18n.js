@@ -1,5 +1,6 @@
 (() => {
   const dictionary = {
+    '英文':'English','词性':'Part of speech','中文翻译':'Chinese meaning','词汇表':'Vocabulary list','当前列表没有可导出的生词。':'No words to export in the current list.',
     '文章生成':'Generate','收藏夹':'Favorites','生词本':'Notebook','历史记录':'History','历史':'History','账户':'Account',
     '帮助':'Help','使用说明':'Help','说明':'Help','输入词汇':'Vocabulary','填入示例词汇':'Use example words','导入文件':'Import file','清空':'Clear',
     '输入英文单词或短语，用逗号或换行分隔':'Enter English words or phrases, separated by commas or new lines',

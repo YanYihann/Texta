@@ -51,6 +51,12 @@
     enhanceArticle();
   });
 
+  document.addEventListener('texta:open-article',()=>{
+    showView('article');
+    if (isMobileLayout()) { currentMobilePage = 'article'; refreshMobileNav(); }
+    requestAnimationFrame(()=>articleViewEl.scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'start'}));
+  });
+
   function chooseDefinition(key) {
     const cards = [...glossaryEl.querySelectorAll('.glossary-item')];
     if (!cards.length) return;

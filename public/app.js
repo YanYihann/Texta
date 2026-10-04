@@ -81,6 +81,8 @@ let latestGenerationMode = "mixed";
 let latestGenerationQuality = "normal";
 let showChinese = true;
 let pendingExportType = "pdf";
+let pendingExportSource = "article";
+let pendingNotebookRows = [];
 let readingMode = false;
 let spellTimer = null;
 let spellState = [];
@@ -2164,8 +2166,8 @@ function syncActionButtonLabels() {
     setButtonContent(readingModeBtn, actionIconSvg("book"), readingMode ? "退出阅读模式" : "阅读模式");
     setButtonContent(toggleZhBtn, '<span class="action-text-icon">ZH</span>', showChinese ? "隐藏中文" : "显示中文");
     setButtonContent(favoriteBtn, actionIconSvg(isCurrentArticleFavorited() ? "heart-fill" : "heart"), isCurrentArticleFavorited() ? "取消收藏" : "收藏文章");
-    setButtonContent(exportPdfBtn, actionIconSvg("export"), "导出 PDF");
-    setButtonContent(exportWordBtn, actionIconSvg("export"), "导出 Word");
+    setButtonContent(exportPdfBtn, "导出 PDF", "导出 PDF");
+    setButtonContent(exportWordBtn, "导出 Word", "导出 Word");
     syncActionButtonStates();
     return;
   }
@@ -3019,6 +3021,10 @@ function renderNotebookView() {
   const rows = getNotebookEntriesSorted();
   syncNotebookFilters(rows);
   const filteredRows = filterNotebookRows(rows);
+  ["notebookExportPdfBtn", "notebookExportWordBtn"].forEach(id => {
+    const button = document.getElementById(id);
+    if (button) button.disabled = filteredRows.length === 0;
+  });
   notebookCountEl.textContent = filteredRows.length === rows.length ? `${rows.length} 个单词` : `显示 ${filteredRows.length} / ${rows.length} 个单词`;
 
   if (!rows.length) {
@@ -3053,88 +3059,61 @@ function safeFileName(name) {
   return String(name || "untitled").replace(/[\\/:*?"<>|]/g, "_").slice(0, 80);
 }
 
+const EXPORT_DOCUMENT_STYLES = `
+.export-document { box-sizing:border-box; background:#fff; color:#202b24; font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif; font-size:16px; line-height:1.65; overflow-wrap:anywhere; }
+.export-document * { box-sizing:border-box; }
+.export-document h1 { margin:0 0 24px; font-family:Georgia,"Microsoft YaHei",serif; font-size:30px; line-height:1.2; font-weight:700; }
+.export-document h2 { margin:32px 0 12px; font-size:20px; }
+.export-document .para-card { margin:0 0 24px; padding:0; border:0; background:#fff; opacity:1; transform:none; animation:none; }
+.export-document .para-en { color:#202b24; margin:0; font-family:Georgia,"Microsoft YaHei",serif; font-size:19px; line-height:1.7; white-space:pre-wrap; }
+.export-document .para-zh { margin:10px 0 0; font-size:16px; line-height:1.8; white-space:pre-wrap; color:#4d5e52; }
+.export-document mark,.export-document .vocab-en-inline,.export-document .vocab-zh-inline { background:#e4eddd; color:inherit; padding:0 2px; border-radius:2px; }
+.export-document .sense-marker { font-size:11px; vertical-align:super; }
+.export-document table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:15px; }
+.export-document th { background:#edf2eb; text-align:left; font-weight:600; }
+.export-document th,.export-document td { padding:10px 12px; border-bottom:1px solid #dce3da; vertical-align:top; overflow-wrap:anywhere; }
+.export-document th:nth-child(1) { width:29%; }
+.export-document th:nth-child(2) { width:15%; }
+.export-document td:first-child { font-family:Georgia,serif; font-weight:600; }
+`;
+
+const exportDocumentStyle = document.createElement("style");
+exportDocumentStyle.textContent = EXPORT_DOCUMENT_STYLES;
+document.head.appendChild(exportDocumentStyle);
+
+function buildVocabularyTable(rows) {
+  const label = text => escapeHtml(window.TextaI18n?.text(text) || text);
+  return `<table class="export-vocabulary"><thead><tr><th>${label("英文")}</th><th>${label("词性")}</th><th>${label("中文翻译")}</th></tr></thead><tbody>${rows.map(item => {
+    const meanings = (item.senses || []).map(sense => sanitizeGlossTextForUi(sense.meaning, 220)).filter(Boolean).join("；");
+    return `<tr><td>${escapeHtml(item.word || "")}</td><td>${escapeHtml(item.pos || "—")}</td><td>${escapeHtml(meanings || "—")}</td></tr>`;
+  }).join("")}</tbody></table>`;
+}
+
 function buildExportBundle(title, includeChinese) {
-  const articleClone = exportAreaEl.cloneNode(true);
-  const titleNode = articleClone.querySelector("#articleTitle") || articleClone.querySelector(".article-title");
-  if (titleNode) {
-    titleNode.textContent = title;
-  }
-
-  articleClone.querySelectorAll(".para-card").forEach((el) => {
-    el.style.opacity = "1";
-    el.style.transform = "none";
-    el.style.animation = "none";
-    el.style.background = "#ffffff";
-  });
-
-  if (!includeChinese) {
-    articleClone.querySelectorAll(".para-zh").forEach((el) => el.remove());
-    articleClone.querySelectorAll(".mixed-note").forEach((el) => el.remove());
-  }
-
-  const glossaryClone = glossaryEl.cloneNode(true);
-
   const wrapper = document.createElement("div");
-  wrapper.className = "export-print-root";
-  wrapper.innerHTML = `
-    <h1>${escapeHtml(title)}</h1>
-    <div>${articleClone.innerHTML}</div>
-    <h2 style="margin-top:14px;">生词中文释义</h2>
-    <div class="glossary">${glossaryClone.innerHTML}</div>
-  `;
-
+  wrapper.className = "export-document export-print-root";
+  const heading = `<h1>${escapeHtml(title)}</h1>`;
+  if (pendingExportSource === "notebook") {
+    wrapper.innerHTML = heading + buildVocabularyTable(pendingNotebookRows);
+    return wrapper;
+  }
+  const articleClone = articleBlocksEl.cloneNode(true);
+  articleClone.removeAttribute("id");
+  articleClone.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+  articleClone.querySelectorAll("[style]").forEach(el => el.removeAttribute("style"));
+  articleClone.querySelectorAll("mark").forEach(el => {
+    el.removeAttribute("role"); el.removeAttribute("tabindex"); el.removeAttribute("aria-label");
+  });
+  if (!includeChinese) articleClone.querySelectorAll(".para-zh,.mixed-note").forEach(el => el.remove());
+  else articleClone.querySelectorAll(".para-zh").forEach(el => el.classList.remove("hidden"));
+  const glossaryTitle = window.TextaI18n?.text("词汇表") || "词汇表";
+  wrapper.innerHTML = heading + articleClone.outerHTML + `<h2>${escapeHtml(glossaryTitle)}</h2>` + buildVocabularyTable(latestLexicon);
   return wrapper;
 }
 
-function makeWordFriendlyHtml(innerHtml, marginPx) {
-  const normalized = String(innerHtml || "")
-    .replace(/<mark class="vocab-en"[^>]*>/g, '<span class="vocab-en-inline">')
-    .replace(/<mark class="vocab-zh"[^>]*>/g, '<span class="vocab-zh-inline">')
-    .replaceAll("</mark>", "</span>");
-
-  return `
-  <html>
-    <head>
-      <meta charset=\"utf-8\" />
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; color:#111827; padding:${marginPx}px; }
-        h1 { margin:0 0 8px; }
-        h2 { margin:14px 0 8px; }
-        .article-title { font-size:22px; margin:0 0 8px; }
-        .export-print-root { page-break-inside:auto; }
-        .para-card {
-          border:1px solid #e5e7eb;
-          border-radius:14px;
-          background:#fff;
-          padding:12px;
-          margin:0 0 10px;
-          break-inside: avoid;
-          page-break-inside: avoid;
-          -webkit-column-break-inside: avoid;
-        }
-        .para-en,.para-zh { white-space: pre-wrap; line-height: 1.72; margin:0; }
-        .para-zh { margin-top:8px; padding-top:8px; border-top:1px dashed #d1d5db; }
-        .glossary { border:1px solid #e5e7eb; border-radius:14px; padding:8px 10px; }
-        .glossary-item {
-          border-bottom:1px dashed #e5e7eb;
-          padding:8px 0;
-          break-inside: avoid;
-          page-break-inside: avoid;
-          -webkit-column-break-inside: avoid;
-        }
-        .glossary-item:last-child { border-bottom:none; }
-        .glossary-word { font-weight:700; }
-        .glossary-pos { color:#6b7280; font-size:12px; margin-left:6px; }
-        .sense-marker { font-size:0.68em; vertical-align:super; line-height:0; margin-left:1px; }
-        .extra-label { color:#6b7280; font-size:12px; margin-right:4px; }
-        .vocab-en-inline { background:#fff3b0; border-radius:5px; padding:0 2px; }
-        .vocab-zh-inline { background:#d7f8e7; border-radius:5px; padding:0 2px; }
-      </style>
-    </head>
-    <body>
-      ${normalized}
-    </body>
-  </html>`;
+function makeWordFriendlyHtml(innerHtml) {
+  const normalized = String(innerHtml || "").replace(/<mark[^>]*>/g, '<span class="vocab-en-inline">').replaceAll("</mark>", "</span>");
+  return `<html><head><meta charset="utf-8"><style>${EXPORT_DOCUMENT_STYLES}</style></head><body>${normalized}</body></html>`;
 }
 
 function renderPreviewPaper() {
@@ -3143,17 +3122,25 @@ function renderPreviewPaper() {
   const marginPx = Number(previewMarginSelect.value || "12");
 
   const bundle = buildExportBundle(title, includeChinese);
-  previewPaperEl.innerHTML = `<div class="export-preview-inner" style=\"padding:${marginPx}px;\">${bundle.innerHTML}</div>`;
+  bundle.style.padding = `${Math.round(marginPx * 96 / 25.4)}px`;
+  previewPaperEl.replaceChildren(bundle);
 }
 
-function openExportPreview(type) {
-  if (!latestArticle) {
+function openExportPreview(type, source = "article") {
+  pendingExportSource = source;
+  pendingNotebookRows = source === "notebook" ? filterNotebookRows(getNotebookEntriesSorted()).map(item => ({...item})) : [];
+  if (source === "notebook" && !pendingNotebookRows.length) {
+    statusEl.textContent = "当前列表没有可导出的生词。";
+    return;
+  }
+  if (source === "article" && !latestArticle) {
     statusEl.textContent = "请先生成文章。";
     return;
   }
 
   pendingExportType = type;
-  const baseTitle = String(exportTitleInput.value || "").trim() || articleTitleEl.textContent.trim() || defaultTitleByWords(latestWords);
+  const baseTitle = source === "notebook" ? (window.TextaI18n?.text("生词本") || "生词本") : String(exportTitleInput.value || "").trim() || articleTitleEl.textContent.trim() || defaultTitleByWords(latestWords);
+  previewIncludeZhInput.closest("label").classList.toggle("hidden", source === "notebook");
   previewTitleInput.value = baseTitle;
   previewIncludeZhInput.checked = showChinese;
   previewMarginSelect.value = "12";
@@ -3197,11 +3184,10 @@ function exportWordFromPreview() {
     return;
   }
 
-  const marginPx = Number(previewMarginSelect.value || "12");
-  const content = makeWordFriendlyHtml(previewPaperEl.innerHTML, marginPx);
+  const content = makeWordFriendlyHtml(previewPaperEl.innerHTML);
   downloadBlob(`${safeFileName(title)}.doc`, content, "application/msword;charset=utf-8");
 
-  exportTitleInput.value = title;
+  if (pendingExportSource === "article") exportTitleInput.value = title;
   statusEl.textContent = "Word 已导出。";
   closeExportPreview();
 }
@@ -3209,37 +3195,38 @@ function exportWordFromPreview() {
 async function exportPdfFromPreview() {
   const title = ensurePreviewTitle();
   if (!title || confirmExportBtn.disabled) return;
+  let renderHost;
   try {
     confirmExportBtn.disabled = true;
     await window.TextaExports.ensurePdf();
-  if (typeof window.html2pdf !== "function") {
-    throw new Error("PDF library unavailable");
-  }
-
-  const margin = Number(previewMarginSelect.value || "12");
-
-  await window
-    .html2pdf()
-    .set({
-      margin: [margin, margin, margin, margin],
-      filename: `${safeFileName(title)}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: {
-        mode: ["css", "legacy"],
-        avoid: [".para-card", ".glossary-item", ".article-title", "h2"]
-      }
-    })
-    .from(previewPaperEl)
-    .save();
-
-  exportTitleInput.value = title;
-  statusEl.textContent = "PDF 已导出。";
-  closeExportPreview();
+    if (typeof window.html2pdf !== "function") throw new Error("PDF library unavailable");
+    await document.fonts.ready;
+    const paper = buildExportBundle(title, Boolean(previewIncludeZhInput.checked));
+    paper.style.padding = `${Math.round(Number(previewMarginSelect.value || 12) * 96 / 25.4)}px`;
+    renderHost = document.createElement("div");
+    renderHost.style.cssText = "position:absolute;left:-10000px;top:0;width:816px;pointer-events:none;";
+    renderHost.setAttribute("aria-hidden", "true");
+    renderHost.appendChild(paper); document.body.appendChild(renderHost);
+    const height = Math.ceil(paper.getBoundingClientRect().height);
+    // Bound memory and canvas dimensions for mobile Safari, while keeping a continuous image.
+    const scale = Math.min(2, Math.sqrt(8000000 / (816 * height)), 16000 / height);
+    const worker = window.html2pdf().set({
+      margin:0, image:{type:"jpeg",quality:0.98}, pagebreak:{mode:[]},
+      html2canvas:{scale,useCORS:true,backgroundColor:"#ffffff",windowWidth:816,scrollX:0,scrollY:0},
+      jsPDF:{unit:"pt",format:[612,792],orientation:"portrait"}
+    }).from(paper).toCanvas();
+    const canvas = await worker.get("canvas");
+    const pageWidth = Math.min(612, 14000 * canvas.width / canvas.height);
+    const pageHeight = pageWidth * canvas.height / canvas.width + 1;
+    // The extra point avoids a second blank page caused by pixel rounding.
+    await worker.set({jsPDF:{unit:"pt",format:[pageWidth,pageHeight],orientation:pageHeight>=pageWidth?"portrait":"landscape"}}).toPdf().save(`${safeFileName(title)}.pdf`);
+    if (pendingExportSource === "article") exportTitleInput.value = title;
+    statusEl.textContent = "PDF 已导出。";
+    closeExportPreview();
   } catch {
     statusEl.textContent = "PDF 导出失败，请重试。";
   } finally {
+    renderHost?.remove();
     confirmExportBtn.disabled = false;
   }
 }
@@ -3631,6 +3618,8 @@ toggleZhBtn.addEventListener("click", () => {
   applyChineseVisibility();
 });
 
+document.getElementById("notebookExportPdfBtn").addEventListener("click", () => openExportPreview("pdf", "notebook"));
+document.getElementById("notebookExportWordBtn").addEventListener("click", () => openExportPreview("word", "notebook"));
 exportPdfBtn.addEventListener("click", () => openExportPreview("pdf"));
 exportWordBtn.addEventListener("click", () => openExportPreview("word"));
 closeModalBtn.addEventListener("click", closeExportPreview);
@@ -3711,7 +3700,7 @@ favoritesListEl.addEventListener("click", (event) => {
     latestWords = Array.isArray(found.words) ? found.words : [];
     wordsInput.value = latestWords.join(", ");
     applyArticleData(found);
-    setLibraryMode("history", { navigate: false, focusArticle: true, mobilePage: "article" });
+    document.dispatchEvent(new CustomEvent("texta:open-article"));
     statusEl.textContent = "已从历史记录打开文章。";
     return;
   }

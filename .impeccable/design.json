@@ -572,6 +572,11 @@
         "name": "The Reading Plane Rule",
         "body": "Keep article paragraphs on the page plane. Use tonal containers for study support and ambient elevation for floating controls.",
         "section": "elevation"
+      },
+      {
+        "name": "The Export Document Rule",
+        "body": "Use the shared EXPORT_DOCUMENT_STYLES print layout for preview, PDF and Word. Article PDFs are a continuous single page; notebook exports contain only vocabulary, part of speech and Chinese meanings from the current filtered list. Keep mobile export menus within the reading toolbar bounds and route opened history articles to reading.",
+        "section": "typography"
       }
     ],
     "dos": [
