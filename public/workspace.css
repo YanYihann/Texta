@@ -246,7 +246,7 @@ mark.vocab-en:hover, mark.vocab-en:focus-visible, mark.vocab-zh:hover { backgrou
 .notebook-details { grid-column: 1 / -1; }
 .notebook-details:not([hidden]) { padding-bottom: 12px; }
 .notebook-empty,.empty-library { padding: 36px 0; color: var(--muted); }
-.reading-mode .input-panel,.reading-mode .glossary-panel,.reading-mode .status-row,.reading-mode .site-header,.reading-mode .reading-toolbar,.reading-mode .mobile-bottom-nav,.reading-mode #adminDiagPanel { display:none !important; }
+.reading-mode .input-panel,.reading-mode .glossary-panel,.reading-mode .status-row,.reading-mode .site-header,.reading-mode .reading-toolbar,.reading-mode .mobile-bottom-nav { display:none !important; }
 body.reading-mode { padding-bottom:0; }
 .reading-mode .reading-workspace { display:block; border:0; max-width:920px; margin:auto; padding:24px 0; }
 .reading-mode #articleView { min-height:0; }
@@ -272,11 +272,6 @@ body.reading-mode { padding-bottom:0; }
 .export-preview-scroll { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:20px 28px; }
 .export-preview-scroll > label { display:block; margin-bottom:6px; }
 #exportModal .modal-actions { flex-shrink:0; margin:0; padding:16px 28px; border-top:1px solid var(--line); background:var(--panel); }
-.admin-diag-panel { padding: 16px; margin-bottom: 16px; border: 1px solid var(--line); }
-.admin-diag-head { display: flex; justify-content: space-between; }
-.admin-diag-row { display: grid; grid-template-columns: 140px 1fr 30px; gap: 12px; }
-.admin-diag-bar-track { background: var(--soft); }
-.admin-diag-bar-fill { display: block; background: var(--primary); height: 12px; }
 .auth-page-wrap { min-height: calc(100dvh - 72px); display: grid; place-items: center; padding: 40px 24px 80px; }
 .auth-card { width: min(420px,100%); }
 .auth-card h1 { font-size: 32px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 28px; }

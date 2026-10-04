@@ -235,10 +235,6 @@
   });
   byId('clearWordsBtn').addEventListener('click',()=>{ updateWordCount(); saveDraft(); wordsInput.focus(); });
   byId('wordFileInput').addEventListener('change',()=>setTimeout(()=>{updateWordCount();saveDraft();},0));
-  byId('exampleWordsBtn').addEventListener('click',()=>{
-    wordsInput.value = 'resilient, adapt, perspective, sustainable, thrive, balance';
-    updateWordCount(); saveDraft(); scheduleSpellcheck(); wordsInput.focus();
-  });
 
   const en = [
     'A greener life is not about giving up comfort, but about making small, thoughtful choices that add up over time. When we choose to live more sustainable lives, we care for the environment and also create a healthier, happier life for ourselves and the people around us.',

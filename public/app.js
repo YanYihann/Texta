@@ -21,9 +21,6 @@ let libraryHistoryBtnEl = document.getElementById("libraryHistoryBtn");
 const libraryNotebookBtnEl = document.getElementById("libraryNotebookBtn");
 const addUnknownToNotebookBtnEl = document.getElementById("addUnknownToNotebookBtn");
 const statusEl = document.getElementById("status");
-const adminDiagPanelEl = document.getElementById("adminDiagPanel");
-const adminDiagSummaryEl = document.getElementById("adminDiagSummary");
-const adminDiagBarsEl = document.getElementById("adminDiagBars");
 const spellHintsEl = document.getElementById("spellHints");
 const wordChipsEl = document.getElementById("wordChips");
 const favoritesListEl = document.getElementById("favoritesList");
@@ -505,53 +502,6 @@ function renderUsage(usage, user = currentUser) {
   }
 }
 
-function clearAdminDiagnosticsView() {
-  if (adminDiagSummaryEl) adminDiagSummaryEl.textContent = "";
-  if (adminDiagBarsEl) adminDiagBarsEl.innerHTML = "";
-}
-
-function renderAdminDiagnostics(data) {
-  const isAdmin = String(currentUser?.role || "").toLowerCase() === "admin";
-  if (!adminDiagPanelEl) return;
-  if (!isAdmin || !data || typeof data !== "object") {
-    adminDiagPanelEl.classList.add("hidden");
-    clearAdminDiagnosticsView();
-    return;
-  }
-
-  const totalRequests = Number(data.totalRequests || 0);
-  const totalDurationMs = Number(data.totalDurationMs || 0);
-  const totalDurationSec = Math.max(0, totalDurationMs / 1000);
-  const totalDurationText = totalDurationSec >= 10 ? totalDurationSec.toFixed(1) : totalDurationSec.toFixed(2);
-  const byStep = Array.isArray(data.byStep) ? data.byStep.slice(0, 8) : [];
-  const maxCount = byStep.reduce((mx, row) => Math.max(mx, Number(row?.requests || 0)), 0) || 1;
-
-  if (adminDiagSummaryEl) {
-    adminDiagSummaryEl.textContent = `${totalRequests} 次请求 · ${totalDurationText}s`;
-  }
-
-  if (adminDiagBarsEl) {
-    adminDiagBarsEl.innerHTML = byStep.length
-      ? byStep
-          .map((row) => {
-            const step = escapeHtml(String(row?.step || "unknown"));
-            const count = Number(row?.requests || 0);
-            const width = Math.max(8, Math.round((count / maxCount) * 100));
-            return `
-              <div class="admin-diag-row">
-                <span class="admin-diag-step">${step}</span>
-                <span class="admin-diag-bar-track"><span class="admin-diag-bar-fill" style="width:${width}%"></span></span>
-                <span class="admin-diag-count">${count}</span>
-              </div>
-            `;
-          })
-          .join("")
-      : `<div class="admin-diag-row"><span class="admin-diag-step">无数据</span><span class="admin-diag-bar-track"></span><span class="admin-diag-count">0</span></div>`;
-  }
-
-  adminDiagPanelEl.classList.remove("hidden");
-}
-
 async function refreshUsage() {
   if (!authToken) return;
   try {
@@ -588,11 +538,9 @@ async function loadMe() {
     userBadgeEl.textContent = `${currentUser?.name || currentUser?.email || "用户"} · ${roleText}`;
     logoutBtnEl.classList.remove("hidden");
     await refreshUsage();
-    renderAdminDiagnostics(null);
     return Boolean(currentUser);
   } catch {
     currentUser = null;
-    renderAdminDiagnostics(null);
     return false;
   }
 }
@@ -3374,7 +3322,6 @@ function applyArticleData(data) {
   if (data && data.usage) {
     renderUsage(data.usage);
   }
-  renderAdminDiagnostics(data?.adminDiagnostics || null);
   const candidateFavoriteId = String(data.id || "").trim();
   currentFavoriteId = candidateFavoriteId && favorites.some((item) => item.id === candidateFavoriteId && !item.deletedAt) ? candidateFavoriteId : "";
 
@@ -3517,7 +3464,6 @@ generateBtn.addEventListener("click", async () => {
   exportWordBtn.disabled = true;
   // Keep the previous article readable while a new request is pending.
   missingWordsEl.textContent = "";
-  renderAdminDiagnostics(null);
   const pendingStatus = "正在生成…";
   startGenerationElapsedTimer(pendingStatus);
 
