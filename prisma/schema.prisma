@@ -72,10 +72,23 @@ model VipRequest {
   @@index([userId, status])
 }
 
+model LibraryFolder {
+  id String @id
+  userId String
+  name String
+  createdAt String
+  updatedAt String
+  deletedAt String @default("")
+
+  @@index([userId, updatedAt])
+}
+
 model FavoriteArticle {
   id           String @id
   userId       String
   title        String
+  folderId     String @default("")
+  deletedAt    String @default("")
   savedAt      String
   words        Json
   article      String
@@ -102,6 +115,7 @@ model NotebookEntry {
   synonyms     Json
   antonyms     Json
   wordFormation String
+  deletedAt    String @default("")
   createdAt    String
   updatedAt    String
 

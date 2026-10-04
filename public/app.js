@@ -119,7 +119,7 @@ const THEME_OPTIONS = [
   { value: "dark", label: "深色" },
   { value: "system", label: "系统" }
 ];
-let notebookViewMode = localStorage.getItem(NOTEBOOK_VIEW_KEY) === "cards" ? "cards" : "list";
+let notebookViewMode = ["cards", "calendar"].includes(localStorage.getItem(NOTEBOOK_VIEW_KEY)) ? localStorage.getItem(NOTEBOOK_VIEW_KEY) : "list";
 let favorites = [];
 let historyEntries = [];
 let vocabPrefs = {};
@@ -236,7 +236,7 @@ function applyReadingFontSize() {
 
 function isCurrentArticleFavorited() {
   if (!currentFavoriteId) return false;
-  return favorites.some((item) => item.id === currentFavoriteId);
+  return favorites.some((item) => item.id === currentFavoriteId && !item.deletedAt);
 }
 
 function syncActionButtonStates() {
@@ -410,7 +410,7 @@ function ensureThemeToggle(containerEl) {
             aria-label="${item.label}"
             title="${item.label}"
           >
-            ${["system", "light", "dark"].includes(item.value) ? themeIconSvg(item.value) : `<span class="theme-swatch" data-palette="${item.value}" aria-hidden="true"></span>`}
+            ${["system", "dark"].includes(item.value) ? themeIconSvg(item.value) : `<span class="theme-swatch" data-palette="${item.value}" aria-hidden="true"></span>`}
             <span>${item.label}</span>
           </button>
         `
@@ -609,7 +609,7 @@ function loadFavorites() {
 
 function saveFavorites(options = {}) {
   const markDirty = options?.markDirty !== false;
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.slice(0, 50)));
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.slice(0, 200)));
   if (markDirty) {
     librarySyncDirty = true;
   }
@@ -661,7 +661,7 @@ function loadNotebookEntries() {
 
 function saveNotebookEntries(options = {}) {
   const markDirty = options?.markDirty !== false;
-  localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(notebookEntries.slice(0, 500)));
+  localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(notebookEntries.slice(0, 2000)));
   if (markDirty) {
     librarySyncDirty = true;
   }
@@ -876,6 +876,8 @@ function normalizeFavorite(item) {
   return {
     id,
     title: sanitizeGlossTextForUi(item?.title, 200) || "未命名文章",
+    folderId: String(item?.folderId || ""),
+    deletedAt: String(item?.deletedAt || ""),
     savedAt,
     words: Array.isArray(item?.words) ? item.words.map((w) => sanitizeGlossTextForUi(w, 80)).filter(Boolean) : [],
     article: String(item?.article || ""),
@@ -911,7 +913,8 @@ function normalizeNotebookEntry(item) {
     synonyms: sanitizeTextListForUi(item?.synonyms, 120, 30),
     antonyms: sanitizeTextListForUi(item?.antonyms, 120, 30),
     wordFormation: sanitizeGlossTextForUi(item?.wordFormation, 500),
-    createdAt: normalizeIsoDate(item?.createdAt, nowIso),
+    deletedAt: String(item?.deletedAt || ""),
+    createdAt: normalizeIsoDate(item?.createdAt || item?.updatedAt, nowIso),
     updatedAt: normalizeIsoDate(item?.updatedAt || item?.createdAt, nowIso)
   };
 }
@@ -934,18 +937,18 @@ function normalizeVocabPrefsMap(raw) {
   return out;
 }
 
-function applyLibraryState({ favorites: incomingFavorites, notebookEntries: incomingNotebook, vocabPrefs: incomingVocabPrefs }) {
+function applyLibraryState({ favorites: incomingFavorites, notebookEntries: incomingNotebook, vocabPrefs: incomingVocabPrefs, libraryFolders: incomingFolders }) {
   const normalizedFavorites = dedupeBy(
     (Array.isArray(incomingFavorites) ? incomingFavorites : []).map(normalizeFavorite),
     (item) => item.id
-  ).slice(0, 50);
+  ).slice(0, 200);
 
   const normalizedNotebook = dedupeBy(
     (Array.isArray(incomingNotebook) ? incomingNotebook : [])
       .map(normalizeNotebookEntry)
       .filter(Boolean),
     (item) => item.key
-  ).slice(0, 500);
+  ).slice(0, 2000);
 
   const normalizedVocab = normalizeVocabPrefsMap(incomingVocabPrefs);
 
@@ -953,6 +956,9 @@ function applyLibraryState({ favorites: incomingFavorites, notebookEntries: inco
   favorites = normalizedFavorites;
   notebookEntries = normalizedNotebook;
   vocabPrefs = normalizedVocab;
+  libraryFolders = mergeFolderRows([], incomingFolders || []);
+  recoverMasteredEntries();
+  saveLibraryFolders(false);
   saveFavorites({ markDirty: false });
   saveNotebookEntries({ markDirty: false });
   saveVocabPrefs({ markDirty: false });
@@ -982,11 +988,12 @@ function mergeLibrary(localState, remoteState) {
   const favoriteMap = new Map();
   for (const item of remoteFavorites) favoriteMap.set(item.id, item);
   for (const item of localFavorites) {
-    if (!favoriteMap.has(item.id)) favoriteMap.set(item.id, item);
+    const old = favoriteMap.get(item.id);
+    if (!old || item.updatedAt >= old.updatedAt) favoriteMap.set(item.id, item);
   }
   const favoritesMerged = Array.from(favoriteMap.values())
     .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
-    .slice(0, 50);
+    .slice(0, 200);
 
   const localNotebook = (localState.notebookEntries || [])
     .map(normalizeNotebookEntry)
@@ -1004,7 +1011,7 @@ function mergeLibrary(localState, remoteState) {
   }
   const notebookMerged = Array.from(notebookMap.values())
     .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
-    .slice(0, 500);
+    .slice(0, 2000);
 
   const localVocab = normalizeVocabPrefsMap(localState.vocabPrefs || {});
   const remoteVocab = normalizeVocabPrefsMap(remoteState.vocabPrefs || {});
@@ -1013,15 +1020,17 @@ function mergeLibrary(localState, remoteState) {
   return {
     favorites: favoritesMerged,
     notebookEntries: notebookMerged,
-    vocabPrefs: vocabMerged
+    vocabPrefs: vocabMerged,
+    libraryFolders: mergeFolderRows(remoteState.libraryFolders || [], localState.libraryFolders || [])
   };
 }
 
 function librarySnapshot() {
   return {
-    favorites: favorites.slice(0, 50),
-    notebookEntries: notebookEntries.slice(0, 500),
-    vocabPrefs
+    favorites: favorites.slice(0, 200),
+    notebookEntries: notebookEntries.slice(0, 2000),
+    vocabPrefs,
+    libraryFolders
   };
 }
 
@@ -1033,6 +1042,11 @@ async function syncLibraryNow() {
   }
   librarySyncInFlight = true;
   try {
+    // A rolling deployment must not send new folder/deletion fields to an old server.
+    const compatibility = await apiFetch("/api/health", { retryCount: 0, timeoutMs: 12000 });
+    if (!compatibility.ok || !(Number((await compatibility.json()).libraryVersion) >= 2)) {
+      throw new Error("Library server update is pending");
+    }
     const response = await apiFetch("/api/library/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1106,11 +1120,6 @@ function scheduleLibrarySync(immediate = false) {
 
 async function hydrateLibraryFromServer() {
   if (!authToken) return;
-  const localState = {
-    favorites: favorites.slice(),
-    notebookEntries: notebookEntries.slice(),
-    vocabPrefs: { ...vocabPrefs }
-  };
   try {
     const response = await apiFetch("/api/library", {
       retryCount: 1,
@@ -1119,10 +1128,11 @@ async function hydrateLibraryFromServer() {
     });
     if (!response.ok) return;
     const remote = await response.json();
-    const merged = mergeLibrary(localState, {
+    const merged = mergeLibrary(librarySnapshot(), {
       favorites: Array.isArray(remote?.favorites) ? remote.favorites : [],
       notebookEntries: Array.isArray(remote?.notebookEntries) ? remote.notebookEntries : [],
-      vocabPrefs: remote?.vocabPrefs && typeof remote.vocabPrefs === "object" ? remote.vocabPrefs : {}
+      vocabPrefs: remote?.vocabPrefs && typeof remote.vocabPrefs === "object" ? remote.vocabPrefs : {},
+      libraryFolders: Array.isArray(remote?.libraryFolders) ? remote.libraryFolders : []
     });
     applyLibraryState(merged);
     await syncLibraryNow();
@@ -1156,7 +1166,7 @@ function saveWordPref(key, patch = {}) {
 }
 
 function removeNotebookEntry(key) {
-  notebookEntries = notebookEntries.filter((item) => item.key !== key);
+  notebookEntries = notebookEntries.map(item => item.key === key ? { ...item, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : item);
   saveNotebookEntries();
 }
 
@@ -1176,6 +1186,7 @@ function upsertNotebookEntry(item) {
     synonyms: sanitizeTextListForUi(item?.synonyms, 120, 30),
     antonyms: sanitizeTextListForUi(item?.antonyms, 120, 30),
     wordFormation: sanitizeGlossTextForUi(item?.wordFormation, 500),
+    deletedAt: "",
     updatedAt: new Date().toISOString()
   };
 
@@ -1183,7 +1194,7 @@ function upsertNotebookEntry(item) {
   if (index >= 0) {
     notebookEntries[index] = { ...notebookEntries[index], ...entry };
   } else {
-    notebookEntries.unshift(entry);
+    notebookEntries.unshift({ ...entry, createdAt: item?.createdAt || entry.updatedAt });
   }
   saveNotebookEntries();
 }
@@ -1202,7 +1213,7 @@ function syncNotebookEntriesFromLexicon(lexicon) {
 }
 
 function isWordInNotebook(key) {
-  return notebookEntries.some((item) => item.key === key);
+  return notebookEntries.some((item) => item.key === key && !item.deletedAt);
 }
 
 function getUnknownWordsNotInNotebook() {
@@ -1222,7 +1233,7 @@ function syncGlossaryFooterButton() {
 }
 
 function getNotebookEntriesSorted() {
-  return [...notebookEntries].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+  return sortLibraryRows(notebookEntries.filter(item => !item.deletedAt && (getWordPref(item.key).mastery === "mastered") === (notebookCategory === "mastered")), notebookSort, "word");
 }
 
 function buildNotebookSearchText(item) {
@@ -1263,33 +1274,11 @@ function filterNotebookRows(rows) {
   return rows.filter((item) => {
     const matchKeyword = !keyword || buildNotebookSearchText(item).includes(keyword);
     const matchPos = notebookPosFilter === "all" || String(item?.pos || "").trim() === notebookPosFilter;
-    return matchKeyword && matchPos;
+    return matchKeyword && matchPos && (!notebookDateFilter || libraryDateKey(item.createdAt) === notebookDateFilter);
   });
 }
 
-function renderFavorites() {
-  if (!favoritesListEl) return;
-  if (!favorites.length) {
-    favoritesListEl.innerHTML = `<div class="fav-meta">暂无收藏</div>`;
-    return;
-  }
-  favoritesListEl.innerHTML = favorites
-    .map(
-      (item) => `
-      <div class="fav-item" data-fav-id="${escapeHtml(item.id)}">
-        <div class="fav-left">
-          <div class="fav-main">${escapeHtml(item.title || "未命名文章")}</div>
-          <div class="fav-meta">${escapeHtml(item.savedAt || "")}</div>
-        </div>
-        <div class="fav-actions">
-          <button class="fav-rename" type="button" data-fav-rename="${escapeHtml(item.id)}">改标题</button>
-          <button class="fav-delete" type="button" data-fav-delete="${escapeHtml(item.id)}">删除</button>
-        </div>
-      </div>
-    `
-    )
-    .join("");
-}
+function renderFavorites() { renderOrganizedFavorites(); }
 
 function renderHistorySidebar() {
   if (!favoritesListEl) return;
@@ -1338,6 +1327,7 @@ function renderNotebookSidebar() {
 }
 
 function renderLibraryList() {
+  document.getElementById("favoritesControls")?.classList.toggle("hidden", currentLibraryMode !== "favorites");
   if (currentLibraryMode === "history") {
     renderHistorySidebar();
     return;
@@ -2054,22 +2044,20 @@ function highlightChineseWithAlignment(text, termKeyPairs, alignment) {
     return highlightChineseWithKeys(text, termKeyPairs);
   }
 
-  let html = escapeHtml(normalizeSenseMarkerSpacing(normalizeZhSenseMarkers(text)).replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, ""));
-  for (const item of termKeyPairs || []) {
-    const term = String(item?.term || "");
-    if (!term) continue;
-    const keys = Array.isArray(item?.keys) ? item.keys.filter(Boolean) : [];
-    if (keys.length === 0) continue;
-    const primaryKey = keys[0];
-    const marker = escapeHtml(alignMap.get(primaryKey)?.marker || "①");
-    const keysAttr = escapeHtml(keys.join(","));
-    const regex = new RegExp(escapeRegExp(term), "g");
-    html = html.replace(
-      regex,
-      (m) => `<mark class=\"vocab-zh\" data-word-keys=\"${keysAttr}\">${m}<sup class=\"sense-marker\">${marker}</sup></mark>`
-    );
+  const plain = normalizeSenseMarkerSpacing(normalizeZhSenseMarkers(text)).replace(/[①②③④⑤⑥⑦⑧⑨⑩]/g, "");
+  const terms = new Map((termKeyPairs || []).filter(item => item?.term && item?.keys?.length).map(item => [String(item.term), item.keys]));
+  if (!terms.size) return escapeHtml(plain);
+  // Match longest terms on plain text once, so a shorter stem cannot match generated markup.
+  const pattern = new RegExp([...terms.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|"), "g");
+  let html = "", offset = 0;
+  for (const match of plain.matchAll(pattern)) {
+    const keys = terms.get(match[0]);
+    const marker = escapeHtml(alignMap.get(keys[0])?.marker || "①");
+    html += escapeHtml(plain.slice(offset, match.index));
+    html += `<mark class="vocab-zh" data-word-keys="${escapeHtml(keys.join(","))}">${escapeHtml(match[0])}<sup class="sense-marker">${marker}</sup></mark>`;
+    offset = match.index + match[0].length;
   }
-  return html;
+  return html + escapeHtml(plain.slice(offset));
 }
 
 function applyChineseVisibility() {
@@ -2381,9 +2369,11 @@ function setWordMastery(item, mastery) {
 
   if (mastery === "mastered") {
     saveWordPref(key, { word, mastery: "mastered" });
-    removeNotebookEntry(key);
+    upsertNotebookEntry(item);
   } else if (mastery === "unknown") {
+    const wasMastered = getWordPref(key).mastery === "mastered";
     saveWordPref(key, { word, mastery: "unknown" });
+    if (wasMastered) upsertNotebookEntry(item);
   } else {
     saveWordPref(key, { word, mastery: "unknown" });
     removeNotebookEntry(key);
@@ -2621,7 +2611,10 @@ function mergeDetailedEntryIntoState(entry) {
   latestLexicon = upsertWordEntryByKey(latestLexicon, key, mergedEntry);
   latestBaseLexicon = upsertWordEntryByKey(latestBaseLexicon, key, mergedEntry);
   latestContextLexicon = upsertWordEntryByKey(latestContextLexicon, key, mergedEntry);
-  notebookEntries = upsertWordEntryByKey(notebookEntries, key, mergedEntry);
+  if (isWordInNotebook(key)) {
+    notebookEntries = upsertWordEntryByKey(notebookEntries, key, mergedEntry);
+    saveNotebookEntries();
+  }
   if (!needsVocabHydration(mergedEntry)) {
     notebookHydrationCompletedKeys.add(key);
   } else {
@@ -2920,8 +2913,9 @@ function renderLexiconCard(item, showContext = false) {
     return section;
   };
   const meaningsSection = createSection("词义");
+  const meaningsList = document.createElement("ol"); meaningsList.className = "meaning-list"; meaningsSection.appendChild(meaningsList);
   senses.forEach((sense) => {
-    const line = document.createElement("div");
+    const line = document.createElement("li");
     line.className = "sense-line";
     const marker = String(sense?.marker || "").trim();
     if (marker) {
@@ -2932,7 +2926,7 @@ function renderLexiconCard(item, showContext = false) {
       line.appendChild(document.createTextNode(" "));
     }
     line.appendChild(document.createTextNode(sanitizeGlossTextForUi(sense?.meaning, 220) || "词义待补充"));
-    meaningsSection.appendChild(line);
+    meaningsList.appendChild(line);
   });
   if (!senses.length) meaningsSection.appendChild(document.createTextNode("词义待补充"));
 
@@ -2956,12 +2950,13 @@ function renderLexiconCard(item, showContext = false) {
       const paragraph = latestParagraphsEn[paragraphIndex];
       const sentence = paragraph.split(/(?<=[.!?。！？])\s*/u).find(matchesWord) || paragraph;
       const context = createSection("在本文中");
-      const sentenceEl = document.createElement("p"); sentenceEl.className = "context-sentence"; sentenceEl.textContent = sentence;
-      context.appendChild(sentenceEl);
+      const sentenceEl = document.createElement("p"); sentenceEl.className = "context-sentence"; sentenceEl.innerHTML = highlightEnglishWordsWithKeys(sentence, [word]);
+      const sourceLabel = document.createElement("div"); sourceLabel.className = "context-translation-label"; sourceLabel.textContent = "原文例句";
+      context.appendChild(sourceLabel); context.appendChild(sentenceEl);
       const translation = String(latestParagraphsZh[paragraphIndex] || "").trim();
       if (translation) {
         const label = document.createElement("div"); label.className = "context-translation-label"; label.textContent = "所在段落译文";
-        const translationEl = document.createElement("p"); translationEl.className = "context-translation"; translationEl.textContent = translation;
+        const translationEl = document.createElement("p"); translationEl.className = "context-translation"; translationEl.innerHTML = highlightChineseWithAlignment(translation, buildChineseTermKeyPairsFromAlignment(latestAlignment.filter(row => keyifyWord(row.word) === key), [item]), latestAlignment);
         context.appendChild(label); context.appendChild(translationEl);
       }
     }
@@ -2981,9 +2976,9 @@ function renderLexiconCard(item, showContext = false) {
     extras.appendChild(line);
   };
   const appendExtraTextLine = (text) => {
-    const line = document.createElement("div");
-    line.className = "extra-line extra-value";
-    line.textContent = text;
+    const line = document.createElement("ul");
+    line.className = "extra-line extra-value extra-list";
+    for (const value of text.split(/,\s*/)) { const li = document.createElement("li"); li.textContent = value; line.appendChild(li); }
     extras.appendChild(line);
   };
 
@@ -3040,6 +3035,7 @@ function renderNotebookView() {
   });
   const expandedKeys = new Set(Array.from(notebookEntriesEl.querySelectorAll(".notebook-details[open]"), detail => detail.closest(".glossary-item").dataset.wordKey));
   const rows = getNotebookEntriesSorted();
+  syncNotebookOrganizer();
   syncNotebookFilters(rows);
   const filteredRows = filterNotebookRows(rows);
   ["notebookExportPdfBtn", "notebookExportWordBtn"].forEach(id => {
@@ -3048,10 +3044,12 @@ function renderNotebookView() {
   });
   notebookCountEl.textContent = filteredRows.length === rows.length ? `${rows.length} 个单词` : `显示 ${filteredRows.length} / ${rows.length} 个单词`;
 
+  if (notebookViewMode === "calendar") { renderNotebookCalendar(filterNotebookRows(rows)); notebookEntriesEl.replaceChildren(); return; }
+
   if (!rows.length) {
     const empty = document.createElement("div");
     empty.className = "empty-library notebook-empty";
-    empty.textContent = "生词本还是空的。先在右侧词汇区把陌生词加入生词本。";
+    empty.textContent = notebookCategory === "mastered" ? "还没有已掌握的单词。掌握一个，就把它移到这里。" : "生词本还是空的。先在词汇区把陌生词加入生词本。";
     notebookEntriesEl.replaceChildren(empty);
     return;
   }
@@ -3067,6 +3065,7 @@ function renderNotebookView() {
   const frag = document.createDocumentFragment();
   filteredRows.forEach((item) => {
     const card = renderLexiconCard(item);
+    const deleteButton = document.createElement("button"); deleteButton.type = "button"; deleteButton.className = "notebook-delete"; deleteButton.dataset.notebookDelete = item.key; deleteButton.textContent = "×"; deleteButton.setAttribute("aria-label", `删除 ${item.word}`); card.querySelector(".study-controls").appendChild(deleteButton);
     if (notebookViewMode === "list") {
       const summary = card.querySelector(".definition-summary");
       if (summary) summary.textContent = sanitizeGlossTextForUi(item.summary || (item.senses || []).map(sense => sense.meaning).filter(Boolean).join("；"), 220);
@@ -3074,7 +3073,8 @@ function renderNotebookView() {
       detail.className = "notebook-details";
       detail.open = expandedKeys.has(card.dataset.wordKey);
       const toggle = document.createElement("summary");
-      toggle.textContent = "查看详情";
+      toggle.setAttribute("aria-label", `${item.word} 的词汇详情`);
+      toggle.title = "展开词汇详情";
       detail.appendChild(toggle);
       Array.from(card.children).filter(child => !child.matches(".glossary-head,.definition-summary,.study-controls")).forEach(child => detail.appendChild(child));
       card.appendChild(detail);
@@ -3303,7 +3303,7 @@ function applyArticleData(data) {
   }
   renderAdminDiagnostics(data?.adminDiagnostics || null);
   const candidateFavoriteId = String(data.id || "").trim();
-  currentFavoriteId = candidateFavoriteId && favorites.some((item) => item.id === candidateFavoriteId) ? candidateFavoriteId : "";
+  currentFavoriteId = candidateFavoriteId && favorites.some((item) => item.id === candidateFavoriteId && !item.deletedAt) ? candidateFavoriteId : "";
 
   const finalTitle = String(data.title || "").trim() || defaultTitleByWords(latestWords);
   articleTitleEl.textContent = finalTitle;
@@ -3581,6 +3581,8 @@ glossaryEl.addEventListener("click", (event) => {
 notebookEntriesEl?.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const deleteButton = target.closest("[data-notebook-delete]");
+  if (deleteButton) { removeNotebookEntry(deleteButton.dataset.notebookDelete); currentNotebookFocusKey = ""; refreshVocabularySurfaces(); return; }
   const notebookItem = target.closest(".glossary-item[data-word-key]");
   if (notebookItem) {
     const itemKey = notebookItem.getAttribute("data-word-key") || "";
@@ -3656,7 +3658,8 @@ notebookSearchInputEl?.addEventListener("input", () => {
 
 document.querySelectorAll("[data-notebook-view]").forEach(button => {
   button.addEventListener("click", () => {
-    notebookViewMode = button.dataset.notebookView === "cards" ? "cards" : "list";
+    notebookViewMode = button.dataset.notebookView;
+    notebookDateFilter = "";
     try { localStorage.setItem(NOTEBOOK_VIEW_KEY, notebookViewMode); } catch { /* Keep the view usable without storage. */ }
     renderNotebookView();
   });
@@ -3705,7 +3708,7 @@ favoriteBtn.addEventListener("click", () => {
     return;
   }
   if (isCurrentArticleFavorited()) {
-    favorites = favorites.filter((item) => item.id !== currentFavoriteId);
+    deleteFavorite(currentFavoriteId);
     saveFavorites();
     renderLibraryList();
     syncActionButtonLabels();
@@ -3725,6 +3728,7 @@ favoriteBtn.addEventListener("click", () => {
 favoritesListEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  if (target.closest("[data-fav-folder]")) return;
   if (currentLibraryMode === "notebook") {
     const notebookItem = target.closest(".notebook-item[data-notebook-key]");
     if (!notebookItem) return;
@@ -3768,7 +3772,7 @@ favoritesListEl.addEventListener("click", (event) => {
   const del = target.closest(".fav-delete[data-fav-delete]");
   if (del) {
     const delId = del.getAttribute("data-fav-delete");
-    favorites = favorites.filter((x) => x.id !== delId);
+    deleteFavorite(delId);
     if (currentFavoriteId === delId) {
       currentFavoriteId = "";
     }
@@ -3829,6 +3833,8 @@ async function init() {
   loadHistoryEntries();
   loadVocabPrefs();
   loadNotebookEntries();
+  loadLibraryFolders();
+  recoverMasteredEntries();
   renderSpelling();
   applyReadingFontSize();
   applyReadingMode();

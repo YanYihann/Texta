@@ -762,6 +762,8 @@ function sanitizeFavoritesPayload(rawList) {
       id,
       userId: "",
       title: normalizeText(raw?.title, 200) || "未命名文章",
+      folderId: normalizeText(raw?.folderId, 80),
+      deletedAt: raw?.deletedAt ? normalizeIso(raw.deletedAt, now) : "",
       savedAt: normalizeText(raw?.savedAt, 120) || now,
       words,
       article: normalizeText(raw?.article, 120000),
@@ -816,6 +818,7 @@ function sanitizeNotebookPayload(rawList) {
       synonyms: cloneJsonSafe(Array.isArray(raw?.synonyms) ? raw.synonyms.slice(0, 30) : [], []),
       antonyms: cloneJsonSafe(Array.isArray(raw?.antonyms) ? raw.antonyms.slice(0, 30) : [], []),
       wordFormation: normalizeText(raw?.wordFormation, 2000),
+      deletedAt: raw?.deletedAt ? normalizeIso(raw.deletedAt, now) : "",
       createdAt: normalizeIso(raw?.createdAt, now),
       updatedAt: normalizeIso(raw?.updatedAt, now)
     });
@@ -3676,7 +3679,7 @@ app.get("/api/library", async (req, res) => {
     const user = await requireAuth(req, res);
     if (!user) return;
 
-    const [favoriteRows, notebookRows, vocabRows] = await Promise.all([
+    const [favoriteRows, notebookRows, vocabRows, folderRows] = await Promise.all([
       prisma.favoriteArticle.findMany({
         where: { userId: user.id },
         orderBy: { updatedAt: "desc" }
@@ -3688,7 +3691,8 @@ app.get("/api/library", async (req, res) => {
       prisma.userVocabPref.findMany({
         where: { userId: user.id },
         orderBy: { updatedAt: "desc" }
-      })
+      }),
+      prisma.libraryFolder.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" } })
     ]);
 
     const favorites = favoriteRows.map((row) => {
@@ -3696,6 +3700,8 @@ app.get("/api/library", async (req, res) => {
       return {
         id: decodeFavoriteId(user.id, row.id),
         title: row.title,
+        folderId: row.folderId,
+        deletedAt: row.deletedAt,
         savedAt: row.savedAt,
         words: Array.isArray(row.words) ? row.words : [],
         article: row.article,
@@ -3724,6 +3730,7 @@ app.get("/api/library", async (req, res) => {
       synonyms: Array.isArray(row.synonyms) ? row.synonyms : [],
       antonyms: Array.isArray(row.antonyms) ? row.antonyms : [],
       wordFormation: row.wordFormation,
+      deletedAt: row.deletedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt
     }));
@@ -3738,7 +3745,8 @@ app.get("/api/library", async (req, res) => {
       };
     }
 
-    res.json({ ok: true, favorites, notebookEntries, vocabPrefs });
+    const libraryFolders = folderRows.map(row => ({ id: decodeFavoriteId(user.id, row.id), name: row.name, createdAt: row.createdAt, updatedAt: row.updatedAt, deletedAt: row.deletedAt }));
+    res.json({ ok: true, libraryVersion: 2, favorites, notebookEntries, vocabPrefs, libraryFolders });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to load library.", detail: error.message });
@@ -3764,19 +3772,24 @@ app.post("/api/library/sync", async (req, res) => {
       userId: user.id
     }));
 
-    await prisma.favoriteArticle.deleteMany({ where: { userId: user.id } });
-    await prisma.notebookEntry.deleteMany({ where: { userId: user.id } });
-    await prisma.userVocabPref.deleteMany({ where: { userId: user.id } });
-
-    if (favoriteRows.length > 0) {
-      await prisma.favoriteArticle.createMany({ data: favoriteRows });
+    const hasFolders = Array.isArray(req.body?.libraryFolders);
+    const now = new Date().toISOString();
+    const folderMap = new Map();
+    for (const row of (hasFolders ? req.body.libraryFolders : []).slice(0, 200)) {
+      const id = normalizeText(row?.id, 80);
+      const name = normalizeText(row?.name, 80);
+      if (!id || !name) continue;
+      folderMap.set(id, { id: encodeFavoriteId(user.id, id), userId: user.id, name,
+        createdAt: normalizeIso(row.createdAt, now), updatedAt: normalizeIso(row.updatedAt, now),
+        deletedAt: row.deletedAt ? normalizeIso(row.deletedAt, now) : "" });
     }
-    if (notebookRows.length > 0) {
-      await prisma.notebookEntry.createMany({ data: notebookRows });
-    }
-    if (vocabRows.length > 0) {
-      await prisma.userVocabPref.createMany({ data: vocabRows });
-    }
+    // Keep a snapshot atomic: a failed insert must not erase the previous library.
+    await prisma.$transaction(async tx => {
+      for (const [model, rows] of [["favoriteArticle", favoriteRows], ["notebookEntry", notebookRows], ["userVocabPref", vocabRows], ...(hasFolders ? [["libraryFolder", [...folderMap.values()]]] : [])]) {
+        await tx[model].deleteMany({ where: { userId: user.id } });
+        if (rows.length) await tx[model].createMany({ data: rows });
+      }
+    });
 
     res.json({
       ok: true,
@@ -4192,7 +4205,7 @@ app.post("/api/spellcheck", async (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, service: "texta-api" });
+  res.json({ ok: true, service: "texta-api", libraryVersion: 2, commit: process.env.RENDER_GIT_COMMIT || "" });
 });
 
 app.post("/api/vocab/detail", async (req, res) => {

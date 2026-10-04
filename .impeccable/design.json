@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-04T08:05:15.940699Z",
+  "generatedAt": "2026-10-04T09:05:13.649Z",
   "title": "Design System: Texta",
   "extensions": {
     "themes": {
@@ -28,9 +28,9 @@
         ],
         "shadow": "0 16px 44px #00000018",
         "rules": [
-          "Grayscale UI, swatches and text selection.",
-          "Only supplied English vocabulary receives yellow fill; annotations are red.",
-          "Chinese vocabulary marks use transparent fill and inherited text color."
+          "Grayscale interface and text selection; theme swatches retain palette colors.",
+          "Supplied English and corresponding Chinese vocabulary use yellow fill and bold black text; annotations are red.",
+          "Forest theme uses a green circular swatch."
         ]
       },
       "paper": {
@@ -599,6 +599,27 @@
       "lavender": "薰衣草",
       "dark": "深色",
       "system": "系统"
+    },
+    "library": {
+      "defaultSort": "az",
+      "dateBasis": "first addition (createdAt), displayed in browser local time",
+      "views": [
+        "list",
+        "cards",
+        "calendar"
+      ],
+      "categories": [
+        "unknown",
+        "mastered"
+      ],
+      "folders": "create, rename, delete retaining articles, and move articles",
+      "calendar": {
+        "markerFill": "#fff200",
+        "markerInk": "#202020",
+        "monthMotion": "transform/opacity 280ms",
+        "markerMotion": "scale/opacity 380ms",
+        "reducedMotion": "none"
+      }
     }
   },
   "components": [
@@ -717,13 +738,18 @@
       },
       {
         "name": "The Focus Reading Rule",
-        "body": "Collapse the article toolbar as content scrolls down and restore it at the top. Focus mode hides navigation and toolbars, announces ESC exit, and supplies a touch exit control. Highlighted words open a closable definition overlay without changing article position; background hydration never reopens it. Notebook content spans the entire study grid; list rows are the default and card mode remains selectable.",
+        "body": "Collapse the article toolbar as content scrolls down and restore it at the top. Focus mode hides navigation and toolbars, announces ESC exit, and supplies a touch exit control. Highlighted words open a closable definition overlay without changing article position; background hydration never reopens it. Notebook content spans the entire study grid; bold list rows are the default; cards and a full-width first-addition calendar remain selectable. Unfamiliar/mastered categories preserve complete entries. Library pages hide the mobile reading navigation.",
         "section": "layout"
       },
       {
         "name": "The Persistent Export Controls Rule",
         "body": "Keep export preview Close and Confirm Export in a visible header and footer while only the middle document scrolls. Hide routine success and article-open microcopy while retaining errors and active generation progress.",
         "section": "layout"
+      },
+      {
+        "name": "The Library Organization Rule",
+        "section": "layout",
+        "body": "Notebook and favorites default to A–Z and offer first-added newest/oldest sorting and search. Notebook has unfamiliar/mastered categories and list/cards/calendar views. Calendar marks addition days with fluorescent circles and opens a date-filtered list; reduced motion disables month and marker animations. Favorites folders support create, rename, move and delete while retaining articles."
       }
     ],
     "dos": [

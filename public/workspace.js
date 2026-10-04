@@ -26,6 +26,7 @@
 
   function showView(next, {edit = false} = {}) {
     view = next;
+    document.body.dataset.workspaceView = next;
     reading.dataset.view = next;
     const isArticle = next === 'article';
     const isEditing = isArticle && (edit || !latestArticle);

@@ -1,5 +1,16 @@
 (() => {
   const dictionary = {
+    '日历':'Calendar','生词':'Unfamiliar','单词状态':'Word status','A–Z 字母排序':'A–Z alphabetically',
+    '加入时间 · 最新在前':'Added · newest first','加入时间 · 最早在前':'Added · oldest first','生词排序':'Notebook sorting','收藏排序':'Favorites sorting',
+    '搜索收藏文章':'Search favorites','搜索标题、文章或词汇':'Search titles, articles or vocabulary','全部文章':'All articles','未分类':'Unfiled',
+    '选择文件夹':'Choose a folder','＋ 新建文件夹':'+ New folder','重命名':'Rename','删除文件夹':'Delete folder',
+    '‹ 返回日历':'‹ Back to calendar','显示全部':'Show all','生词日历':'Vocabulary calendar','本月':'This month','上个月':'Previous month','下个月':'Next month',
+    '按首次加入日期查看':'Browse by the date first added','荧光圈标记加入日期 · 点击查看单词':'Highlighted dates mark additions · select to view words',
+    '原文例句':'Sentence in the article','展开词汇详情':'Expand word details',
+    '还没有已掌握的单词。掌握一个，就把它移到这里。':'No mastered words yet. Mark a word as mastered to move it here.',
+    '生词本还是空的。先在词汇区把陌生词加入生词本。':'Your notebook is empty. Save unfamiliar words from the definitions.',
+    '没有符合当前搜索或文件夹的文章。':'No articles match this search or folder.',
+    '还没有收藏。读到喜欢的文章，就把它收进来。':'No favorites yet. Save an article you would like to revisit.',
     '修改词汇':'Edit vocabulary',
     '按 ESC 可退出阅读模式。':'Press ESC to exit focus mode.', '关闭词汇解析':'Close definition',
     '英文':'English','词性':'Part of speech','中文翻译':'Chinese meaning','词汇表':'Vocabulary list','当前列表没有可导出的生词。':'No words to export in the current list.',
@@ -54,6 +65,13 @@
     '无匹配文章':'No matching articles','学习者':'Learner','普通用户':'Free user','VIP用户':'VIP user','管理员':'Administrator','普通':'Free','用户':'User'
   };
   const patterns = [
+    [/^(\d+) 篇文章$/, n => `${n} articles`],
+    [/^(\d+) 个词$/, n => `${n} words`],
+    [/^本月 (\d+) 个词$/, n => `${n} words this month`],
+    [/^(.+) 加入的单词$/, date => `Words added on ${date}`],
+    [/^删除 (.+)$/, word => `Delete ${word}`],
+    [/^(.+) 的词汇详情$/, word => `Word details for ${word}`],
+    [/^移动 (.+) 到文件夹$/, title => `Move ${title} to folder`],
     [/^已从 (.+) 新增 (\d+) 个词汇（最多 120 个）。$/, (file,n) => `Added ${n} vocabulary items from ${file} (120 maximum).`],
     [/^(\d+) \/ 120 个词$/, n => `${n} / 120 words`],
     [/^(\d+) 个单词$/, n => `${n} words`],
