@@ -103,11 +103,17 @@ summary::after { content: ""; width: 6px; height: 6px; border: solid currentColo
 .status-row { display: flex; justify-content: space-between; gap: var(--space-md); min-height: 0; margin: 8px 0; font-size: 13px; color: var(--muted); }
 #status { margin: 0; overflow-wrap: anywhere; }
 #status.is-error { color: var(--warning); }
+.status-row.quiet-status { display:none; }
 .reading-workspace { display: grid; grid-template-columns: minmax(0,2.15fr) minmax(310px,1fr); gap: 40px; padding: 24px 0 32px; border-top: 1px solid var(--line); }
 #articleView { display:flex; flex-direction:column; height:var(--reading-panel-height,calc(100dvh - 400px)); min-height:320px; }
 #exportArea,#glossary { overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; scrollbar-width:none; -webkit-overflow-scrolling:touch; min-height:0; flex:1; }
 #exportArea::-webkit-scrollbar,#glossary::-webkit-scrollbar { display:none; width:0; height:0; }
 #exportArea { padding:4px 6px 16px 0; }
+.reading-toolbar { display:grid; grid-template-rows:1fr; opacity:1; visibility:visible; transition:grid-template-rows 200ms var(--ease-out),opacity 160ms,transform 200ms var(--ease-out),visibility 0s; }
+.reading-toolbar .top-actions { min-height:0; transition:margin 200ms,padding 200ms; }
+.toolbar-collapsed .reading-toolbar { grid-template-rows:0fr; opacity:0; transform:translateY(-12px); visibility:hidden; transition:grid-template-rows 200ms var(--ease-out),opacity 160ms,transform 200ms var(--ease-out),visibility 0s 200ms; }
+.toolbar-collapsed .top-actions { overflow:hidden; margin-bottom:0; padding-bottom:0; border:0; }
+#exportArea { overflow-anchor:none; }
 .top-actions,#missingWords,.glossary-heading,.glossary-footer { flex-shrink:0; }
 #missingWords:empty { display:none; }
 .top-actions { display: flex; align-items: center; gap: var(--space-lg); padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
@@ -189,14 +195,22 @@ mark.vocab-en:hover, mark.vocab-en:focus-visible, mark.vocab-zh:hover { backgrou
 .fav-delete { color: var(--warning); }
 .word-state-pill { font-size: 13px; color: var(--primary); }
 .notebook-view { grid-column: 1 / -1; }
+.reading-workspace[data-view="notebook"] #resultSection { grid-column:1 / -1; min-width:0; }
 .notebook-view-head { display: flex; justify-content: space-between; align-items: baseline; }
 .notebook-toolbar { display: grid; grid-template-columns: minmax(0,1fr) 180px; gap: 16px; margin: 16px 0 24px; }
 .notebook-entries { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,340px),1fr)); gap: 24px; }
 .notebook-entries .glossary-item { padding: 24px; background: var(--soft); border-radius: 10px; }
 .notebook-empty,.empty-library { padding: 36px 0; color: var(--muted); }
-.reading-mode .input-panel,.reading-mode .glossary-panel,.reading-mode .status-row { display: none !important; }
-.reading-mode .reading-workspace { display: block; border: 0; max-width: 920px; margin: auto; }
-.reading-mode .article-title { margin-top: 32px; }
+.reading-mode .input-panel,.reading-mode .glossary-panel,.reading-mode .status-row,.reading-mode .site-header,.reading-mode .reading-toolbar,.reading-mode .mobile-bottom-nav,.reading-mode #adminDiagPanel { display:none !important; }
+body.reading-mode { padding-bottom:0; }
+.reading-mode .reading-workspace { display:block; border:0; max-width:920px; margin:auto; padding:24px 0; }
+.reading-mode #articleView { min-height:0; }
+.reading-mode .article-title { margin-top:0; }
+.reading-mode.focus-definition-open #glossaryPanel { display:flex !important; position:fixed; top:24px; right:24px; width:min(420px,calc(100vw - 48px)); height:calc(100dvh - 48px); min-height:0; margin:0; z-index:70; border:1px solid var(--line); box-shadow:var(--shadow); }
+#closeFocusDefinitionBtn { display:none; padding:8px; min-width:44px; }
+.reading-mode #closeFocusDefinitionBtn { display:inline-flex; }
+.reading-mode-hint { position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:80; width:max-content; max-width:calc(100vw - 32px); padding:12px 20px; border:1px solid var(--line); border-radius:8px; background:var(--panel); box-shadow:var(--shadow); font-size:14px; }
+.focus-exit-btn { display:none; }
 .modal { position: fixed; inset: 0; display: grid; place-items: center; z-index: 100; padding: 24px; background: var(--overlay); }
 .modal-card { width: min(780px,100%); max-height: 90dvh; overflow-y: auto; border-radius: 12px; background: var(--panel); padding: 28px; box-shadow: var(--shadow); animation: reveal var(--normal) var(--ease-out); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
@@ -208,6 +222,11 @@ mark.vocab-en:hover, mark.vocab-en:focus-visible, mark.vocab-zh:hover { backgrou
 .guide-steps { padding-left: 24px; line-height: 1.9; }
 .guide-steps li { margin-bottom: 12px; }
 .preview-paper { margin-top: 24px; background: var(--field); border: 1px solid var(--line); }
+#exportModal .modal-card { display:flex; flex-direction:column; padding:0; overflow:hidden; max-height:calc(100dvh - 48px); }
+#exportModal .modal-head { flex-shrink:0; padding:20px 28px; margin:0; border-bottom:1px solid var(--line); }
+.export-preview-scroll { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:20px 28px; }
+.export-preview-scroll > label { display:block; margin-bottom:6px; }
+#exportModal .modal-actions { flex-shrink:0; margin:0; padding:16px 28px; border-top:1px solid var(--line); background:var(--panel); }
 .admin-diag-panel { padding: 16px; margin-bottom: 16px; border: 1px solid var(--line); }
 .admin-diag-head { display: flex; justify-content: space-between; }
 .admin-diag-row { display: grid; grid-template-columns: 140px 1fr 30px; gap: 12px; }
@@ -292,6 +311,14 @@ body.admin-page input::placeholder,body.payment-page input::placeholder { color:
   .fav-main { font-size: 16px; }
   .modal { padding: 12px; }
   .modal-card { padding: 20px; }
+  #exportModal .modal-card { max-height:calc(100dvh - 24px); }
+  #exportModal .modal-head,.export-preview-scroll,#exportModal .modal-actions { padding:16px; }
+  #previewPaper table { font-size:13px; }
+  #previewPaper th,#previewPaper td { padding:8px 4px; }
+  #previewPaper th:nth-child(1) { width:38%; }
+  #previewPaper th:nth-child(2) { width:16%; }
+  .reading-mode .focus-exit-btn { display:inline-flex; position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:60; background:var(--panel); font-size:13px; }
+  .reading-mode.focus-definition-open #glossaryPanel { top:12px; right:12px; width:calc(100vw - 24px); height:calc(100dvh - 24px); }
   .modal-row,.modal-actions { flex-wrap: wrap; }
   .top-actions { position: relative; }
   .export-menu { position: static; }

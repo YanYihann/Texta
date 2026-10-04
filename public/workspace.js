@@ -13,7 +13,7 @@
       if (!reading.getClientRects().length) return;
       const style = getComputedStyle(reading);
       const top = reading.getBoundingClientRect().top + window.scrollY + parseFloat(style.paddingTop) + parseFloat(style.borderTopWidth);
-      const bottom = isMobileLayout() ? byId('mobileBottomNav').offsetHeight + 16 : 32;
+      const bottom = readingMode ? 24 : isMobileLayout() ? byId('mobileBottomNav').offsetHeight + 16 : 32;
       const height = Math.max(320, Math.floor(window.innerHeight - top - bottom));
       const value = `${height}px`;
       if (reading.style.getPropertyValue('--reading-panel-height') !== value) reading.style.setProperty('--reading-panel-height',value);
@@ -26,6 +26,7 @@
 
   function showView(next, {edit = false} = {}) {
     view = next;
+    reading.dataset.view = next;
     const isArticle = next === 'article';
     const isEditing = isArticle && (edit || !latestArticle);
     input.classList.toggle('hidden', !isEditing);
@@ -135,6 +136,61 @@
     if (['Enter',' '].includes(event.key) && event.target.matches('mark[role="button"]')) { event.preventDefault(); event.target.click(); }
   });
   document.addEventListener('texta:language',enhanceArticle);
+  const toolbar = articleViewEl.querySelector('.reading-toolbar');
+  function syncReadingToolbar() {
+    const collapsed = exportAreaEl.scrollTop > 24;
+    articleViewEl.classList.toggle('toolbar-collapsed', collapsed);
+    toolbar.inert = collapsed || readingMode;
+    if (collapsed) toolbar.querySelectorAll('details[open]').forEach(detail=>detail.open=false);
+  }
+  exportAreaEl.addEventListener('scroll',syncReadingToolbar,{passive:true});
+  document.addEventListener('texta:article',syncReadingToolbar);
+
+  let focusDefinitionOrigin = null, readingHintTimer = 0;
+  function closeFocusDefinition(restoreFocus = true) {
+    document.body.classList.remove('focus-definition-open');
+    glossaryPanelEl.removeAttribute('role');
+    glossaryPanelEl.setAttribute('aria-hidden', String(readingMode));
+    if (!readingMode) glossaryPanelEl.removeAttribute('aria-hidden');
+    if (restoreFocus && focusDefinitionOrigin?.isConnected) focusDefinitionOrigin.focus({preventScroll:true});
+  }
+  function exitReadingMode() {
+    readingMode = false;
+    applyReadingMode();
+    refreshMobileNav();
+    exportAreaEl.focus({preventScroll:true});
+  }
+  articleBlocksEl.addEventListener('click',event=>{
+    if (readingMode) focusDefinitionOrigin = event.target.closest('mark');
+  },true);
+  document.addEventListener('texta:focus-definition',event=>{
+    if (!readingMode) return;
+    clearTimeout(readingHintTimer);
+    byId('readingModeHint').classList.add('hidden');
+    chooseDefinition(event.detail);
+    document.body.classList.add('focus-definition-open');
+    glossaryPanelEl.setAttribute('role','dialog');
+    glossaryPanelEl.setAttribute('aria-hidden','false');
+    byId('closeFocusDefinitionBtn').focus({preventScroll:true});
+  });
+  byId('closeFocusDefinitionBtn').addEventListener('click',()=>closeFocusDefinition());
+  byId('exitReadingModeBtn').addEventListener('click',exitReadingMode);
+  document.addEventListener('pointerdown',event=>{
+    if (readingMode && document.body.classList.contains('focus-definition-open') && !glossaryPanelEl.contains(event.target) && !event.target.closest('mark')) closeFocusDefinition(false);
+  });
+  document.addEventListener('texta:reading-mode',event=>{
+    clearTimeout(readingHintTimer);
+    closeFocusDefinition(false);
+    const hint = byId('readingModeHint');
+    hint.classList.toggle('hidden',!event.detail);
+    document.body.style.overflow = event.detail || activeDialog ? 'hidden' : '';
+    syncReadingToolbar();
+    sizeReadingPanels();
+    if (event.detail) {
+      readingHintTimer = setTimeout(()=>hint.classList.add('hidden'),3600);
+      exportAreaEl.focus({preventScroll:true});
+    }
+  });
   const libraryObserver = new MutationObserver(()=>{
     favoritesListEl.querySelectorAll('.fav-item').forEach(item=>{
       item.tabIndex = 0; item.setAttribute('role','button');
@@ -216,11 +272,19 @@
     if (event.detail) showView('article', {edit:true});
     else updateWordCount();
   });
-  const statusObserver = new MutationObserver(()=>statusEl.classList.toggle('is-error', /失败|超过|expired|failed|too many/i.test(statusEl.textContent)));
+  function syncStatusVisibility() {
+    const error = /失败|超过|过期|不支持|请先|重试|expired|failed|too many|exceed|not support|please.*first|retry/i.test(statusEl.textContent);
+    statusEl.classList.toggle('is-error',error);
+    statusEl.parentElement.classList.toggle('quiet-status',!error && byId('generationProgress').classList.contains('hidden'));
+  }
+  const statusObserver = new MutationObserver(syncStatusVisibility);
   statusObserver.observe(statusEl,{childList:true,characterData:true,subtree:true});
+  document.addEventListener('texta:generation',syncStatusVisibility);
+  syncStatusVisibility();
   document.addEventListener('keydown',event=>{
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && view === 'article' && !activeDialog && !generateBtn.disabled) { event.preventDefault(); generateBtn.click(); }
     if (event.key === 'Escape') document.querySelectorAll('details[open]').forEach(detail=>detail.open=false);
+    if (event.key === 'Escape' && readingMode && !activeDialog) { event.preventDefault(); exitReadingMode(); }
     if (event.key === 'Tab' && activeDialog) {
       const items = [...activeDialog.querySelectorAll('button,input,select,a[href],[tabindex="0"]')].filter(el=>!el.disabled && el.getClientRects().length);
       const first = items[0], last = items.at(-1);
@@ -235,7 +299,7 @@
         dialogReturnFocus = document.activeElement; activeDialog = modal; document.body.style.overflow = 'hidden';
         modal.querySelector('button,input')?.focus();
       } else if (modal.classList.contains('hidden') && activeDialog === modal) {
-        activeDialog = null; document.body.style.overflow = ''; dialogReturnFocus?.focus();
+        activeDialog = null; document.body.style.overflow = readingMode ? 'hidden' : ''; dialogReturnFocus?.focus();
       }
     }).observe(modal,{attributes:true,attributeFilter:['class']});
   });

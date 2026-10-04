@@ -2082,6 +2082,7 @@ function applyReadingMode() {
     document.body.classList.remove("reading-mode");
   }
   syncActionButtonLabels();
+  document.dispatchEvent(new CustomEvent("texta:reading-mode", {detail:readingMode}));
 }
 
 function updateMobileNavVisibility() {
@@ -2410,6 +2411,11 @@ function updateGlossaryFollow(wordKeys) {
 function jumpToGlossaryKey(key) {
   if (!key) return;
   void ensureVocabDetailForKey(key);
+  if (readingMode) {
+    updateGlossaryFollow([key]);
+    document.dispatchEvent(new CustomEvent("texta:focus-definition", {detail:key}));
+    return;
+  }
   if (isMobileLayout()) {
     currentMobilePage = "glossary";
     applyMobilePageLayout();
@@ -3710,7 +3716,7 @@ favoritesListEl.addEventListener("click", (event) => {
     wordsInput.value = latestWords.join(", ");
     applyArticleData(found);
     document.dispatchEvent(new CustomEvent("texta:open-article"));
-    statusEl.textContent = "已从历史记录打开文章。";
+    statusEl.textContent = "";
     return;
   }
 
@@ -3743,7 +3749,7 @@ favoritesListEl.addEventListener("click", (event) => {
   latestWords = Array.isArray(found.words) ? found.words : [];
   wordsInput.value = latestWords.join(", ");
   applyArticleData(found);
-  statusEl.textContent = "已从收藏夹打开文章。";
+  statusEl.textContent = "";
 });
 
 previewTitleInput.addEventListener("input", renderPreviewPaper);

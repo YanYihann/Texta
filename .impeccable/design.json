@@ -587,6 +587,16 @@
         "name": "The Reading Space Rule",
         "body": "After successful generation or opening an article, hide vocabulary input and generation settings to give article and definition panes the available viewport. Edit vocabulary opens a separate editor retaining words and settings; Back to article resumes the existing article and its reading position. A failed generation keeps the editor available. Mobile Input and Article navigation follows the same states.",
         "section": "layout"
+      },
+      {
+        "name": "The Focus Reading Rule",
+        "body": "Collapse the article toolbar as content scrolls down and restore it at the top. Focus mode hides navigation and toolbars, announces ESC exit, and supplies a touch exit control. Highlighted words open a closable definition overlay without changing article position; background hydration never reopens it. Notebook cards span the entire study grid.",
+        "section": "layout"
+      },
+      {
+        "name": "The Persistent Export Controls Rule",
+        "body": "Keep export preview Close and Confirm Export in a visible header and footer while only the middle document scrolls. Hide routine success and article-open microcopy while retaining errors and active generation progress.",
+        "section": "layout"
       }
     ],
     "dos": [
