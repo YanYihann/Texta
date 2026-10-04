@@ -1,0 +1,75 @@
+/* The vocabulary composer follows the approved unified-panel concept. */
+body .input-panel { display: block; margin: 40px 0 28px; padding: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); }
+.input-panel .word-entry { padding: 24px 32px 28px; min-width: 0; }
+.input-panel .section-heading { margin-bottom: 24px; }
+.input-panel .file-tools-row { align-items: center; }
+.input-panel .file-tools-row button { font-size: 14px; }
+.vocabulary-editor { min-height: 132px; }
+body .input-panel .word-chips { display: flex; flex-wrap: wrap; align-items: start; gap: 10px; max-height: 116px; overflow: auto; margin: 0 0 12px; padding: 3px; }
+body .input-panel .word-chips:empty { display: none; }
+body .input-panel .word-chips.is-expanded { max-height: 360px; }
+.input-panel .chip { display: inline-flex; max-width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); color: var(--primary); }
+.input-panel .chip.bad { color: var(--warning); border-color: var(--warning); }
+body .input-panel .chip button { border: 0; background: transparent; box-shadow: none; color: inherit; min-height: 48px; }
+body .input-panel .chip .chip-edit { min-width: 0; padding: 6px 4px 6px 16px; font: 600 23px/1.4 var(--font-display); overflow-wrap: anywhere; text-align: left; display: block; }
+body .input-panel .chip .chip-remove { flex: 0 0 40px; padding: 8px; }
+.input-panel .chip-remove svg { width: 15px; height: 15px; }
+body .input-panel .chip button:hover { background: color-mix(in srgb,var(--primary) 9%,transparent); }
+body .input-panel #wordDraft { display: block; resize: none; width: 100%; min-height: 52px; max-height: 140px; padding: 10px 3px; border: 0; border-radius: 4px; background: transparent; box-shadow: none; font: 20px/1.6 var(--font-reading); }
+body .input-panel #wordDraft:focus-visible { outline: 1px solid var(--primary); outline-offset: 3px; }
+body .input-panel #wordDraft::placeholder { font: 16px/2 var(--font-ui); }
+.input-panel .input-tools { margin-top: 20px; align-items: baseline; }
+.input-panel .field-help,.input-panel .count { font-size: 13px; margin: 0; }
+.input-panel .count { white-space: nowrap; }
+.input-panel .spell-hints { font-size: 14px; margin-top: 12px; }
+body .input-panel #expandWordsBtn { font-size: 13px; margin-bottom: 8px; }
+body .input-panel .generation-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 20px 32px; border-top: 1px solid var(--line); border-radius: 0 0 20px 20px; background: color-mix(in srgb,var(--soft) 28%,var(--panel)); }
+.input-panel .level-setting { display: flex; gap: 12px; flex-shrink: 0; }
+.input-panel .level-setting select { width: auto; min-width: 100px; background: var(--field); }
+.generation-mode { display: flex; gap: 4px; padding: 4px; background: var(--soft); border-radius: 12px; }
+body .generation-mode button { border: 0; background: transparent; color: var(--muted); min-height: 40px; padding: 8px 14px; font-size: 14px; border-radius: 8px; }
+body .generation-mode button[aria-pressed="true"] { color: var(--primary); background: var(--panel); box-shadow: var(--control-shadow); font-weight: 600; }
+.generation-more { position: relative; }
+.generation-more summary { font-size: 14px; padding-inline: 8px; color: var(--primary); }
+.generation-more summary::after { content: none; }
+.generation-more[open] summary { background: var(--soft); }
+.generation-popover { position: absolute; top: calc(100% + 10px); left: 0; width: 310px; padding: 20px; display: grid; gap: 16px; z-index: 30; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); }
+.generation-popover .setting-row { grid-template-columns: 70px minmax(0,1fr); }
+.generation-popover .switch-label { font-size: 13px; }
+.generation-submit { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.generation-summary { font-size: 13px; color: var(--muted); white-space: nowrap; }
+body .input-panel #generateBtn { width: auto; min-width: 154px; margin: 0; min-height: 48px; font-size: 15px; gap: 22px; }
+body .input-panel #generateBtn.is-loading svg { display: none; }
+.input-panel #returnToReadingBtn { font-size: 14px; }
+@media (max-width: 1100px) {
+  body .input-panel .generation-settings { gap: 14px; }
+  .generation-submit { flex: 1 0 auto; justify-content: flex-end; }
+  .generation-popover { left: auto; right: 0; }
+}
+@media (min-width: 641px) and (max-width: 1100px) {
+  .input-panel .generation-settings { position: relative; }
+  .generation-more { position: static; }
+  .generation-popover { left: 24px; right: auto; }
+}
+@media (max-width: 640px) {
+  body .input-panel { margin-top: 24px; border-radius: 16px; }
+  .input-panel .word-entry { padding: 18px; }
+  .input-panel .section-heading { gap: 8px; margin-bottom: 20px; }
+  .input-panel .section-heading label { font-size: 19px; }
+  .input-panel .file-tools-row { gap: 0; }
+  .input-panel .file-tools-row button { padding-inline: 9px; }
+  .input-panel #uploadWordsBtn svg { display: none; }
+  .input-panel .input-tools { flex-wrap: wrap; gap: 8px; }
+  .input-panel .count { margin-left: auto; }
+  body .input-panel .chip .chip-edit { font-size: 20px; padding-left: 12px; }
+  body .input-panel .generation-settings { display: grid; grid-template-columns: minmax(0,1fr) auto; padding: 16px 18px; gap: 12px; border-radius: 0 0 16px 16px; }
+  .generation-mode { grid-column: 1 / -1; order: 2; }
+  body .generation-mode button { flex: 1; padding-inline: 10px; }
+  .generation-more { order: 1; justify-self: end; }
+  .generation-popover { left: auto; right: 0; width: min(310px,calc(90vw - 38px)); padding: 14px; }
+  .generation-submit { grid-column: 1 / -1; order: 3; width: 100%; justify-content: space-between; gap: 10px; }
+  .input-panel #returnToReadingBtn { grid-column: 1 / -1; order: 4; }
+  .generation-summary { white-space: normal; }
+  body .input-panel #generateBtn { min-width: 142px; }
+}
+@media (forced-colors: active) { .generation-mode button[aria-pressed="true"] { outline: 2px solid Highlight; } }

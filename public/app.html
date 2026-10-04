@@ -5,10 +5,11 @@
   <meta name="theme-color" content="#f6f7f4"><title>Texta · 词汇学习</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./workspace.css?v=20261004-clean11"><link rel="stylesheet" href="./controls.css?v=20261005-controls1"><script src="./theme.js?v=20261005-controls1"></script>
-  <script src="./i18n.js?v=20261004-clean11" defer></script>
+  <link rel="stylesheet" href="./vocabulary.css?v=20261005-editor1">
+  <script src="./i18n.js?v=20261005-editor1" defer></script>
 </head>
 <body class="workspace-page">
-  <a class="skip-link" href="#words">跳到词汇输入</a>
+  <a class="skip-link" href="#wordDraft">跳到词汇输入</a>
   <header class="site-header">
     <a class="wordmark" href="./app.html" aria-label="Texta 主页">Texta</a>
     <nav class="library-tabs" aria-label="学习导航">
@@ -34,20 +35,28 @@
   <main class="app-shell">
     <section class="input-panel" aria-label="文章生成设置">
       <div class="word-entry">
-        <div class="section-heading"><label for="words">输入词汇</label></div>
-        <textarea id="words" aria-describedby="inputHelp wordCount" placeholder="输入英文单词或短语，用逗号或换行分隔"></textarea>
-        <div class="input-tools"><span id="wordCount" class="count">0 / 120 个词</span><div class="file-tools-row"><button id="uploadWordsBtn" type="button">导入文件</button><button id="clearWordsBtn" type="button">清空</button></div></div>
+        <div class="section-heading"><label for="wordDraft">输入词汇</label><div class="file-tools-row"><button id="uploadWordsBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M4 14v6h16v-6"/></svg><span>导入文件</span></button><button id="clearWordsBtn" class="text-btn" type="button">清空</button></div></div>
+        <textarea id="words" class="hidden" aria-hidden="true" tabindex="-1"></textarea>
+        <div class="vocabulary-editor">
+          <div id="wordChips" class="word-chips" aria-label="输入的词汇"></div>
+          <button id="expandWordsBtn" class="text-btn hidden" type="button" aria-expanded="false" aria-controls="wordChips">展开全部词汇</button>
+          <textarea id="wordDraft" rows="1" aria-describedby="inputHelp wordEntryHelp wordCount" placeholder="粘贴或输入你想学习的单词与短语…" spellcheck="false"></textarea>
+        </div>
+        <div class="input-tools"><span id="wordEntryHelp" class="field-help">逗号或回车添加 · 点击词汇编辑</span><span id="wordCount" class="count" aria-live="polite">0 / 120 个词</span></div>
         <p id="inputHelp" class="field-help sr-only">短语中的空格会保留。支持 TXT、Markdown、CSV 和 JSON 文件。</p>
         <input id="wordFileInput" type="file" class="hidden" accept=".txt,.md,.csv,.json">
         <p id="fileImportHint" class="file-import-hint hidden" role="status"></p>
-        <div id="spellHints" class="spell-hints hidden"></div><div id="wordChips" class="word-chips" aria-label="输入的词汇"></div>
+        <div id="spellHints" class="spell-hints hidden" role="status"></div>
       </div>
       <div class="generation-settings">
-        <div class="setting-row"><label for="level">难度等级</label><select id="level"><option value="初级">初级</option><option value="中级" selected>中级</option><option value="高级">高级</option></select></div>
-        <div class="setting-row"><label for="generationMode">生成模式</label><select id="generationMode"><option value="standard">英文文章 + 中文翻译</option><option value="mixed" selected>中英混合</option></select></div>
+        <div class="setting-row level-setting"><label for="level">难度</label><select id="level"><option value="初级">初级</option><option value="中级" selected>中级</option><option value="高级">高级</option></select></div>
+        <div class="generation-mode" role="group" aria-label="生成模式"><button type="button" data-generation-mode="mixed" aria-pressed="true">中英混合</button><button type="button" data-generation-mode="standard" aria-pressed="false">双语文章</button></div>
+        <select id="generationMode" class="hidden" aria-label="生成模式" tabindex="-1"><option value="standard">英文文章 + 中文翻译</option><option value="mixed" selected>中英混合</option></select>
+        <details class="generation-more"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h8m4 0h6M3 17h3m4 0h11"/><circle cx="13" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>更多设置</span></summary><div class="generation-popover">
         <div class="setting-row"><label for="generationQuality">生成档位</label><select id="generationQuality"><option value="normal" selected>普通生成 · 1 次</option><option value="advanced">高级生成 · 5 次</option></select></div>
         <div class="setting-row"><label for="quickMode">快速模式</label><label class="switch-label"><input id="quickMode" type="checkbox" role="switch"><span>生成更短文章</span></label></div>
-        <button id="generateBtn" class="primary-btn" type="button">生成文章</button>
+        </div></details>
+        <div class="generation-submit"><span id="generationSummary" class="generation-summary">普通生成 · 1 次</span><button id="generateBtn" class="primary-btn" type="button"><span>生成文章</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></button></div>
         <button id="returnToReadingBtn" class="text-btn hidden" type="button">返回文章</button>
       </div>
     </section>
@@ -142,4 +151,4 @@
       </div>
     </section>
 
-<script src="./site-config.js?v=20261004-clean11"></script><script src="./app.js?v=20261005-controls1"></script><script src="./library.js?v=20261004-clean11"></script><script src="./workspace.js?v=20261005-controls1"></script></body></html>
+<script src="./site-config.js?v=20261004-clean11"></script><script src="./app.js?v=20261005-editor1"></script><script src="./vocabulary.js?v=20261005-editor1"></script><script src="./library.js?v=20261004-clean11"></script><script src="./workspace.js?v=20261005-editor1"></script></body></html>

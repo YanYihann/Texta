@@ -2207,6 +2207,8 @@ function refreshMobileNav() {
 
 function renderSpelling() {
   const words = splitWords(wordsInput.value);
+  const map = new Map(spellState.map((x) => [String(x.word || "").toLowerCase(), x]));
+  if (window.TextaVocabulary) window.TextaVocabulary.render(words, map);
   if (words.length === 0) {
     spellHintsEl.classList.add("hidden");
     spellHintsEl.innerHTML = "";
@@ -2214,8 +2216,7 @@ function renderSpelling() {
     return;
   }
 
-  const map = new Map(spellState.map((x) => [String(x.word || "").toLowerCase(), x]));
-  wordChipsEl.innerHTML = words
+  if (!window.TextaVocabulary) wordChipsEl.innerHTML = words
     .map((w) => {
       const info = map.get(w.toLowerCase());
       const bad = info && info.ok === false;
@@ -3452,13 +3453,14 @@ generateBtn.addEventListener("click", async () => {
 
   if (!wordsText) {
     statusEl.textContent = "请先输入单词。";
+    document.getElementById('wordDraft')?.focus();
     return;
   }
 
   const requestedWords = splitWords(wordsText);
   if (requestedWords.length > 120) {
     statusEl.textContent = "输入超过 120 个词，请删减后重试。";
-    wordsInput.focus();
+    document.getElementById('wordDraft')?.focus();
     return;
   }
   generateBtn.disabled = true;

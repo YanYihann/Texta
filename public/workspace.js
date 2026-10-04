@@ -61,7 +61,7 @@
   function openWordEditor() {
     showView('article', {edit:true});
     window.scrollTo({top:0,behavior:reduceMotion()?'auto':'smooth'});
-    wordsInput.focus({preventScroll:true});
+    byId('wordDraft').focus({preventScroll:true});
   }
   homeButton.addEventListener('click',openWordEditor);
   byId('editWordsBtn').addEventListener('click',openWordEditor);
@@ -233,7 +233,7 @@
     } catch { /* Ignore a malformed draft. */ }
     updateWordCount(); refreshDefinitions(); showView('article');
   });
-  byId('clearWordsBtn').addEventListener('click',()=>{ updateWordCount(); saveDraft(); wordsInput.focus(); });
+  byId('clearWordsBtn').addEventListener('click',()=>{ updateWordCount(); saveDraft(); byId('wordDraft').focus(); });
   byId('wordFileInput').addEventListener('change',()=>setTimeout(()=>{updateWordCount();saveDraft();},0));
 
   const en = [

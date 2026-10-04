@@ -1,5 +1,10 @@
 (() => {
   const dictionary = {
+    '难度':'Level','双语文章':'Bilingual article','更多设置':'More settings','短文章':'Short article',
+    '输入的词汇':'Entered vocabulary','编辑词汇':'Edit word','删除词汇':'Remove word','建议拼写':'Suggested spelling',
+    '逗号或回车添加 · 点击词汇编辑':'Comma or Enter to add · Select a word to edit',
+    '粘贴或输入你想学习的单词与短语…':'Paste or type words and phrases to learn…',
+    '继续输入单词或短语…':'Add another word or phrase…','展开全部词汇':'Expand vocabulary','收起词汇':'Collapse vocabulary',
     '日历大小':'Calendar size','缩略图':'Thumbnail','跳转原文':'Open source article','来源文章':'Source article','暂无保存的原文':'No saved source article',
     '日历':'Calendar','生词':'Unfamiliar','单词状态':'Word status','A–Z 字母排序':'A–Z alphabetically',
     '加入时间 · 最新在前':'Added · newest first','加入时间 · 最早在前':'Added · oldest first','生词排序':'Notebook sorting','收藏排序':'Favorites sorting',
