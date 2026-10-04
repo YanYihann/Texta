@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const path = require("path");
 const dotenv = require("dotenv");
 const crypto = require("crypto");
@@ -1423,6 +1423,13 @@ async function callOpenAIText(prompt, options = {}) {
   throw new Error("Unexpected request state.");
 }
 
+// Vocabulary output grows with every word, even in quick article mode.
+// Fixed small budgets truncated JSON arrays and turned valid words into placeholders.
+function lexiconTokenBudget(wordCount, detailLevel, quickMode) {
+  const perWord = detailLevel === "core" ? (quickMode ? 180 : 240) : (quickMode ? 450 : 650);
+  return Math.min(12000, Math.max(768, 256 + wordCount * perWord));
+}
+
 async function generateLexicon(words, quickMode, model, detailLevel = "full") {
   const normalizedDetailLevel = String(detailLevel || "").toLowerCase() === "core" ? "core" : "full";
   const isCore = normalizedDetailLevel === "core";
@@ -1468,7 +1475,7 @@ async function generateLexicon(words, quickMode, model, detailLevel = "full") {
         ].join("\n");
 
     const text = await callOpenAIText(prompt, {
-      maxTokens: isCore ? (quickMode ? 360 : 760) : quickMode ? 650 : 1300,
+      maxTokens: lexiconTokenBudget(chunkWords.length, normalizedDetailLevel, quickMode),
       model,
       step: isCore ? "lexicon_core" : "lexicon"
     });
@@ -1484,7 +1491,7 @@ async function generateLexicon(words, quickMode, model, detailLevel = "full") {
         `Words: ${chunkWords.join(", ")}`
       ].join("\n");
       const retryText = await callOpenAIText(retryPrompt, {
-        maxTokens: isCore ? (quickMode ? 360 : 760) : quickMode ? 650 : 1300,
+        maxTokens: lexiconTokenBudget(chunkWords.length, normalizedDetailLevel, quickMode),
         model,
         step: isCore ? "lexicon_core_retry" : "lexicon_retry"
       });
@@ -1521,7 +1528,7 @@ async function generateLexicon(words, quickMode, model, detailLevel = "full") {
         `Words: ${c.join(", ")}`
       ].join("\n");
       const fallbackText = await callOpenAIText(fallbackPrompt, {
-        maxTokens: isCore ? (quickMode ? 420 : 860) : quickMode ? 700 : 1400,
+        maxTokens: lexiconTokenBudget(c.length, normalizedDetailLevel, quickMode),
         model,
         step: isCore ? "lexicon_core_fallback" : "lexicon_fallback"
       });
@@ -1533,7 +1540,10 @@ async function generateLexicon(words, quickMode, model, detailLevel = "full") {
   }
 
   const finalLexicon = cloneJsonSafe(lexicon, []);
-  setToTimedCache(lexiconCache, cacheKey, finalLexicon, LEXICON_CACHE_TTL_MS, LEXICON_CACHE_MAX);
+  // A temporary provider failure must not poison subsequent attempts with cached placeholders.
+  if (!finalLexicon.some((item) => item.senses.some((sense) => isGeneratedLexiconFallbackMeaning(sense.meaning)))) {
+    setToTimedCache(lexiconCache, cacheKey, finalLexicon, LEXICON_CACHE_TTL_MS, LEXICON_CACHE_MAX);
+  }
   return cloneJsonSafe(finalLexicon, []);
 }
 
