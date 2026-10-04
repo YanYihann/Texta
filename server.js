@@ -321,7 +321,6 @@ function verifyPassword(raw, passwordHash) {
 
 async function writeAuthStore(store) {
   const users = Array.isArray(store?.users) ? store.users : [];
-  const sessions = Array.isArray(store?.sessions) ? store.sessions : [];
   const usageDailyObj = store?.usageDaily && typeof store.usageDaily === "object" ? store.usageDaily : {};
   const vipRequests = Array.isArray(store?.vipRequests) ? store.vipRequests : [];
 
@@ -359,17 +358,7 @@ async function writeAuthStore(store) {
     });
   }
 
-  await prisma.session.deleteMany({});
-  if (sessions.length > 0) {
-    await prisma.session.createMany({
-      data: sessions.map((s) => ({
-        token: String(s.token),
-        userId: String(s.userId),
-        expiresAt: BigInt(Number(s.expiresAt || 0)),
-        createdAt: BigInt(Number(s.createdAt || Date.now()))
-      }))
-    });
-  }
+  // Sessions are written by login/logout only, so quota updates cannot invalidate active logins.
 
   await prisma.usageDaily.deleteMany({});
   if (usageRows.length > 0) {
@@ -625,11 +614,9 @@ function extractBearerToken(req) {
 async function getUserFromToken(req) {
   const token = extractBearerToken(req);
   if (!token) return null;
-  const store = await readAuthStore();
-  const session = store.sessions.find((x) => x.token === token);
-  if (!session) return null;
-  const user = store.users.find((x) => x.id === session.userId);
-  return user || null;
+  const session = await prisma.session.findUnique({ where: { token } });
+  if (!session || Number(session.expiresAt) <= Date.now()) return null;
+  return prisma.user.findUnique({ where: { id: session.userId } });
 }
 
 async function ensureAdminSeed() {
@@ -3647,9 +3634,9 @@ app.post("/api/auth/login", async (req, res) => {
 
     const token = `tk_${crypto.randomBytes(24).toString("hex")}`;
     const expiresAt = Date.now() + AUTH_TOKEN_TTL_MS;
-    store.sessions = (store.sessions || []).filter((s) => Number(s?.expiresAt || 0) > Date.now());
-    store.sessions.push({ token, userId: user.id, expiresAt, createdAt: Date.now() });
-    await writeAuthStore(store);
+    await prisma.session.create({
+      data: { token, userId: user.id, expiresAt: BigInt(expiresAt), createdAt: BigInt(Date.now()) }
+    });
 
     res.json({ ok: true, token, user: publicUser(user), expiresAt });
   } catch (error) {
@@ -4155,9 +4142,7 @@ app.post("/api/auth/logout", async (req, res) => {
     if (!token) {
       return res.json({ ok: true });
     }
-    const store = await readAuthStore();
-    store.sessions = (store.sessions || []).filter((s) => s.token !== token);
-    await writeAuthStore(store);
+    await prisma.session.deleteMany({ where: { token } });
     res.json({ ok: true });
   } catch (error) {
     console.error(error);
