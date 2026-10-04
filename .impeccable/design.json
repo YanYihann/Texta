@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-04T07:38:25.8204066Z",
+  "generatedAt": "2026-10-04T08:05:15.940699Z",
   "title": "Design System: Texta",
   "extensions": {
     "themes": {
@@ -19,13 +19,18 @@
           "highlight-en": "{colors.highlighter-highlight-en}",
           "highlight-zh": "{colors.highlighter-highlight-zh}",
           "vocab-ink": "{colors.highlighter-vocab-ink}",
-          "annotation": "{colors.highlighter-annotation}"
+          "annotation": "{colors.highlighter-annotation}",
+          "warning": "{colors.highlighter-warning}",
+          "overlay": "{colors.highlighter-overlay}"
         },
         "inherits": [
-          "white",
-          "warning",
-          "overlay",
-          "shadow"
+          "white"
+        ],
+        "shadow": "0 16px 44px #00000018",
+        "rules": [
+          "Grayscale UI, swatches and text selection.",
+          "Only supplied English vocabulary receives yellow fill; annotations are red.",
+          "Chinese vocabulary marks use transparent fill and inherited text color."
         ]
       },
       "paper": {
@@ -96,10 +101,26 @@
           "overlay",
           "shadow"
         ]
+      },
+      "dark": {
+        "selector": ":root[data-theme=\"dark\"]",
+        "tokens": {
+          "highlight-en": "{colors.dark-highlight-en}",
+          "highlight-zh": "{colors.dark-highlight-zh}",
+          "vocab-ink": "{colors.dark-vocab-ink}"
+        }
       }
     },
-    "aliases": { "annotation": "muted", "vocab-ink": "primary" },
-    "preferences": { "theme": "texta_theme_preference", "notebookView": "texta_notebook_view", "defaultTheme": "light", "defaultNotebookView": "list" },
+    "aliases": {
+      "annotation": "muted",
+      "vocab-ink": "primary"
+    },
+    "preferences": {
+      "theme": "texta_theme_preference",
+      "notebookView": "texta_notebook_view",
+      "defaultTheme": "light",
+      "defaultNotebookView": "list"
+    },
     "colorMeta": {
       "bg": {
         "role": "neutral",
@@ -457,28 +478,28 @@
         "role": "primary",
         "displayName": "Dark English Highlight",
         "tonalRamp": [
-          "oklch(15.0% 0.06538 135.97)",
-          "oklch(26.4% 0.06538 135.97)",
-          "oklch(37.9% 0.06538 135.97)",
-          "oklch(49.3% 0.06538 135.97)",
-          "oklch(60.7% 0.06538 135.97)",
-          "oklch(72.1% 0.06538 135.97)",
-          "oklch(83.6% 0.06538 135.97)",
-          "oklch(95.0% 0.06538 135.97)"
+          "oklch(15.0% 0.14664 118.07)",
+          "oklch(26.4% 0.14664 118.07)",
+          "oklch(37.9% 0.14664 118.07)",
+          "oklch(49.3% 0.14664 118.07)",
+          "oklch(60.7% 0.14664 118.07)",
+          "oklch(72.1% 0.14664 118.07)",
+          "oklch(83.6% 0.14664 118.07)",
+          "oklch(95.0% 0.14664 118.07)"
         ]
       },
       "dark-highlight-zh": {
         "role": "primary",
         "displayName": "Dark Translation Highlight",
         "tonalRamp": [
-          "oklch(15.0% 0.04454 149.17)",
-          "oklch(26.4% 0.04454 149.17)",
-          "oklch(37.9% 0.04454 149.17)",
-          "oklch(49.3% 0.04454 149.17)",
-          "oklch(60.7% 0.04454 149.17)",
-          "oklch(72.1% 0.04454 149.17)",
-          "oklch(83.6% 0.04454 149.17)",
-          "oklch(95.0% 0.04454 149.17)"
+          "oklch(15.0% 0.10405 116.97)",
+          "oklch(26.4% 0.10405 116.97)",
+          "oklch(37.9% 0.10405 116.97)",
+          "oklch(49.3% 0.10405 116.97)",
+          "oklch(60.7% 0.10405 116.97)",
+          "oklch(72.1% 0.10405 116.97)",
+          "oklch(83.6% 0.10405 116.97)",
+          "oklch(95.0% 0.10405 116.97)"
         ]
       }
     },
@@ -569,7 +590,16 @@
         "name": "mobile",
         "value": "860px"
       }
-    ]
+    ],
+    "themeLabels": {
+      "light": "森林",
+      "highlighter": "荧光",
+      "paper": "暖纸",
+      "ocean": "海蓝",
+      "lavender": "薰衣草",
+      "dark": "深色",
+      "system": "系统"
+    }
   },
   "components": [
     {

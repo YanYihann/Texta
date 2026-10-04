@@ -21,7 +21,7 @@
     '生词本还是空的。先在右侧词汇区把陌生词加入生词本。':'Your notebook is empty. Add unfamiliar words from the definitions panel.',
     '没有找到符合当前搜索或筛选条件的单词。':'No words match your search or filter.','搜索单词、释义或搭配':'Search words, meanings or collocations','搜索生词':'Search notebook','筛选词性':'Filter by part of speech','全部词性':'All parts of speech',
     '返回文章':'Back to article','改标题':'Rename','删除':'Delete','未命名文章':'Untitled article','未命名单词':'Untitled word','陌生词':'Unfamiliar word',
-    '列表':'List','卡片':'Cards','生词本视图':'Notebook view','查看详情':'View details','主题样式':'Theme style','荧光批注':'Highlighter','暖纸':'Warm paper','海蓝':'Ocean','薰衣草':'Lavender','模型请求诊断':'Model requests','系统':'System','浅色':'Light','深色':'Dark','主题切换':'Theme','学习导航':'Study navigation','移动端学习导航':'Mobile study navigation',
+    '列表':'List','卡片':'Cards','生词本视图':'Notebook view','查看详情':'View details','主题样式':'Theme style','荧光':'Highlighter','森林':'Forest','暖纸':'Warm paper','海蓝':'Ocean','薰衣草':'Lavender','模型请求诊断':'Model requests','系统':'System','浅色':'Light','深色':'Dark','主题切换':'Theme','学习导航':'Study navigation','移动端学习导航':'Mobile study navigation',
     '连接账户中…':'Connecting account…','未登录':'Signed out','退出登录':'Sign out','用户使用查看':'Usage administration','VIP 审核':'VIP review','VIP审核中心':'VIP review',
     '升级 VIP（10 元，每日 50 次）':'Upgrade to VIP · ¥10 · 50 daily credits','升级VIP（10元/日50次）':'Upgrade to VIP · ¥10 · 50 daily credits',
     '登录 Texta':'Sign in to Texta','登录':'Sign in','注册':'Register','邮箱':'Email','密码':'Password','用户名':'Name','登录并进入':'Sign in','注册并进入':'Create account',

@@ -111,8 +111,8 @@ const GUIDE_FORCE_OPEN_KEY = "texta_guide_force_open";
 const THEME_PREF_KEY = "texta_theme_preference";
 const NOTEBOOK_VIEW_KEY = "texta_notebook_view";
 const THEME_OPTIONS = [
-  { value: "light", label: "浅色" },
-  { value: "highlighter", label: "荧光批注" },
+  { value: "light", label: "森林" },
+  { value: "highlighter", label: "荧光" },
   { value: "paper", label: "暖纸" },
   { value: "ocean", label: "海蓝" },
   { value: "lavender", label: "薰衣草" },
