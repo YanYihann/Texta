@@ -2403,7 +2403,7 @@ function updateGlossaryFollow(wordKeys) {
 
   if (target && lastActiveGlossaryKey !== keys[0]) {
     lastActiveGlossaryKey = keys[0];
-    target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+    glossaryEl.scrollTo({ top:0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 }
 
@@ -3195,31 +3195,39 @@ function exportWordFromPreview() {
 async function exportPdfFromPreview() {
   const title = ensurePreviewTitle();
   if (!title || confirmExportBtn.disabled) return;
-  let renderHost;
+  let renderHost, canvas;
   try {
     confirmExportBtn.disabled = true;
     await window.TextaExports.ensurePdf();
-    if (typeof window.html2pdf !== "function") throw new Error("PDF library unavailable");
-    await document.fonts.ready;
+    if (typeof window.html2canvas !== "function" || !window.jspdf?.jsPDF) throw new Error("PDF library unavailable");
     const paper = buildExportBundle(title, Boolean(previewIncludeZhInput.checked));
     paper.style.padding = `${Math.round(Number(previewMarginSelect.value || 12) * 96 / 25.4)}px`;
-    renderHost = document.createElement("div");
-    renderHost.style.cssText = "position:absolute;left:-10000px;top:0;width:816px;pointer-events:none;";
+    // A separate document keeps Safari viewport offsets and screen styles out of the capture.
+    renderHost = document.createElement("iframe");
+    renderHost.style.cssText = "position:fixed;left:0;top:0;width:816px;height:600px;border:0;pointer-events:none;z-index:-1;";
     renderHost.setAttribute("aria-hidden", "true");
-    renderHost.appendChild(paper); document.body.appendChild(renderHost);
-    const height = Math.ceil(paper.getBoundingClientRect().height);
+    renderHost.tabIndex = -1;
+    document.body.appendChild(renderHost);
+    const renderDocument = renderHost.contentDocument;
+    renderDocument.open();
+    renderDocument.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=816"><style>html,body{margin:0;padding:0;width:816px;background:#fff;color-scheme:light;} ${EXPORT_DOCUMENT_STYLES}</style></head><body></body></html>`);
+    renderDocument.close();
+    const renderPaper = renderDocument.importNode(paper, true);
+    renderDocument.body.appendChild(renderPaper);
+    await renderDocument.fonts.ready;
+    const height = Math.ceil(renderPaper.getBoundingClientRect().height);
     // Bound memory and canvas dimensions for mobile Safari, while keeping a continuous image.
     const scale = Math.min(2, Math.sqrt(8000000 / (816 * height)), 16000 / height);
-    const worker = window.html2pdf().set({
-      margin:0, image:{type:"jpeg",quality:0.98}, pagebreak:{mode:[]},
-      html2canvas:{scale,useCORS:true,backgroundColor:"#ffffff",windowWidth:816,scrollX:0,scrollY:0},
-      jsPDF:{unit:"pt",format:[612,792],orientation:"portrait"}
-    }).from(paper).toCanvas();
-    const canvas = await worker.get("canvas");
+    canvas = await window.html2canvas(renderPaper, {
+      scale, width:816, height, x:0, y:0, useCORS:true, backgroundColor:"#ffffff",
+      windowWidth:816, windowHeight:height, scrollX:0, scrollY:0, logging:false
+    });
+    if (!canvas.width || !canvas.height) throw new Error("Empty PDF capture");
     const pageWidth = Math.min(612, 14000 * canvas.width / canvas.height);
-    const pageHeight = pageWidth * canvas.height / canvas.width + 1;
-    // The extra point avoids a second blank page caused by pixel rounding.
-    await worker.set({jsPDF:{unit:"pt",format:[pageWidth,pageHeight],orientation:pageHeight>=pageWidth?"portrait":"landscape"}}).toPdf().save(`${safeFileName(title)}.pdf`);
+    const pageHeight = pageWidth * canvas.height / canvas.width;
+    const pdf = new window.jspdf.jsPDF({unit:"pt",format:[pageWidth,pageHeight],orientation:pageHeight>=pageWidth?"portrait":"landscape"});
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, pageWidth, pageHeight);
+    pdf.save(`${safeFileName(title)}.pdf`);
     if (pendingExportSource === "article") exportTitleInput.value = title;
     statusEl.textContent = "PDF 已导出。";
     closeExportPreview();
@@ -3227,6 +3235,7 @@ async function exportPdfFromPreview() {
     statusEl.textContent = "PDF 导出失败，请重试。";
   } finally {
     renderHost?.remove();
+    if (canvas) { canvas.width = 0; canvas.height = 0; }
     confirmExportBtn.disabled = false;
   }
 }

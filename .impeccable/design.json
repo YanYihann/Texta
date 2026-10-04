@@ -577,6 +577,11 @@
         "name": "The Export Document Rule",
         "body": "Use the shared EXPORT_DOCUMENT_STYLES print layout for preview, PDF and Word. Article PDFs are a continuous single page; notebook exports contain only vocabulary, part of speech and Chinese meanings from the current filtered list. Keep mobile export menus within the reading toolbar bounds and route opened history articles to reading.",
         "section": "typography"
+      },
+      {
+        "name": "The Independent Reading Rule",
+        "body": "Article and definition content scroll independently with hidden scrollbars and keyboard access. Keep toolbars visible, contain scroll at pane boundaries, preserve positions across mobile reading tabs and reset positions when a new article opens. PDF capture uses a separate fixed-width document so screen scrolling and mobile viewport offsets cannot crop its content.",
+        "section": "layout"
       }
     ],
     "dos": [

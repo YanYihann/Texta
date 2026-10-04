@@ -6,6 +6,22 @@
   let view = 'article', selectedWord = '', draftTimer = 0, draftKey = '', sample = false, activeDialog = null, dialogReturnFocus = null;
   const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const translate = text => window.TextaI18n?.text(text) || text;
+  let readingHeightFrame = 0;
+  function sizeReadingPanels() {
+    cancelAnimationFrame(readingHeightFrame);
+    readingHeightFrame = requestAnimationFrame(()=>{
+      if (!reading.getClientRects().length) return;
+      const top = reading.getBoundingClientRect().top + window.scrollY + parseFloat(getComputedStyle(reading).paddingTop);
+      const bottom = isMobileLayout() ? byId('mobileBottomNav').offsetHeight + 16 : 32;
+      const height = Math.max(320, Math.floor(window.innerHeight - top - bottom));
+      const value = `${height}px`;
+      if (reading.style.getPropertyValue('--reading-panel-height') !== value) reading.style.setProperty('--reading-panel-height',value);
+    });
+  }
+  const readingSizeObserver = new ResizeObserver(sizeReadingPanels);
+  [document.querySelector('.site-header'),input,byId('status').parentElement,reading].forEach(el=>readingSizeObserver.observe(el));
+  window.addEventListener('resize',sizeReadingPanels);
+  window.visualViewport?.addEventListener('resize',sizeReadingPanels);
 
   function showView(next) {
     view = next;
@@ -35,6 +51,7 @@
     if (next === 'notebook' && isMobileLayout()) currentMobilePage = 'article';
     refreshMobileNav();
     window.TextaI18n?.apply();
+    sizeReadingPanels();
   }
   homeButton.addEventListener('click',()=>showView('article'));
   byId('backToArticleBtn').addEventListener('click',()=>showView('article'));
@@ -47,6 +64,8 @@
     exampleNotice.classList.add('hidden');
     showView('article');
     if (isMobileLayout()) { currentMobilePage = 'article'; refreshMobileNav(); }
+    exportAreaEl.scrollTop = 0;
+    glossaryEl.scrollTop = 0;
     chooseDefinition(selectedWord || latestLexicon[0]?.key || keyifyWord(latestLexicon[0]?.word));
     enhanceArticle();
   });
@@ -54,13 +73,17 @@
   document.addEventListener('texta:open-article',()=>{
     showView('article');
     if (isMobileLayout()) { currentMobilePage = 'article'; refreshMobileNav(); }
-    requestAnimationFrame(()=>articleViewEl.scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'start'}));
+    requestAnimationFrame(()=>{
+      const bounds = articleViewEl.getBoundingClientRect();
+      if (bounds.top < 0 || bounds.bottom > window.innerHeight) articleViewEl.scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'start'});
+    });
   });
 
   function chooseDefinition(key) {
     const cards = [...glossaryEl.querySelectorAll('.glossary-item')];
     if (!cards.length) return;
     const target = cards.find(card=>card.dataset.wordKey === key) || cards[0];
+    if (selectedWord !== target.dataset.wordKey) glossaryEl.scrollTop = 0;
     selectedWord = target.dataset.wordKey;
     cards.forEach(card=>card.classList.toggle('active',card === target));
     if (wordSelect.value !== selectedWord) wordSelect.value = selectedWord;
@@ -205,12 +228,18 @@
     document.querySelectorAll('details[open]').forEach(detail=>{if(!detail.contains(event.target))detail.open=false;});
   });
   let pdfPromise;
-  window.TextaExports = {ensurePdf:()=>{
-    if (typeof window.html2pdf === 'function') return Promise.resolve();
-    if (!pdfPromise) pdfPromise = new Promise((resolve,reject)=>{
-      const script = document.createElement('script'); script.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
-      script.onload=resolve; script.onerror=()=>{pdfPromise=null;reject(new Error('PDF library could not load'));}; document.head.appendChild(script);
+  function loadPdfScript(src) {
+    return new Promise((resolve,reject)=>{
+      const script = document.createElement('script'); script.src=src;
+      script.onload=resolve; script.onerror=()=>{script.remove();reject(new Error('PDF library could not load'));}; document.head.appendChild(script);
     });
+  }
+  window.TextaExports = {ensurePdf:()=>{
+    if (typeof window.html2canvas === 'function' && window.jspdf?.jsPDF) return Promise.resolve();
+    if (!pdfPromise) pdfPromise = Promise.all([
+      typeof window.html2canvas === 'function' ? undefined : loadPdfScript('./vendor/html2canvas-1.4.1.min.js'),
+      window.jspdf?.jsPDF ? undefined : loadPdfScript('./vendor/jspdf-4.2.1.umd.min.js')
+    ]).catch(error=>{pdfPromise=null;throw error;});
     return pdfPromise;
   }};
   document.addEventListener('texta:imported',()=>{updateWordCount();saveDraft();});
