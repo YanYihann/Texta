@@ -4,8 +4,8 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f7f4"><title>Texta · 词汇学习</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./workspace.css?v=20261004-focus5">
-  <script src="./i18n.js?v=20261004-focus5" defer></script>
+  <link rel="stylesheet" href="./workspace.css?v=20261004-themes6">
+  <script src="./i18n.js?v=20261004-themes6" defer></script>
 </head>
 <body class="workspace-page">
   <a class="skip-link" href="#words">跳到词汇输入</a>
@@ -26,7 +26,7 @@
           <div class="user-row"><span id="userBadge" class="user-badge">连接账户中…</span><button id="logoutBtn" class="hidden" type="button">退出登录</button></div>
           <div id="usageCard" class="usage-card"><div id="usageText">今日剩余次数：—</div><a id="upgradeVipBtn" class="hidden" href="./pay.html">升级 VIP（10 元，每日 50 次）</a><a id="adminReviewLink" class="hidden" href="./admin.html">VIP 审核</a><a id="adminUsageLink" class="hidden" href="./admin-usage.html">用户使用查看</a></div>
           <button id="openGuideBtn" type="button">使用说明</button>
-          <div id="themeTools"></div>
+          <p class="theme-heading">主题样式</p><div id="themeTools"></div>
         </div>
       </details>
     </div>
@@ -65,7 +65,7 @@
           <p id="missingWords" class="warning"></p>
           <section id="exportArea" class="export-area" tabindex="0" aria-label="文章阅读"><h3 id="articleTitle" class="article-title"></h3><div id="articleBlocks" class="article-blocks"></div><p id="sampleArticleNotice" class="sample-notice hidden">示例文章</p></section>
         </div>
-        <div id="notebookView" class="result-view notebook-view hidden"><div class="notebook-view-head"><h2>生词本</h2><span id="notebookCount">0 个单词</span></div><div class="notebook-export-actions"><button id="notebookExportPdfBtn" type="button" disabled>导出 PDF</button><button id="notebookExportWordBtn" type="button" disabled>导出 Word</button></div><div class="notebook-toolbar"><label class="sr-only" for="notebookSearchInput">搜索生词</label><input id="notebookSearchInput" type="search" placeholder="搜索单词、释义或搭配"><label class="sr-only" for="notebookPosFilter">筛选词性</label><select id="notebookPosFilter"><option value="all">全部词性</option></select></div><div id="notebookEntries" class="notebook-entries"></div></div>
+        <div id="notebookView" class="result-view notebook-view hidden"><div class="notebook-view-head"><h2>生词本</h2><span id="notebookCount">0 个单词</span></div><div class="notebook-view-actions"><div class="notebook-layout-toggle" role="group" aria-label="生词本视图"><button type="button" data-notebook-view="list" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>列表</button><button type="button" data-notebook-view="cards" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>卡片</button></div><div class="notebook-export-actions"><button id="notebookExportPdfBtn" type="button" disabled>导出 PDF</button><button id="notebookExportWordBtn" type="button" disabled>导出 Word</button></div></div><div class="notebook-toolbar"><label class="sr-only" for="notebookSearchInput">搜索生词</label><input id="notebookSearchInput" type="search" placeholder="搜索单词、释义或搭配"><label class="sr-only" for="notebookPosFilter">筛选词性</label><select id="notebookPosFilter"><option value="all">全部词性</option></select></div><div id="notebookEntries" class="notebook-entries" data-view="list"></div></div>
       </section>
       <aside id="glossaryPanel" class="glossary-panel hidden" aria-label="词汇解析">
         <div class="glossary-heading"><h2>词汇解析</h2><div class="definition-pagination"><button id="previousWordBtn" type="button" aria-label="上一个单词"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><span id="definitionCount">—</span><button id="nextWordBtn" type="button" aria-label="下一个单词"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div><button id="closeFocusDefinitionBtn" type="button" aria-label="关闭词汇解析"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
@@ -140,4 +140,4 @@
       </div>
     </section>
 
-<script src="./site-config.js?v=20261004-focus5"></script><script src="./app.js?v=20261004-focus5"></script><script src="./workspace.js?v=20261004-focus5"></script></body></html>
+<script src="./site-config.js?v=20261004-themes6"></script><script src="./app.js?v=20261004-themes6"></script><script src="./workspace.js?v=20261004-themes6"></script></body></html>

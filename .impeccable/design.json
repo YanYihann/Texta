@@ -1,8 +1,105 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-03T22:37:03.697981Z",
+  "generatedAt": "2026-10-04T07:38:25.8204066Z",
   "title": "Design System: Texta",
   "extensions": {
+    "themes": {
+      "highlighter": {
+        "selector": ":root[data-theme=\"highlighter\"]",
+        "tokens": {
+          "bg": "{colors.highlighter-bg}",
+          "panel": "{colors.highlighter-panel}",
+          "field": "{colors.highlighter-field}",
+          "text": "{colors.highlighter-text}",
+          "muted": "{colors.highlighter-muted}",
+          "line": "{colors.highlighter-line}",
+          "primary": "{colors.highlighter-primary}",
+          "primary-press": "{colors.highlighter-primary-press}",
+          "soft": "{colors.highlighter-soft}",
+          "highlight-en": "{colors.highlighter-highlight-en}",
+          "highlight-zh": "{colors.highlighter-highlight-zh}",
+          "vocab-ink": "{colors.highlighter-vocab-ink}",
+          "annotation": "{colors.highlighter-annotation}"
+        },
+        "inherits": [
+          "white",
+          "warning",
+          "overlay",
+          "shadow"
+        ]
+      },
+      "paper": {
+        "selector": ":root[data-theme=\"paper\"]",
+        "tokens": {
+          "bg": "{colors.paper-bg}",
+          "panel": "{colors.paper-panel}",
+          "field": "{colors.paper-field}",
+          "text": "{colors.paper-text}",
+          "muted": "{colors.paper-muted}",
+          "line": "{colors.paper-line}",
+          "primary": "{colors.paper-primary}",
+          "primary-press": "{colors.paper-primary-press}",
+          "soft": "{colors.paper-soft}",
+          "highlight-en": "{colors.paper-highlight-en}",
+          "highlight-zh": "{colors.paper-highlight-zh}",
+          "annotation": "{colors.paper-annotation}"
+        },
+        "inherits": [
+          "white",
+          "warning",
+          "overlay",
+          "shadow"
+        ]
+      },
+      "ocean": {
+        "selector": ":root[data-theme=\"ocean\"]",
+        "tokens": {
+          "bg": "{colors.ocean-bg}",
+          "panel": "{colors.ocean-panel}",
+          "field": "{colors.ocean-field}",
+          "text": "{colors.ocean-text}",
+          "muted": "{colors.ocean-muted}",
+          "line": "{colors.ocean-line}",
+          "primary": "{colors.ocean-primary}",
+          "primary-press": "{colors.ocean-primary-press}",
+          "soft": "{colors.ocean-soft}",
+          "highlight-en": "{colors.ocean-highlight-en}",
+          "highlight-zh": "{colors.ocean-highlight-zh}",
+          "annotation": "{colors.ocean-annotation}"
+        },
+        "inherits": [
+          "white",
+          "warning",
+          "overlay",
+          "shadow"
+        ]
+      },
+      "lavender": {
+        "selector": ":root[data-theme=\"lavender\"]",
+        "tokens": {
+          "bg": "{colors.lavender-bg}",
+          "panel": "{colors.lavender-panel}",
+          "field": "{colors.lavender-field}",
+          "text": "{colors.lavender-text}",
+          "muted": "{colors.lavender-muted}",
+          "line": "{colors.lavender-line}",
+          "primary": "{colors.lavender-primary}",
+          "primary-press": "{colors.lavender-primary-press}",
+          "soft": "{colors.lavender-soft}",
+          "highlight-en": "{colors.lavender-highlight-en}",
+          "highlight-zh": "{colors.lavender-highlight-zh}",
+          "annotation": "{colors.lavender-annotation}"
+        },
+        "inherits": [
+          "white",
+          "warning",
+          "overlay",
+          "shadow"
+        ]
+      }
+    },
+    "aliases": { "annotation": "muted", "vocab-ink": "primary" },
+    "preferences": { "theme": "texta_theme_preference", "notebookView": "texta_notebook_view", "defaultTheme": "light", "defaultNotebookView": "list" },
     "colorMeta": {
       "bg": {
         "role": "neutral",
@@ -545,7 +642,7 @@
       "refersTo": "vocabulary-highlight",
       "description": "Inline vocabulary control linked to the selected definition.",
       "html": "<p class=\"ds-reading\">We can build a <mark class=\"ds-vocab\" role=\"button\" tabindex=\"0\" aria-label=\"词汇解析: resilient\">resilient</mark> community.</p>",
-      "css": ".ds-reading{font:22px/1.5 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);color:var(--text,#222724);margin:0;}.ds-vocab{background:var(--highlight-en,#dae8d4);color:var(--primary,#386548);border-radius:3px;padding:0 3px;cursor:pointer;transition:background var(--fast,160ms);}.ds-vocab:hover,.ds-vocab:focus-visible{background:var(--highlight-zh,#e3ebdc);text-decoration:underline;}.ds-vocab:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-vocab{animation:none;transition-duration:.01ms;}}"
+      "css": ".ds-reading{font:22px/1.5 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);color:var(--text,#222724);margin:0;}.ds-vocab{background:var(--highlight-en,#dae8d4);color:var(--vocab-ink,var(--primary,#386548));font-weight:700;border-radius:3px;padding:0 3px;cursor:pointer;transition:background var(--fast,160ms);}.ds-vocab:hover,.ds-vocab:focus-visible{background:var(--highlight-zh,#e3ebdc);text-decoration:underline;}.ds-vocab:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-vocab{animation:none;transition-duration:.01ms;}}"
     }
   ],
   "narrative": {
@@ -590,7 +687,7 @@
       },
       {
         "name": "The Focus Reading Rule",
-        "body": "Collapse the article toolbar as content scrolls down and restore it at the top. Focus mode hides navigation and toolbars, announces ESC exit, and supplies a touch exit control. Highlighted words open a closable definition overlay without changing article position; background hydration never reopens it. Notebook cards span the entire study grid.",
+        "body": "Collapse the article toolbar as content scrolls down and restore it at the top. Focus mode hides navigation and toolbars, announces ESC exit, and supplies a touch exit control. Highlighted words open a closable definition overlay without changing article position; background hydration never reopens it. Notebook content spans the entire study grid; list rows are the default and card mode remains selectable.",
         "section": "layout"
       },
       {
@@ -600,7 +697,7 @@
       }
     ],
     "dos": [
-      "**Do** preserve the warm neutral, ink and sage roles across themes.",
+      "**Do** preserve warm neutral, ink and sage as the default; optional palettes retain the same semantic roles and readable state cues.",
       "**Do** use the display, reading and interface font roles for their documented purposes.",
       "**Do** preserve generous reading space and collapse the study grid for narrow screens.",
       "**Do** pair selected vocabulary, mastery and navigation colors with readable text and accessible state.",

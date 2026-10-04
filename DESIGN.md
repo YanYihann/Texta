@@ -29,6 +29,55 @@ colors:
   dark-warning: "#ffb5a3"
   dark-highlight-en: "#435c37"
   dark-highlight-zh: "#374f3b"
+  highlighter-bg: "#fff"
+  highlighter-panel: "#fff"
+  highlighter-field: "#fff"
+  highlighter-text: "#202124"
+  highlighter-muted: "#626266"
+  highlighter-line: "#dededb"
+  highlighter-primary: "#705900"
+  highlighter-primary-press: "#574400"
+  highlighter-soft: "#fffbe5"
+  highlighter-highlight-en: "#fff200"
+  highlighter-highlight-zh: "#fff77a"
+  highlighter-vocab-ink: "#202124"
+  highlighter-annotation: "#b4232c"
+  paper-bg: "#f7f0e2"
+  paper-panel: "#fffaf0"
+  paper-field: "#fffaf0"
+  paper-text: "#352b21"
+  paper-muted: "#75624c"
+  paper-line: "#dfcfb9"
+  paper-primary: "#78522e"
+  paper-primary-press: "#5e3d20"
+  paper-soft: "#eee1cb"
+  paper-highlight-en: "#f4d79f"
+  paper-highlight-zh: "#f1e0bc"
+  paper-annotation: "#935022"
+  ocean-bg: "#f2f7fa"
+  ocean-panel: "#fbfdff"
+  ocean-field: "#fbfdff"
+  ocean-text: "#1f3340"
+  ocean-muted: "#526e7e"
+  ocean-line: "#ccdde7"
+  ocean-primary: "#235f83"
+  ocean-primary-press: "#194969"
+  ocean-soft: "#e0eef5"
+  ocean-highlight-en: "#c8e8fa"
+  ocean-highlight-zh: "#d6edf7"
+  ocean-annotation: "#235f83"
+  lavender-bg: "#f7f4fa"
+  lavender-panel: "#fdfbff"
+  lavender-field: "#fdfbff"
+  lavender-text: "#33283f"
+  lavender-muted: "#71617e"
+  lavender-line: "#ded4e7"
+  lavender-primary: "#70508d"
+  lavender-primary-press: "#56366f"
+  lavender-soft: "#ede4f4"
+  lavender-highlight-en: "#e0cef3"
+  lavender-highlight-zh: "#eadef5"
+  lavender-annotation: "#805066"
 typography:
   display:
     fontFamily: '"Texta Serif", Georgia, "Songti SC", "SimSun", serif'
@@ -67,6 +116,11 @@ typography:
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.65
+  reading-vocabulary:
+    fontFamily: 'Georgia, "Times New Roman", "Songti SC", "SimSun", serif'
+    fontSize: "inherit"
+    fontWeight: 700
+    lineHeight: "inherit"
 rounded:
   control: "8px"
   panel: "10px"
@@ -128,6 +182,7 @@ components:
   vocabulary-highlight:
     backgroundColor: "{colors.highlight-en}"
     textColor: "{colors.primary}"
+    typography: "{typography.reading-vocabulary}"
     rounded: "{rounded.highlight}"
     padding: "0 3px"
 ---
@@ -175,7 +230,7 @@ The palette pairs warm whites and green-tinted ink with a muted sage accent. Fro
 
 **The Study State Rule.** Use sage to identify an action, selected study state or vocabulary relationship; carry meaning with text and state attributes as well as color.
 
-Light is the default. Dark and system choices remap the same CSS roles; `dark-*` frontmatter values record the explicit overrides. Dark mode inherits the backdrop and shadow from the base theme. Sources: [light and dark tokens](/D:/wku/雅思/单词/public/workspace.css:5), [theme preference](/D:/wku/雅思/单词/public/app.js:109).
+Light sage remains the default. Dark and system choices remap the same CSS roles; `dark-*` frontmatter values record the explicit overrides. Optional highlighter, paper, ocean and lavender palettes use the same semantic roles, recorded under their frontmatter prefixes. Highlighter combines white ground, yellow vocabulary marks and red annotations; paper uses warm parchment, ocean cool blue and lavender muted violet. The `annotation` alias follows `muted` unless a palette explicitly overrides it; `vocab-ink` follows `primary` except for highlighter's explicit ink. Highlighter also applies annotation color to Chinese paragraphs and sense markers. All optional palettes inherit the base action foreground, warning, backdrop and shadow. Theme preference persists locally under `texta_theme_preference`. Sources: [theme tokens](/D:/wku/雅思/单词/public/workspace.css:5), [theme preference](/D:/wku/雅思/单词/public/app.js:111).
 
 ## Typography
 
@@ -194,6 +249,7 @@ Light is the default. Dark and system choices remap the same CSS roles; `dark-*`
 - **Definition word:** the `definition-word` role, carrying the selected English vocabulary item.
 - **Title:** section headings and the vocabulary label use the `title` role.
 - **Body:** UI text uses `body`; English article paragraphs use `reading`; Chinese article paragraphs use `translation`.
+- **Reading vocabulary:** supplied English vocabulary uses bold weight (700), retaining the paragraph's size and line height in every palette.
 - **Supporting text:** controls commonly use 14px; real help/status text uses 13px. These are functional explanations, not decorative eyebrows.
 
 ### Named Rules
@@ -206,9 +262,9 @@ Reading-size controls supply small and large English prose variants (20px and 26
 
 The shared shell uses 90% width with a 1700px maximum. The implemented study surface has full-width top navigation and separate editing and reading states. Vocabulary entry and generation settings share the editing grid; article and definitions share the reading grid. Successful generation and opening a saved article hide the editing grid automatically. The reading toolbar offers “修改词汇” to reopen the editor with existing words and settings, and the editor offers “返回文章” to resume the current article without regeneration. Both use `minmax(0,2.15fr) minmax(310px,1fr)` and a 40px gap. This is the chosen C study surface, not a mandatory grid for every auxiliary page.
 
-At 1100px and below the grids become `minmax(0,1.7fr) minmax(290px,1fr)` with a 24px gap. At 860px and below the input stacks, the reading area becomes a block and the mobile learning navigation fixes to the bottom with safe-area padding. At 1600px and above the grid gap becomes 56px. Article and definition panels share the available viewport height, with independently scrolling content and hidden scrollbars. The article toolbar collapses upward as the article scrolls down and returns only when it reaches the top. The definition toolbar remains outside its scrolling content. Wheel, touch and keyboard navigation stay available; reaching a pane boundary does not scroll the other pane. Focus reading narrows the article to a 920px maximum and hides the input, navigation, reading toolbar and default definition panel. A brief ESC hint announces how to exit; touch layouts also provide an exit button. Selecting highlighted vocabulary opens the definition panel as a fixed, independently scrolling dialog with a persistent close control. Closing it preserves the article position and cannot be undone by a background definition refresh. Notebook content spans the full reading grid and distributes cards across the available width.
+At 1100px and below the grids become `minmax(0,1.7fr) minmax(290px,1fr)` with a 24px gap. At 860px and below the input stacks, the reading area becomes a block and the mobile learning navigation fixes to the bottom with safe-area padding. At 1600px and above the grid gap becomes 56px. Article and definition panels share the available viewport height, with independently scrolling content and hidden scrollbars. The article toolbar collapses upward as the article scrolls down and returns only when it reaches the top. The definition toolbar remains outside its scrolling content. Wheel, touch and keyboard navigation stay available; reaching a pane boundary does not scroll the other pane. Focus reading narrows the article to a 920px maximum and hides the input, navigation, reading toolbar and default definition panel. A brief ESC hint announces how to exit; touch layouts also provide an exit button. Selecting highlighted vocabulary opens the definition panel as a fixed, independently scrolling dialog with a persistent close control. Closing it preserves the article position and cannot be undone by a background definition refresh. Notebook content spans the full reading grid, defaults to divided list rows and offers a card toggle.
 
-Use the extracted spacing scale for repeated gaps and padding. Article paragraphs remain open on the page with a 24px bottom separation; notebook entries use an adaptive grid with a 340px target minimum that can shrink to the available width. Auxiliary authentication, payment and administration pages retain their own layouts while sharing the visual roles.
+Use the extracted spacing scale for repeated gaps and padding. Article paragraphs remain open on the page with a 24px bottom separation; notebook card mode uses an adaptive grid with a 340px target minimum that can shrink to the available width; default list mode uses one column with divided rows. Auxiliary authentication, payment and administration pages retain their own layouts while sharing the visual roles.
 
 Sources: [shell and input grid](/D:/wku/雅思/单词/public/workspace.css:73), [reading grid](/D:/wku/雅思/单词/public/workspace.css:106), [responsive rules](/D:/wku/雅思/单词/public/workspace.css:248).
 
@@ -246,6 +302,8 @@ Small functional vocabulary annotations using sage wash and sage text; invalid c
 
 Definitions and notebook entries use the sage tonal container with quiet section rules. Floating account/export popovers and dialogs use paper, the floating radius and ambient shadow. Article paragraphs are open containers. Favorites and history use divided rows with a sage hover/focus fill.
 
+Notebook review defaults to full-width divided list rows showing the word, meaning and mastery actions; examples and dictionary details live in an expandable disclosure. The list/cards toggle uses `aria-pressed` and preserves the selection locally under `texta_notebook_view`. Card mode retains the adaptive tonal grid; list rows stack on narrow screens. Expanded details survive rerendering while the entry remains visible.
+
 ### Inputs / Fields
 
 Fields use the paper field color, quiet border, control radius and 44px minimum height. Focus shifts the border to sage while preserving a visible keyboard outline. The vocabulary textarea uses Georgia and remains vertically resizable. Settings selects use sage wash. Validation pairs warning-colored status with the input's invalid state.
@@ -266,7 +324,7 @@ Color/border changes use the fast duration; tabs and floating reveals use the no
 
 ### Do:
 
-- **Do** preserve the warm neutral, ink and sage roles across themes.
+- **Do** preserve warm neutral, ink and sage as the default; optional palettes retain the same semantic roles and readable state cues.
 - **Do** use the display, reading and interface font roles for their documented purposes.
 - **Do** preserve generous reading space and collapse the study grid for narrow screens.
 - **Do** pair selected vocabulary, mastery and navigation colors with readable text and accessible state.

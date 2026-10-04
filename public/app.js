@@ -109,6 +109,17 @@ const VOCAB_PREFS_KEY = "texta_vocab_prefs_v1";
 const NOTEBOOK_KEY = "texta_notebook_v1";
 const GUIDE_FORCE_OPEN_KEY = "texta_guide_force_open";
 const THEME_PREF_KEY = "texta_theme_preference";
+const NOTEBOOK_VIEW_KEY = "texta_notebook_view";
+const THEME_OPTIONS = [
+  { value: "light", label: "浅色" },
+  { value: "highlighter", label: "荧光批注" },
+  { value: "paper", label: "暖纸" },
+  { value: "ocean", label: "海蓝" },
+  { value: "lavender", label: "薰衣草" },
+  { value: "dark", label: "深色" },
+  { value: "system", label: "系统" }
+];
+let notebookViewMode = localStorage.getItem(NOTEBOOK_VIEW_KEY) === "cards" ? "cards" : "list";
 let favorites = [];
 let historyEntries = [];
 let vocabPrefs = {};
@@ -354,9 +365,8 @@ function themeIconSvg(mode) {
 }
 
 function resolveTheme(preference) {
-  if (preference === "dark") return "dark";
-  if (preference === "light") return "light";
-  return themeMediaQuery?.matches ? "dark" : "light";
+  if (preference === "system") return themeMediaQuery?.matches ? "dark" : "light";
+  return THEME_OPTIONS.some(item => item.value === preference) ? preference : "light";
 }
 
 function syncThemeToggleState() {
@@ -367,7 +377,7 @@ function syncThemeToggleState() {
     const value = String(node.getAttribute("data-theme-value") || "");
     const isActive = value === themePreference;
     node.classList.toggle("is-active", isActive);
-    node.setAttribute("aria-checked", isActive ? "true" : "false");
+    node.setAttribute("aria-pressed", String(isActive));
   });
 }
 
@@ -386,26 +396,22 @@ function ensureThemeToggle(containerEl) {
     wrap = document.createElement("div");
     wrap.id = "themeToggle";
     wrap.className = "theme-toggle-mini";
-    wrap.setAttribute("role", "radiogroup");
+    wrap.setAttribute("role", "group");
     wrap.setAttribute("aria-label", "主题切换");
-    const options = [
-      { value: "system", label: "系统" },
-      { value: "light", label: "浅色" },
-      { value: "dark", label: "深色" }
-    ];
+    const options = THEME_OPTIONS;
     wrap.innerHTML = options
       .map(
         (item) => `
           <button
             type="button"
             class="theme-toggle-btn"
-            role="radio"
-            aria-checked="false"
+            aria-pressed="false"
             data-theme-value="${item.value}"
             aria-label="${item.label}"
             title="${item.label}"
           >
-            ${themeIconSvg(item.value)}
+            ${["system", "light", "dark"].includes(item.value) ? themeIconSvg(item.value) : `<span class="theme-swatch" data-palette="${item.value}" aria-hidden="true"></span>`}
+            <span>${item.label}</span>
           </button>
         `
       )
@@ -2123,6 +2129,8 @@ function applyMobilePageLayout() {
     currentMobilePage = "article";
   }
 
+  if (document.querySelector('.reading-workspace')?.dataset.view === "notebook") currentMobilePage = "article";
+
   if (currentMobilePage === "article" && !hasArticlePage()) {
     currentMobilePage = "home";
   }
@@ -2821,6 +2829,7 @@ function buildStudyControls(item) {
   masteredBtn.setAttribute("data-action", "mastery");
   masteredBtn.setAttribute("data-word-key", key);
   masteredBtn.setAttribute("data-mastery", "mastered");
+  masteredBtn.setAttribute("aria-pressed", String(isMastered));
   masteredBtn.textContent = "已掌握";
 
   const unknownBtn = document.createElement("button");
@@ -2829,6 +2838,7 @@ function buildStudyControls(item) {
   unknownBtn.setAttribute("data-action", "mastery");
   unknownBtn.setAttribute("data-word-key", key);
   unknownBtn.setAttribute("data-mastery", "unknown");
+  unknownBtn.setAttribute("aria-pressed", String(isUnknown));
   unknownBtn.textContent = "陌生";
 
   group.appendChild(masteredBtn);
@@ -3024,6 +3034,11 @@ function renderGlossary(lexicon) {
 
 function renderNotebookView() {
   if (!notebookEntriesEl || !notebookCountEl) return;
+  notebookEntriesEl.dataset.view = notebookViewMode;
+  document.querySelectorAll("[data-notebook-view]").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.notebookView === notebookViewMode));
+  });
+  const expandedKeys = new Set(Array.from(notebookEntriesEl.querySelectorAll(".notebook-details[open]"), detail => detail.closest(".glossary-item").dataset.wordKey));
   const rows = getNotebookEntriesSorted();
   syncNotebookFilters(rows);
   const filteredRows = filterNotebookRows(rows);
@@ -3050,7 +3065,22 @@ function renderNotebookView() {
   }
 
   const frag = document.createDocumentFragment();
-  filteredRows.forEach((item) => frag.appendChild(renderLexiconCard(item)));
+  filteredRows.forEach((item) => {
+    const card = renderLexiconCard(item);
+    if (notebookViewMode === "list") {
+      const summary = card.querySelector(".definition-summary");
+      if (summary) summary.textContent = sanitizeGlossTextForUi(item.summary || (item.senses || []).map(sense => sense.meaning).filter(Boolean).join("；"), 220);
+      const detail = document.createElement("details");
+      detail.className = "notebook-details";
+      detail.open = expandedKeys.has(card.dataset.wordKey);
+      const toggle = document.createElement("summary");
+      toggle.textContent = "查看详情";
+      detail.appendChild(toggle);
+      Array.from(card.children).filter(child => !child.matches(".glossary-head,.definition-summary,.study-controls")).forEach(child => detail.appendChild(child));
+      card.appendChild(detail);
+    }
+    frag.appendChild(card);
+  });
   notebookEntriesEl.replaceChildren(frag);
   if (currentLibraryMode === "notebook" && !notebookPrefetchInFlight) {
     void prefetchNotebookVocabDetails(filteredRows);
@@ -3074,6 +3104,7 @@ const EXPORT_DOCUMENT_STYLES = `
 .export-document .para-en { color:#202b24; margin:0; font-family:Georgia,"Microsoft YaHei",serif; font-size:19px; line-height:1.7; white-space:pre-wrap; }
 .export-document .para-zh { margin:10px 0 0; font-size:16px; line-height:1.8; white-space:pre-wrap; color:#4d5e52; }
 .export-document mark,.export-document .vocab-en-inline,.export-document .vocab-zh-inline { background:#e4eddd; color:inherit; padding:0 2px; border-radius:2px; }
+.export-document .vocab-en-inline { font-weight:700; }
 .export-document .sense-marker { font-size:11px; vertical-align:super; }
 .export-document table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:15px; }
 .export-document th { background:#edf2eb; text-align:left; font-weight:600; }
@@ -3621,6 +3652,14 @@ addUnknownToNotebookBtnEl?.addEventListener("click", () => {
 notebookSearchInputEl?.addEventListener("input", () => {
   notebookSearchTerm = String(notebookSearchInputEl.value || "");
   renderNotebookView();
+});
+
+document.querySelectorAll("[data-notebook-view]").forEach(button => {
+  button.addEventListener("click", () => {
+    notebookViewMode = button.dataset.notebookView === "cards" ? "cards" : "list";
+    try { localStorage.setItem(NOTEBOOK_VIEW_KEY, notebookViewMode); } catch { /* Keep the view usable without storage. */ }
+    renderNotebookView();
+  });
 });
 
 notebookPosFilterEl?.addEventListener("change", () => {
