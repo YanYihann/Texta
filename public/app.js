@@ -2399,6 +2399,7 @@ function updateGlossaryFollow(wordKeys) {
     const item = glossaryEl.querySelector(`.glossary-item[data-word-key=\"${key}\"]`);
     if (item) {
       item.classList.add("active");
+      loadVisibleContextTranslation(item);
       if (!target) target = item;
     }
   }
@@ -2843,6 +2844,58 @@ function buildStudyControls(item) {
   return wrap;
 }
 
+const contextTranslationCache = new Map();
+const contextTranslationRequests = new Map();
+const contextTranslationLoaders = new WeakMap();
+
+function loadVisibleContextTranslation(card) {
+  for (const context of card.querySelectorAll(".definition-section")) {
+    const load = contextTranslationLoaders.get(context);
+    if (load) { contextTranslationLoaders.delete(context); void load(); }
+  }
+}
+
+function splitContextSentences(text) {
+  const source = String(text || "").trim();
+  if (!source) return [];
+  if (typeof Intl.Segmenter === "function") return [...new Intl.Segmenter("en", { granularity: "sentence" }).segment(source)].map(row => row.segment.trim()).filter(Boolean);
+  return source.split(/(?<=[.!?。！？])\s+/u).filter(Boolean);
+}
+
+async function fetchContextTranslation(payload) {
+  const cacheKey = JSON.stringify(payload);
+  if (contextTranslationCache.has(cacheKey)) return contextTranslationCache.get(cacheKey);
+  if (contextTranslationRequests.has(cacheKey)) return contextTranslationRequests.get(cacheKey);
+  const request = (async () => {
+    const response = await apiFetch("/api/context/translation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), timeoutMs: 65000 });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !String(data.translation || "").trim()) throw new Error("Sentence translation unavailable");
+    const translation = String(data.translation).trim();
+    contextTranslationCache.set(cacheKey, translation);
+    if (contextTranslationCache.size > 200) contextTranslationCache.delete(contextTranslationCache.keys().next().value);
+    return translation;
+  })();
+  contextTranslationRequests.set(cacheKey, request);
+  try { return await request; } finally { contextTranslationRequests.delete(cacheKey); }
+}
+
+function renderContextTranslation(container, payload, termPairs, alignment, savedTranslation = "") {
+  const translationEl = document.createElement("p"); translationEl.className = "context-translation";
+  const status = document.createElement("span"); status.className = "context-translation-status"; status.setAttribute("role", "status");
+  container.appendChild(status); container.appendChild(translationEl);
+  const display = translation => { status.replaceChildren(); translationEl.innerHTML = highlightChineseWithAlignment(translation, termPairs, alignment); };
+  if (savedTranslation) { display(savedTranslation); return; }
+  const load = async () => {
+    status.textContent = "正在翻译例句…";
+    try { display(await fetchContextTranslation(payload)); }
+    catch {
+      status.textContent = "例句翻译暂时不可用。";
+      const retry = document.createElement("button"); retry.type = "button"; retry.textContent = "重试翻译"; retry.addEventListener("click", load); status.appendChild(retry);
+    }
+  };
+  contextTranslationLoaders.set(container, load);
+}
+
 function renderLexiconCard(item, showContext = false) {
   const word = String(item?.word || "").trim();
   const key = keyifyWord(item?.word || item?.key || "");
@@ -2951,17 +3004,19 @@ function renderLexiconCard(item, showContext = false) {
     const paragraphIndex = latestParagraphsEn.findIndex(matchesWord);
     if (paragraphIndex >= 0) {
       const paragraph = latestParagraphsEn[paragraphIndex];
-      const sentence = paragraph.split(/(?<=[.!?。！？])\s*/u).find(matchesWord) || paragraph;
+      const sentences = splitContextSentences(paragraph);
+      const sentence = sentences.find(matchesWord) || paragraph;
       const context = createSection("在本文中");
       const sentenceEl = document.createElement("p"); sentenceEl.className = "context-sentence"; sentenceEl.innerHTML = highlightEnglishWordsWithKeys(sentence, [word]);
       const sourceLabel = document.createElement("div"); sourceLabel.className = "context-translation-label"; sourceLabel.textContent = "原文例句";
       context.appendChild(sourceLabel); context.appendChild(sentenceEl);
       const translation = String(latestParagraphsZh[paragraphIndex] || "").trim();
-      if (translation) {
-        const label = document.createElement("div"); label.className = "context-translation-label"; label.textContent = "所在段落译文";
-        const translationEl = document.createElement("p"); translationEl.className = "context-translation"; translationEl.innerHTML = highlightChineseWithAlignment(translation, buildChineseTermKeyPairsFromAlignment(latestAlignment.filter(row => keyifyWord(row.word) === key), [item]), latestAlignment);
-        context.appendChild(label); context.appendChild(translationEl);
-      }
+      const alignment = latestAlignment.filter(row => keyifyWord(row.word) === key);
+      const termPairs = buildChineseTermKeyPairsFromAlignment(alignment, [item]);
+      const label = document.createElement("div"); label.className = "context-translation-label"; label.textContent = "例句译文";
+      context.appendChild(label);
+      renderContextTranslation(context, { sentence, paragraph, paragraphTranslation: translation, terms: termPairs.map(pair => pair.term) }, termPairs, latestAlignment,
+        sentences.length === 1 && translation && !/翻译生成失败/.test(translation) ? translation : "");
     }
   }
 

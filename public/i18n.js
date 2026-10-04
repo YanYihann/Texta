@@ -69,6 +69,7 @@
     [/^(\d+) 篇文章$/, n => `${n} articles`],
     [/^(\d+) 个词$/, n => `${n} words`],
     [/^本月 (\d+) 个词$/, n => `${n} words this month`],
+    [/^全年 (\d+) 个词$/, n => `${n} words this year`],
     [/^(.+) 加入的单词$/, date => `Words added on ${date}`],
     [/^删除 (.+)$/, word => `Delete ${word}`],
     [/^(.+) 的词汇详情$/, word => `Word details for ${word}`],
@@ -93,8 +94,9 @@
   ];
   dictionary['注册 Texta'] = 'Create a Texta account';
   dictionary['在本文中'] = 'In this article';
-  dictionary['词义'] = 'Meanings'; dictionary['常见搭配'] = 'Collocations'; dictionary['词汇扩展'] = 'More word details'; dictionary['所在段落译文'] = 'Paragraph translation';
+  dictionary['词义'] = 'Meanings'; dictionary['常见搭配'] = 'Collocations'; dictionary['词汇扩展'] = 'More word details'; dictionary['例句译文'] = 'Sentence translation';
   Object.assign(dictionary, {
+    '日历视图':'Calendar view','上一年':'Previous year','下一年':'Next year','今年':'This year','正在翻译例句…':'Translating sentence…','例句翻译暂时不可用。':'Sentence translation is unavailable.','重试翻译':'Retry translation',
     'Texta 主页':'Texta home','PDF 导出失败，请重试。':'PDF export failed. Try again.',
     '返回主页面':'Back to study','升级 VIP':'Upgrade to VIP','支付 10 元可升级 VIP（每日 50 次）':'Pay ¥10 for VIP with 50 daily credits.',
     '收款码':'Payment QR code','扫码付款后，提交支付凭证供管理员审核。':'Scan to pay, then submit proof of payment for review.',

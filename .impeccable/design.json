@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-04T09:05:13.649Z",
+  "generatedAt": "2026-10-04T10:10:17.000Z",
   "title": "Design System: Texta",
   "extensions": {
     "themes": {
@@ -602,6 +602,21 @@
       "dark": "深色",
       "system": "系统"
     },
+    "contextTranslation": {
+      "sourceLabel": "原文例句",
+      "translationLabel": "例句译文",
+      "scope": "The actual English example sentence containing the selected vocabulary and its single-sentence Chinese translation.",
+      "sentenceBoundaries": "Intl.Segmenter(en, sentence), with punctuation fallback.",
+      "savedTranslation": "Reuse a valid saved paragraph translation only when the paragraph contains one English sentence.",
+      "request": "Authenticated POST /api/context/translation, loaded lazily for the selected definition; paragraph, paragraphTranslation and terms provide context.",
+      "sessionCache": {
+        "requestDeduplication": "An in-flight request map shares requests for the same payload and clears each entry on completion.",
+        "maxResults": 200,
+        "eviction": "Remove the oldest inserted result when the cache exceeds 200 translations."
+      },
+      "status": "A role=status region shows loading or unavailable state with a retry button; empty status and translation elements are hidden.",
+      "highlights": "Retain English vocabulary and aligned Chinese-term highlights; match overlapping Chinese terms once."
+    },
     "library": {
       "defaultSort": "az",
       "dateBasis": "first addition (createdAt), displayed in browser local time",
@@ -640,18 +655,40 @@
             "mobileNumberType": "23px"
           },
           "mini": {
-            "maxWidth": "336px",
-            "alignment": "left",
-            "declaredDayHeight": "40px",
-            "dateButtonMinHeight": "44px",
-            "effectiveGridTrackMinHeight": "44px",
-            "numberBox": "28px",
-            "numberType": "16px",
+            "mode": "annual",
+            "maxWidth": "1120px",
+            "alignment": "center",
+            "months": 12,
+            "cellsPerMonth": 42,
+            "weekRowsPerMonth": 6,
+            "columns": 4,
+            "columnBreakpoints": [
+              { "maxWidth": "1100px", "columns": 3 },
+              { "maxWidth": "820px", "columns": 2 },
+              { "maxWidth": "600px", "columns": 1 }
+            ],
+            "monthGap": "28px 24px",
+            "dayHeight": "32px",
+            "dateButtonMinHeight": "32px",
+            "blankHeight": "32px",
+            "numberBox": "26px",
+            "numberType": "15px",
+            "mobileBreakpoint": "600px",
+            "mobileMaxWidth": "336px",
+            "mobileDayHeight": "44px",
+            "mobileDateButtonMinHeight": "44px",
+            "mobileBlankHeight": "44px",
+            "mobileNumberBox": "28px",
+            "mobileNumberType": "16px",
+            "visibleMonthCounts": true,
+            "visibleYearCount": true,
             "visibleDayCounts": false,
-            "accessibleDayCounts": true
+            "accessibleDayCounts": true,
+            "eyebrow": false
           }
         },
-        "sizeBehavior": "Standard and thumbnail use the same month navigation, date selection and animations; size selection uses aria-pressed."
+        "sizeBehavior": "Standard uses month navigation and 本月; thumbnail shows twelve months with year navigation and 今年. Size selection uses aria-pressed and persists as standard or mini under texta_calendar_size. Selecting an addition date opens its filtered list with return and clear-date controls, and stores the selected month so standard shows that month.",
+        "animationTargets": "Standard calendar-grid and thumbnail calendar-year-grid use the shared grid transition; miniature inner grids do not animate separately. Reduced motion disables both grid targets and date markers."
       }
     }
   },
@@ -771,7 +808,7 @@
       },
       {
         "name": "The Focus Reading Rule",
-        "body": "Collapse the article toolbar as content scrolls down and restore it at the top. Focus mode hides navigation and toolbars, announces ESC exit, and supplies a touch exit control. Highlighted words open a closable definition overlay without changing article position; background hydration never reopens it. Notebook content spans the entire study grid; bold list rows are the default; cards and a first-addition calendar with centered standard and left-aligned thumbnail sizes remain selectable. Unfamiliar/mastered categories preserve complete entries. Library pages hide the mobile reading navigation.",
+        "body": "Collapse the article toolbar as content scrolls down and restore it at the top. Focus mode hides navigation and toolbars, announces ESC exit, and supplies a touch exit control. Highlighted words open a closable definition overlay without changing article position; background hydration never reopens it. Notebook content spans the entire study grid; bold list rows are the default; cards and a first-addition calendar with centered standard month and thumbnail annual views remain selectable. Unfamiliar/mastered categories preserve complete entries. Library pages hide the mobile reading navigation.",
         "section": "layout"
       },
       {
@@ -782,7 +819,7 @@
       {
         "name": "The Library Organization Rule",
         "section": "layout",
-        "body": "Notebook and favorites default to A–Z and offer first-added newest/oldest sorting and search. Notebook has unfamiliar/mastered categories and list/cards/calendar views. A separate chevron on the mastery row controls hidden details; only mastered entries offer deletion. Source actions open saved article snapshots and focus the word, with favorites/history fallback for older entries. Calendar offers a persistent standard/thumbnail size choice, marks addition days with fluorescent circles and opens a date-filtered list; reduced motion disables month and marker animations. Favorites folders support create, rename, move and delete while retaining articles."
+        "body": "Notebook and favorites default to A–Z and offer first-added newest/oldest sorting and search. Notebook has unfamiliar/mastered categories and list/cards/calendar views. A separate chevron on the mastery row controls hidden details; only mastered entries offer deletion. Source actions open saved article snapshots and focus the word, with favorites/history fallback for older entries. Calendar offers a persistent standard month/thumbnail annual choice; the annual overview shows twelve aligned six-week months, month and year counts, responsive four/three/two/one columns and year navigation. Addition dates use fluorescent circles and open a date-filtered list; selecting a date retains its month for standard view. Reduced motion disables standard month, annual grid and marker animations. Favorites folders support create, rename, move and delete while retaining articles."
       }
     ],
     "dos": [

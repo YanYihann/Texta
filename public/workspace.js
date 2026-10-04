@@ -103,6 +103,7 @@
     if (selectedWord !== target.dataset.wordKey) glossaryEl.scrollTop = 0;
     selectedWord = target.dataset.wordKey;
     cards.forEach(card=>card.classList.toggle('active',card === target));
+    loadVisibleContextTranslation(target);
     if (wordSelect.value !== selectedWord) wordSelect.value = selectedWord;
     byId('definitionCount').textContent = `${cards.indexOf(target) + 1} / ${cards.length}`;
     byId('previousWordBtn').disabled = cards.length < 2;

@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "test:library": "node tests/library-api.cjs",
+    "test:context": "node tests/context-translation.cjs",
     "postinstall": "prisma generate",
     "ui:audit": "impeccable detect public --fast",
     "ui:audit:json": "impeccable detect public --fast --json",

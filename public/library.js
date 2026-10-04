@@ -136,20 +136,27 @@ function renderNotebookCalendar(rows) {
   const calendar = document.getElementById("notebookCalendar");
   calendar.dataset.size = calendarSize;
   const year = calendarMonth.getFullYear(), month = calendarMonth.getMonth();
-  const days = new Date(year, month + 1, 0).getDate();
-  const offset = (new Date(year, month, 1).getDay() + 6) % 7;
   const counts = new Map();
   for (const item of rows) { const key = libraryDateKey(item.createdAt); counts.set(key, (counts.get(key) || 0) + 1); }
   const today = libraryDateKey(new Date());
-  const cells = Array.from({ length: Math.ceil((offset + days) / 7) * 7 }, (_, index) => {
+  const annual = calendarSize === "mini";
+  const monthCells = currentMonth => {
+    const days = new Date(year, currentMonth + 1, 0).getDate();
+    const offset = (new Date(year, currentMonth, 1).getDay() + 6) % 7;
+    return Array.from({ length: annual ? 42 : Math.ceil((offset + days) / 7) * 7 }, (_, index) => {
     const day = index - offset + 1;
     if (day < 1 || day > days) return '<div class="calendar-blank" aria-hidden="true"></div>';
-    const date = libraryDateKey(new Date(year, month, day));
+    const date = libraryDateKey(new Date(year, currentMonth, day));
     const count = counts.get(date) || 0;
-    return `<button type="button" class="calendar-day${count ? " has-words" : ""}${date === today ? " is-today" : ""}" data-calendar-date="${date}" ${count ? "" : "disabled"} ${date === today ? 'aria-current="date"' : ""} aria-label="${year}年${month + 1}月${day}日，${count} 个${notebookCategory === "mastered" ? "已掌握单词" : "生词"}"><span class="calendar-number" style="--day-delay:${index * 12}ms">${day}</span>${count ? `<span class="calendar-count">${count} 个词</span>` : ""}</button>`;
-  }).join("");
-  const monthCount = rows.filter(item => { const date = new Date(item.createdAt); return date.getFullYear() === year && date.getMonth() === month; }).length;
-  calendar.innerHTML = `<div class="calendar-heading"><div><p class="calendar-eyebrow">按首次加入日期查看</p><h3 aria-live="polite">${year}<span>年</span> ${String(month + 1).padStart(2, "0")}<span>月</span></h3></div><div class="calendar-size-toggle" role="group" aria-label="日历大小"><button type="button" data-calendar-size="standard" aria-pressed="${calendarSize === "standard"}">标准</button><button type="button" data-calendar-size="mini" aria-pressed="${calendarSize === "mini"}">缩略图</button></div><div class="calendar-navigation"><button type="button" data-calendar-month="-1" aria-label="上个月">‹</button><button type="button" data-calendar-today>本月</button><button type="button" data-calendar-month="1" aria-label="下个月">›</button></div></div><div class="calendar-weekdays">${["一", "二", "三", "四", "五", "六", "日"].map(day => `<span>${day}</span>`).join("")}</div><div class="calendar-grid" style="--month-direction:${calendarDirection}">${cells}</div><div class="calendar-footer"><span><i aria-hidden="true"></i> 荧光圈标记加入日期 · 点击查看单词</span><span>本月 ${monthCount} 个词</span></div>`;
+    return `<button type="button" class="calendar-day${count ? " has-words" : ""}${date === today ? " is-today" : ""}" data-calendar-date="${date}" ${count ? "" : "disabled"} ${date === today ? 'aria-current="date"' : ""} aria-label="${year}年${currentMonth + 1}月${day}日，${count} 个${notebookCategory === "mastered" ? "已掌握单词" : "生词"}"><span class="calendar-number" style="--day-delay:${index * 12}ms">${day}</span>${count ? `<span class="calendar-count">${count} 个词</span>` : ""}</button>`;
+    }).join("");
+  };
+  const monthCount = currentMonth => rows.filter(item => { const date = new Date(item.createdAt); return date.getFullYear() === year && date.getMonth() === currentMonth; }).length;
+  const weekdays = `<div class="calendar-weekdays">${["一", "二", "三", "四", "五", "六", "日"].map(day => `<span>${day}</span>`).join("")}</div>`;
+  const body = annual ? `<div class="calendar-year-grid" style="--month-direction:${calendarDirection}">${Array.from({ length: 12 }, (_, index) => `<section class="calendar-mini-month" aria-label="${year}年${index + 1}月"><div class="calendar-month-heading"><h4>${String(index + 1).padStart(2, "0")}<span>月</span></h4><span>${monthCount(index)} 个词</span></div>${weekdays}<div class="calendar-grid">${monthCells(index)}</div></section>`).join("")}</div>` : `${weekdays}<div class="calendar-grid" style="--month-direction:${calendarDirection}">${monthCells(month)}</div>`;
+  const count = annual ? rows.filter(item => new Date(item.createdAt).getFullYear() === year).length : monthCount(month);
+  const navigationUnit = annual ? "year" : "month";
+  calendar.innerHTML = `<div class="calendar-heading"><div>${annual ? "" : '<p class="calendar-eyebrow">按首次加入日期查看</p>'}<h3 aria-live="polite">${year}<span>年</span>${annual ? "" : ` ${String(month + 1).padStart(2, "0")}<span>月</span>`}</h3></div><div class="calendar-size-toggle" role="group" aria-label="日历视图"><button type="button" data-calendar-size="standard" aria-pressed="${!annual}">标准</button><button type="button" data-calendar-size="mini" aria-pressed="${annual}">缩略图</button></div><div class="calendar-navigation"><button type="button" data-calendar-${navigationUnit}="-1" aria-label="${annual ? "上一年" : "上个月"}">‹</button><button type="button" data-calendar-today>${annual ? "今年" : "本月"}</button><button type="button" data-calendar-${navigationUnit}="1" aria-label="${annual ? "下一年" : "下个月"}">›</button></div></div>${body}<div class="calendar-footer"><span><i aria-hidden="true"></i> 荧光圈标记加入日期 · 点击查看单词</span><span>${annual ? "全年" : "本月"} ${count} 个词</span></div>`;
 }
 
 document.getElementById("notebookSort").addEventListener("change", event => { notebookSort = event.target.value; renderNotebookView(); });
@@ -159,11 +166,13 @@ document.querySelectorAll("[data-notebook-category]").forEach(button => button.a
 document.getElementById("notebookCalendar").addEventListener("click", event => {
   const sizeButton = event.target.closest("[data-calendar-size]");
   if (sizeButton) { calendarSize = sizeButton.dataset.calendarSize; localStorage.setItem("texta_calendar_size", calendarSize); renderNotebookView(); document.querySelector(`[data-calendar-size="${calendarSize}"]`).focus(); return; }
+  const yearButton = event.target.closest("[data-calendar-year]");
+  if (yearButton) { calendarDirection = Number(yearButton.dataset.calendarYear); calendarMonth = new Date(calendarMonth.getFullYear() + calendarDirection, calendarMonth.getMonth(), 1); renderNotebookView(); document.querySelector(`[data-calendar-year="${calendarDirection}"]`).focus(); return; }
   const monthButton = event.target.closest("[data-calendar-month]");
   if (monthButton) { calendarDirection = Number(monthButton.dataset.calendarMonth); calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + calendarDirection, 1); renderNotebookView(); document.querySelector(`[data-calendar-month="${calendarDirection}"]`).focus(); return; }
   if (event.target.closest("[data-calendar-today]")) { calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1); renderNotebookView(); document.querySelector("[data-calendar-today]").focus(); return; }
   const dateButton = event.target.closest("[data-calendar-date]");
-  if (dateButton && !dateButton.disabled) { notebookDateFilter = dateButton.dataset.calendarDate; notebookViewMode = "list"; renderNotebookView(); document.getElementById("backToCalendarBtn").focus(); }
+  if (dateButton && !dateButton.disabled) { notebookDateFilter = dateButton.dataset.calendarDate; const [year, month] = notebookDateFilter.split("-").map(Number); calendarMonth = new Date(year, month - 1, 1); notebookViewMode = "list"; renderNotebookView(); document.getElementById("backToCalendarBtn").focus(); }
 });
 document.getElementById("backToCalendarBtn").addEventListener("click", () => { notebookDateFilter = ""; notebookViewMode = "calendar"; renderNotebookView(); document.querySelector("[data-calendar-today]").focus(); });
 document.getElementById("clearNotebookDateBtn").addEventListener("click", () => { notebookDateFilter = ""; renderNotebookView(); document.getElementById("notebookSearchInput").focus(); });
