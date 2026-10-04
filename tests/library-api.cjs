@@ -8,16 +8,20 @@ function models(state){return Object.fromEntries(Object.keys(state).map(name=>[n
 }]))}
 const prisma={...models(db),$transaction:async work=>{const copy=structuredClone(db);await work(models(copy));for(const name of Object.keys(db))db[name]=copy[name];}};
 const context=vm.createContext({crypto,console:{error:()=>{}},prisma,requireAuth:async req=>({id:req.userId}),app:{get:(path,handler)=>routes.set('GET '+path,handler),post:(path,handler)=>routes.set('POST '+path,handler)}});
-const names=['cloneJsonSafe','normalizeText','normalizeIso','normalizeStringArray','parseAlignmentPayload','buildAlignmentPayload','sanitizeFavoritesPayload','sanitizeNotebookPayload','sanitizeVocabPrefsPayload','encodeFavoriteId','decodeFavoriteId','normalizeGenerationMode','normalizeGenerationQuality'];
+const names=['cloneJsonSafe','normalizeText','normalizeIso','normalizeStringArray','parseAlignmentPayload','buildAlignmentPayload','sanitizeFavoritesPayload','sanitizeNotebookSource','sanitizeNotebookPayload','sanitizeVocabPrefsPayload','encodeFavoriteId','decodeFavoriteId','normalizeGenerationMode','normalizeGenerationQuality'];
 for(const name of names){const start=source.indexOf('function '+name+'(');assert(start>=0,name);let end=source.indexOf('\nfunction ',start+1);const asyncEnd=source.indexOf('\nasync function ',start+1);if(asyncEnd>=0&&(end<0||asyncEnd<end))end=asyncEnd;vm.runInContext(source.slice(start,end),context)}
 vm.runInContext(source.slice(source.indexOf('app.get("/api/library",'),source.indexOf('app.post("/api/upgrade/request",')),context);
 async function call(method,userId,body){let result,status=200;const res={json:value=>{result=value},status:value=>{status=value;return res}};await routes.get(method+' /api/library'+(method==='POST'?'/sync':''))({userId,body},res);return {status,result}}
 (async()=>{
  const first='2026-10-01T04:00:00.000Z',later='2026-10-04T04:00:00.000Z';
- const snapshot={favorites:[{id:'article',title:'My article',words:['apple'],article:'apple',folderId:'folder',createdAt:first,updatedAt:later}],notebookEntries:[{id:'word_a',key:'apple',word:'apple',senses:[{meaning:'苹果'}],createdAt:first,updatedAt:later,deletedAt:later}],vocabPrefs:{apple:{word:'apple',mastery:'mastered',createdAt:first,updatedAt:later}},libraryFolders:[{id:'folder',name:'阅读',createdAt:first,updatedAt:later}]};
+ const sourceArticle={id:'source',title:'Original reading',article:'An apple a day.',words:['apple'],paragraphsEn:['An apple a day.'],paragraphsZh:['一天一个苹果。'],lexicon:[{word:'apple',senses:[{meaning:'苹果'}]}],alignment:[{word:'apple',zh_terms:['苹果']}],generationMode:'standard',createdAt:first,updatedAt:first};
+ const snapshot={favorites:[{id:'article',title:'My article',words:['apple'],article:'apple',folderId:'folder',createdAt:first,updatedAt:later}],notebookEntries:[{id:'word_a',key:'apple',word:'apple',senses:[{meaning:'苹果'}],sourceArticle,createdAt:first,updatedAt:later,deletedAt:later}],vocabPrefs:{apple:{word:'apple',mastery:'mastered',createdAt:first,updatedAt:later}},libraryFolders:[{id:'folder',name:'阅读',createdAt:first,updatedAt:later}]};
  assert.equal((await call('POST','alice',snapshot)).status,200);
  let result=(await call('GET','alice')).result;
  assert.equal(result.favorites[0].folderId,'folder');assert.equal(result.libraryFolders[0].id,'folder');assert.equal(result.notebookEntries[0].createdAt,first);assert.equal(result.notebookEntries[0].deletedAt,later);assert.equal(result.vocabPrefs.apple.mastery,'mastered');
+ assert.equal(result.notebookEntries[0].sourceArticle.article,sourceArticle.article);
+ assert.equal(result.notebookEntries[0].sourceArticle.alignment[0].zh_terms[0],'苹果');
+ assert.equal(result.notebookEntries[0].sourceArticle.generationMode,'standard');
  const bob={favorites:[{...snapshot.favorites[0],title:'Bob'}],notebookEntries:[],vocabPrefs:{},libraryFolders:snapshot.libraryFolders};
  await call('POST','bob',bob);assert.equal((await call('GET','alice')).result.favorites[0].title,'My article');assert.equal((await call('GET','bob')).result.favorites[0].title,'Bob');
  const before=JSON.stringify(db);failInsert=true;assert.equal((await call('POST','alice',{...snapshot,favorites:[]})).status,500);assert.equal(JSON.stringify(db),before,'Partial snapshot persisted');failInsert=false;

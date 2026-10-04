@@ -913,6 +913,7 @@ function normalizeNotebookEntry(item) {
     synonyms: sanitizeTextListForUi(item?.synonyms, 120, 30),
     antonyms: sanitizeTextListForUi(item?.antonyms, 120, 30),
     wordFormation: sanitizeGlossTextForUi(item?.wordFormation, 500),
+    sourceArticle: item?.sourceArticle?.article ? normalizeFavorite(item.sourceArticle) : null,
     deletedAt: String(item?.deletedAt || ""),
     createdAt: normalizeIsoDate(item?.createdAt || item?.updatedAt, nowIso),
     updatedAt: normalizeIsoDate(item?.updatedAt || item?.createdAt, nowIso)
@@ -1044,7 +1045,7 @@ async function syncLibraryNow() {
   try {
     // A rolling deployment must not send new folder/deletion fields to an old server.
     const compatibility = await apiFetch("/api/health", { retryCount: 0, timeoutMs: 12000 });
-    if (!compatibility.ok || !(Number((await compatibility.json()).libraryVersion) >= 2)) {
+    if (!compatibility.ok || !(Number((await compatibility.json()).libraryVersion) >= 3)) {
       throw new Error("Library server update is pending");
     }
     const response = await apiFetch("/api/library/sync", {
@@ -1191,6 +1192,8 @@ function upsertNotebookEntry(item) {
   };
 
   const index = notebookEntries.findIndex((row) => row.key === key);
+  const source = notebookEntries[index]?.sourceArticle || findNotebookSource(item, { includeCurrent: true });
+  if (source) entry.sourceArticle = source;
   if (index >= 0) {
     notebookEntries[index] = { ...notebookEntries[index], ...entry };
   } else {
@@ -3033,7 +3036,7 @@ function renderNotebookView() {
   document.querySelectorAll("[data-notebook-view]").forEach(button => {
     button.setAttribute("aria-pressed", String(button.dataset.notebookView === notebookViewMode));
   });
-  const expandedKeys = new Set(Array.from(notebookEntriesEl.querySelectorAll(".notebook-details[open]"), detail => detail.closest(".glossary-item").dataset.wordKey));
+  const expandedKeys = new Set(Array.from(notebookEntriesEl.querySelectorAll(".notebook-details:not([hidden])"), detail => detail.closest(".glossary-item").dataset.wordKey));
   const rows = getNotebookEntriesSorted();
   syncNotebookOrganizer();
   syncNotebookFilters(rows);
@@ -3065,17 +3068,32 @@ function renderNotebookView() {
   const frag = document.createDocumentFragment();
   filteredRows.forEach((item) => {
     const card = renderLexiconCard(item);
-    const deleteButton = document.createElement("button"); deleteButton.type = "button"; deleteButton.className = "notebook-delete"; deleteButton.dataset.notebookDelete = item.key; deleteButton.textContent = "×"; deleteButton.setAttribute("aria-label", `删除 ${item.word}`); card.querySelector(".study-controls").appendChild(deleteButton);
+    if (notebookCategory === "mastered") {
+      const deleteButton = document.createElement("button"); deleteButton.type = "button"; deleteButton.className = "notebook-delete"; deleteButton.dataset.notebookDelete = item.key; deleteButton.textContent = "×"; deleteButton.setAttribute("aria-label", `删除 ${item.word}`); card.querySelector(".study-controls").appendChild(deleteButton);
+    }
+    const source = findNotebookSource(item);
+    const sourceActions = document.createElement("div"); sourceActions.className = "notebook-source-actions";
+    if (source) {
+      const jump = document.createElement("button"); jump.type = "button"; jump.className = "notebook-source-link"; jump.dataset.notebookSource = item.key; jump.textContent = "跳转原文"; sourceActions.appendChild(jump);
+      const title = document.createElement("span"); title.className = "notebook-source-title"; title.textContent = source.title || "来源文章"; sourceActions.appendChild(title);
+    } else {
+      const hint = document.createElement("span"); hint.className = "notebook-source-title"; hint.textContent = "暂无保存的原文"; sourceActions.appendChild(hint);
+    }
+    card.appendChild(sourceActions);
     if (notebookViewMode === "list") {
       const summary = card.querySelector(".definition-summary");
       if (summary) summary.textContent = sanitizeGlossTextForUi(item.summary || (item.senses || []).map(sense => sense.meaning).filter(Boolean).join("；"), 220);
-      const detail = document.createElement("details");
+      const detail = document.createElement("section");
       detail.className = "notebook-details";
-      detail.open = expandedKeys.has(card.dataset.wordKey);
-      const toggle = document.createElement("summary");
+      detail.hidden = !expandedKeys.has(card.dataset.wordKey);
+      detail.id = `notebook-detail-${encodeURIComponent(item.key)}`;
+      const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "notebook-detail-toggle";
+      toggle.dataset.notebookToggle = item.key;
+      toggle.setAttribute("aria-controls", detail.id); toggle.setAttribute("aria-expanded", String(!detail.hidden));
+      toggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
       toggle.setAttribute("aria-label", `${item.word} 的词汇详情`);
       toggle.title = "展开词汇详情";
-      detail.appendChild(toggle);
+      card.querySelector(".study-controls").appendChild(toggle);
       Array.from(card.children).filter(child => !child.matches(".glossary-head,.definition-summary,.study-controls")).forEach(child => detail.appendChild(child));
       card.appendChild(detail);
     }
@@ -3581,8 +3599,21 @@ glossaryEl.addEventListener("click", (event) => {
 notebookEntriesEl?.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const toggle = target.closest("[data-notebook-toggle]");
+  if (toggle) {
+    const panel = document.getElementById(toggle.getAttribute("aria-controls"));
+    panel.hidden = !panel.hidden; toggle.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) void ensureVocabDetailForKey(toggle.dataset.notebookToggle);
+    return;
+  }
+  const sourceButton = target.closest("[data-notebook-source]");
+  if (sourceButton) { openNotebookSource(sourceButton.dataset.notebookSource); return; }
   const deleteButton = target.closest("[data-notebook-delete]");
-  if (deleteButton) { removeNotebookEntry(deleteButton.dataset.notebookDelete); currentNotebookFocusKey = ""; refreshVocabularySurfaces(); return; }
+  if (deleteButton) {
+    const key = deleteButton.dataset.notebookDelete;
+    if (getWordPref(key).mastery !== "mastered") return;
+    removeNotebookEntry(key); currentNotebookFocusKey = ""; refreshVocabularySurfaces(); return;
+  }
   const notebookItem = target.closest(".glossary-item[data-word-key]");
   if (notebookItem) {
     const itemKey = notebookItem.getAttribute("data-word-key") || "";

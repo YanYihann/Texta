@@ -1,5 +1,6 @@
 (() => {
   const dictionary = {
+    '日历大小':'Calendar size','缩略图':'Thumbnail','跳转原文':'Open source article','来源文章':'Source article','暂无保存的原文':'No saved source article',
     '日历':'Calendar','生词':'Unfamiliar','单词状态':'Word status','A–Z 字母排序':'A–Z alphabetically',
     '加入时间 · 最新在前':'Added · newest first','加入时间 · 最早在前':'Added · oldest first','生词排序':'Notebook sorting','收藏排序':'Favorites sorting',
     '搜索收藏文章':'Search favorites','搜索标题、文章或词汇':'Search titles, articles or vocabulary','全部文章':'All articles','未分类':'Unfiled',

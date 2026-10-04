@@ -115,6 +115,7 @@ model NotebookEntry {
   synonyms     Json
   antonyms     Json
   wordFormation String
+  sourceArticle Json @default("null")
   deletedAt    String @default("")
   createdAt    String
   updatedAt    String

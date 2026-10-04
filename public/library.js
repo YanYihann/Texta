@@ -8,7 +8,37 @@ let favoritesSort = "az";
 let selectedFolder = "all";
 let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let calendarDirection = 1;
+let calendarSize = localStorage.getItem("texta_calendar_size") === "mini" ? "mini" : "standard";
 const FOLDERS_KEY = "texta_library_folders";
+
+function findNotebookSource(item, { includeCurrent = false } = {}) {
+  if (item?.sourceArticle?.article) return item.sourceArticle;
+  const key = keyifyWord(item?.word || item?.key || "");
+  const matches = article => article?.article && !article.deletedAt &&
+    (article.words || []).some(word => keyifyWord(word) === key);
+  // Prefer the current article only when first saving a word from that article.
+  if (includeCurrent && latestArticle && latestWords.some(word => keyifyWord(word) === key)) return favoriteFromCurrent();
+  return favorites.find(matches) || historyEntries.find(matches) || null;
+}
+
+function openNotebookSource(key) {
+  const entry = notebookEntries.find(item => item.key === key && !item.deletedAt);
+  const source = findNotebookSource(entry);
+  if (!source) return;
+  const original = normalizeFavorite(source);
+  // Keep the saved definition available alongside the original article.
+  original.lexicon = upsertWordEntryByKey(original.lexicon, key, entry);
+  original.baseLexicon = upsertWordEntryByKey(original.baseLexicon, key, entry);
+  wordsInput.value = original.words.join(", ");
+  applyArticleData(original);
+  document.dispatchEvent(new CustomEvent("texta:open-article"));
+  setMobilePage("article");
+  requestAnimationFrame(() => {
+    updateGlossaryFollow([key]);
+    const mark = [...articleBlocksEl.querySelectorAll("mark[data-word-key]")].find(element => element.dataset.wordKey === key);
+    if (mark) { mark.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); mark.focus({ preventScroll: true }); }
+  });
+}
 
 function libraryDateKey(value) {
   const date = new Date(value);
@@ -104,6 +134,7 @@ function syncNotebookOrganizer() {
 
 function renderNotebookCalendar(rows) {
   const calendar = document.getElementById("notebookCalendar");
+  calendar.dataset.size = calendarSize;
   const year = calendarMonth.getFullYear(), month = calendarMonth.getMonth();
   const days = new Date(year, month + 1, 0).getDate();
   const offset = (new Date(year, month, 1).getDay() + 6) % 7;
@@ -118,7 +149,7 @@ function renderNotebookCalendar(rows) {
     return `<button type="button" class="calendar-day${count ? " has-words" : ""}${date === today ? " is-today" : ""}" data-calendar-date="${date}" ${count ? "" : "disabled"} ${date === today ? 'aria-current="date"' : ""} aria-label="${year}年${month + 1}月${day}日，${count} 个${notebookCategory === "mastered" ? "已掌握单词" : "生词"}"><span class="calendar-number" style="--day-delay:${index * 12}ms">${day}</span>${count ? `<span class="calendar-count">${count} 个词</span>` : ""}</button>`;
   }).join("");
   const monthCount = rows.filter(item => { const date = new Date(item.createdAt); return date.getFullYear() === year && date.getMonth() === month; }).length;
-  calendar.innerHTML = `<div class="calendar-heading"><div><p class="calendar-eyebrow">按首次加入日期查看</p><h3 aria-live="polite">${year}<span>年</span> ${String(month + 1).padStart(2, "0")}<span>月</span></h3></div><div class="calendar-navigation"><button type="button" data-calendar-month="-1" aria-label="上个月">‹</button><button type="button" data-calendar-today>本月</button><button type="button" data-calendar-month="1" aria-label="下个月">›</button></div></div><div class="calendar-weekdays">${["一", "二", "三", "四", "五", "六", "日"].map(day => `<span>${day}</span>`).join("")}</div><div class="calendar-grid" style="--month-direction:${calendarDirection}">${cells}</div><div class="calendar-footer"><span><i aria-hidden="true"></i> 荧光圈标记加入日期 · 点击查看单词</span><span>本月 ${monthCount} 个词</span></div>`;
+  calendar.innerHTML = `<div class="calendar-heading"><div><p class="calendar-eyebrow">按首次加入日期查看</p><h3 aria-live="polite">${year}<span>年</span> ${String(month + 1).padStart(2, "0")}<span>月</span></h3></div><div class="calendar-size-toggle" role="group" aria-label="日历大小"><button type="button" data-calendar-size="standard" aria-pressed="${calendarSize === "standard"}">标准</button><button type="button" data-calendar-size="mini" aria-pressed="${calendarSize === "mini"}">缩略图</button></div><div class="calendar-navigation"><button type="button" data-calendar-month="-1" aria-label="上个月">‹</button><button type="button" data-calendar-today>本月</button><button type="button" data-calendar-month="1" aria-label="下个月">›</button></div></div><div class="calendar-weekdays">${["一", "二", "三", "四", "五", "六", "日"].map(day => `<span>${day}</span>`).join("")}</div><div class="calendar-grid" style="--month-direction:${calendarDirection}">${cells}</div><div class="calendar-footer"><span><i aria-hidden="true"></i> 荧光圈标记加入日期 · 点击查看单词</span><span>本月 ${monthCount} 个词</span></div>`;
 }
 
 document.getElementById("notebookSort").addEventListener("change", event => { notebookSort = event.target.value; renderNotebookView(); });
@@ -126,6 +157,8 @@ document.querySelectorAll("[data-notebook-category]").forEach(button => button.a
   notebookCategory = button.dataset.notebookCategory; currentNotebookFocusKey = ""; renderNotebookView();
 }));
 document.getElementById("notebookCalendar").addEventListener("click", event => {
+  const sizeButton = event.target.closest("[data-calendar-size]");
+  if (sizeButton) { calendarSize = sizeButton.dataset.calendarSize; localStorage.setItem("texta_calendar_size", calendarSize); renderNotebookView(); document.querySelector(`[data-calendar-size="${calendarSize}"]`).focus(); return; }
   const monthButton = event.target.closest("[data-calendar-month]");
   if (monthButton) { calendarDirection = Number(monthButton.dataset.calendarMonth); calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + calendarDirection, 1); renderNotebookView(); document.querySelector(`[data-calendar-month="${calendarDirection}"]`).focus(); return; }
   if (event.target.closest("[data-calendar-today]")) { calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1); renderNotebookView(); document.querySelector("[data-calendar-today]").focus(); return; }

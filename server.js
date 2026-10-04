@@ -267,7 +267,7 @@ function buildAdminModelDiagnostics(traceStore) {
     calls: calls.slice(0, 120)
   };
 }
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(
   express.static(path.join(__dirname, "public"), {
     setHeaders: (res, filePath) => {
@@ -787,6 +787,16 @@ function sanitizeFavoritesPayload(rawList) {
   return out;
 }
 
+function sanitizeNotebookSource(raw) {
+  if (!raw?.article) return undefined;
+  const source = sanitizeFavoritesPayload([raw])[0];
+  if (!source) return undefined;
+  const alignment = parseAlignmentPayload(source.alignment);
+  return { ...source, alignment: alignment.items, generationMode: alignment.generationMode,
+    generationQuality: alignment.generationQuality, baseLexicon: alignment.baseLexicon,
+    contextGlosses: alignment.contextGlosses, runs: alignment.runs };
+}
+
 function sanitizeNotebookPayload(rawList) {
   if (!Array.isArray(rawList)) return [];
   const now = new Date().toISOString();
@@ -818,6 +828,7 @@ function sanitizeNotebookPayload(rawList) {
       synonyms: cloneJsonSafe(Array.isArray(raw?.synonyms) ? raw.synonyms.slice(0, 30) : [], []),
       antonyms: cloneJsonSafe(Array.isArray(raw?.antonyms) ? raw.antonyms.slice(0, 30) : [], []),
       wordFormation: normalizeText(raw?.wordFormation, 2000),
+      sourceArticle: sanitizeNotebookSource(raw?.sourceArticle),
       deletedAt: raw?.deletedAt ? normalizeIso(raw.deletedAt, now) : "",
       createdAt: normalizeIso(raw?.createdAt, now),
       updatedAt: normalizeIso(raw?.updatedAt, now)
@@ -3730,6 +3741,7 @@ app.get("/api/library", async (req, res) => {
       synonyms: Array.isArray(row.synonyms) ? row.synonyms : [],
       antonyms: Array.isArray(row.antonyms) ? row.antonyms : [],
       wordFormation: row.wordFormation,
+      sourceArticle: row.sourceArticle || null,
       deletedAt: row.deletedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt
@@ -3746,7 +3758,7 @@ app.get("/api/library", async (req, res) => {
     }
 
     const libraryFolders = folderRows.map(row => ({ id: decodeFavoriteId(user.id, row.id), name: row.name, createdAt: row.createdAt, updatedAt: row.updatedAt, deletedAt: row.deletedAt }));
-    res.json({ ok: true, libraryVersion: 2, favorites, notebookEntries, vocabPrefs, libraryFolders });
+    res.json({ ok: true, libraryVersion: 3, favorites, notebookEntries, vocabPrefs, libraryFolders });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to load library.", detail: error.message });
@@ -4205,7 +4217,7 @@ app.post("/api/spellcheck", async (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, service: "texta-api", libraryVersion: 2, commit: process.env.RENDER_GIT_COMMIT || "" });
+  res.json({ ok: true, service: "texta-api", libraryVersion: 3, commit: process.env.RENDER_GIT_COMMIT || "" });
 });
 
 app.post("/api/vocab/detail", async (req, res) => {
