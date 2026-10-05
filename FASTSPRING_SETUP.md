@@ -4,9 +4,11 @@ Current store: `texta.onfastspring.com`, **Test**. Public purchases remain disab
 
 Configured on 2026-10-05: the four one-time products below, Chinese names and descriptions, CNY-only catalog prices, checkout path `texta/popup-texta`, API credentials and HMAC secret stored in the existing Render `texta-backend` service, and the `Texta Payment Webhook` endpoint with `order.completed`, Live and Test sources, expansion disabled. Render configuration deployed successfully. The API credentials and webhook secret are excluded from this repository.
 
-All four actual FastSpring Test session requests returned 201 with CNY tax-inclusive totals 9.90, 19.90, 49.90 and 99.90. The Chinese checkout displayed Alipay. The server accepted a signed Test notification with HTTP 200 and rejected an unsigned notification with HTTP 401; public `paymentsAvailable` remained false. These checks alone do not establish that an actual completed FastSpring order has delivered its webhook.
+All four actual FastSpring Test session requests returned 201 with CNY tax-inclusive totals 9.90, 19.90, 49.90 and 99.90. The Chinese checkout displayed Alipay. The server accepted a signed Test notification with HTTP 200 and rejected an unsigned notification with HTTP 401; public `paymentsAvailable` remained false.
 
-Outstanding Test checkout issue: submitting FastSpring's official success test card (4242) in the CNY V2 hosted session returned the provider message `在测试模式中不支持` (“Not supported in test mode”). The session remained OPEN. No successful provider-generated order/webhook or Alipay QR payment has been verified; resolve this with FastSpring's checkout configuration/support before Live activation. Do not infer a successful payment from session creation or the synthetic signed notification test.
+A provider-generated Test purchase completed successfully: reference `TEXTA261005-6459-56148`, order ID `0iKmx5nNT1qZ4j-YSBaOqg`, CNY 9.90, quantity 1, `live:false`, `payment.type:test`. FastSpring's Webhook log showed `order.completed` → `Texta Payment Webhook` → `Success`. Retrieving the order through the authenticated API confirmed the original `tags.textaOrder` and `tags.textaProof` survived checkout. This probe deliberately used a non-production order binding and never granted production access. The official success test card requires the **store-specific CVV shown under Checkout → Test**; a generic numeric CVV returned “Not supported in test mode.” Do not put the store-specific test CVV in this repository.
+
+Alipay was confirmed as an available payment option, but no real Alipay QR payment has been made. A Test card transaction is proof of Test checkout and webhook delivery, not proof of real Alipay settlement or automatic Live entitlement activation.
 
 ## Catalog
 
@@ -60,9 +62,9 @@ Refunds and chargebacks currently require manual entitlement review in the admin
 ## Required before Live
 
 1. Complete FastSpring's own identity/business review, payout setup, and required terms/privacy/refund information using accurate owner-supplied details.
-2. Supply the four products, actual checkout ID, API credentials and webhook secret through the server environment.
-3. In an isolated staging database, simulate the checkout/session/webhook flow and verify actual FastSpring payloads (including `tags.textaOrder` and `tags.textaProof`). The automated repository tests use signed fixtures and a separate database schema; they are **not** proof of a real FastSpring transaction.
-4. Confirm final CNY totals, Chinese Alipay availability, window behavior and webhook delivery with FastSpring Test checkout. Test payments must never grant production access.
+2. Completed: four products, actual checkout ID, API credentials and webhook secret are configured through the server environment.
+3. The automated repository tests use signed fixtures and a separate database schema to verify entitlement activation. Actual FastSpring Test order tags and callback delivery are verified above. Live activation must still be verified separately.
+4. Completed: CNY totals, Chinese Alipay option, quantity lock and Test webhook delivery. Real Alipay QR payment and the Texta Live window-closing flow remain to be checked after approval. Test payments must never grant production access.
 5. After FastSpring approves the store, set `FASTSPRING_MODE=live` and `BILLING_ENABLED=true` only when the end-to-end checks pass. A paid Live smoke test requires the owner's authorization for its amount.
 
 ## References
