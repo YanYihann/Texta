@@ -5,6 +5,10 @@ const crypto = require("crypto");
 const { AsyncLocalStorage } = require("async_hooks");
 const { PrismaClient } = require("@prisma/client");
 dotenv.config();
+const {effectivePlan, dailyLimit, normalizePlan, grant, PRODUCTS} = require('./billing/plans.cjs');
+const {createFastSpring} = require('./billing/fastspring.cjs');
+const {registerBilling, transaction} = require('./billing/service.cjs');
+const {reserveCredits, refundCredits} = require('./billing/credits.cjs');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -267,7 +271,7 @@ function buildAdminModelDiagnostics(traceStore) {
     calls: calls.slice(0, 120)
   };
 }
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "10mb", verify(req,res,buffer) { if(req.originalUrl === "/api/billing/fastspring/webhook") req.rawBillingBody=Buffer.from(buffer); } }));
 app.use(
   express.static(path.join(__dirname, "public"), {
     setHeaders: (res, filePath) => {
@@ -319,75 +323,6 @@ function verifyPassword(raw, passwordHash) {
   return crypto.timingSafeEqual(a, b);
 }
 
-async function writeAuthStore(store) {
-  const users = Array.isArray(store?.users) ? store.users : [];
-  const usageDailyObj = store?.usageDaily && typeof store.usageDaily === "object" ? store.usageDaily : {};
-  const vipRequests = Array.isArray(store?.vipRequests) ? store.vipRequests : [];
-
-  const usageRows = [];
-  for (const [userId, dateMap] of Object.entries(usageDailyObj)) {
-    if (!dateMap || typeof dateMap !== "object") continue;
-    for (const [dateKey, used] of Object.entries(dateMap)) {
-      usageRows.push({
-        userId,
-        dateKey,
-        used: Number(used || 0)
-      });
-    }
-  }
-
-  for (const user of users) {
-    await prisma.user.upsert({
-      where: { id: String(user.id) },
-      create: {
-        id: String(user.id),
-        email: String(user.email || "").toLowerCase(),
-        name: String(user.name || ""),
-        passwordHash: String(user.passwordHash || ""),
-        role: String(user.role || "user"),
-        plan: String(user.plan || "free"),
-        createdAt: String(user.createdAt || new Date().toISOString())
-      },
-      update: {
-        email: String(user.email || "").toLowerCase(),
-        name: String(user.name || ""),
-        passwordHash: String(user.passwordHash || ""),
-        role: String(user.role || "user"),
-        plan: String(user.plan || "free")
-      }
-    });
-  }
-
-  // Sessions are written by login/logout only, so quota updates cannot invalidate active logins.
-
-  await prisma.usageDaily.deleteMany({});
-  if (usageRows.length > 0) {
-    await prisma.usageDaily.createMany({ data: usageRows });
-  }
-
-  await prisma.vipRequest.deleteMany({});
-  if (vipRequests.length > 0) {
-    await prisma.vipRequest.createMany({
-      data: vipRequests.map((x) => ({
-        id: String(x.id),
-        userId: String(x.userId || ""),
-        userEmail: String(x.userEmail || ""),
-        payerName: String(x.payerName || ""),
-        amount: String(x.amount || ""),
-        paidAt: String(x.paidAt || ""),
-        proofCode: String(x.proofCode || ""),
-        proofImageUrl: String(x.proofImageUrl || ""),
-        note: String(x.note || ""),
-        status: String(x.status || "pending"),
-        createdAt: String(x.createdAt || new Date().toISOString()),
-        reviewedAt: String(x.reviewedAt || ""),
-        reviewerId: String(x.reviewerId || ""),
-        reviewNote: String(x.reviewNote || "")
-      }))
-    });
-  }
-}
-
 async function readAuthStore() {
   const now = Date.now();
   const [usersRows, sessionsRows, usageRows, vipRows] = await Promise.all([
@@ -404,6 +339,8 @@ async function readAuthStore() {
     passwordHash: u.passwordHash,
     role: u.role || "user",
     plan: u.plan || "free",
+    permanentPlan: u.permanentPlan,
+    planExpiresAt: u.planExpiresAt,
     createdAt: u.createdAt
   }));
 
@@ -450,7 +387,9 @@ function publicUser(user) {
     email: user.email,
     name: user.name,
     role: user.role || "user",
-    plan: user.plan || "free"
+    plan: effectivePlan(user),
+    permanentPlan: normalizePlan(user.permanentPlan),
+    planExpiresAt: user.planExpiresAt || null
   };
 }
 
@@ -499,13 +438,7 @@ function getShanghaiHourBucket(date = new Date()) {
   };
 }
 
-function getDailyLimit(user) {
-  if (String(user?.role || "").toLowerCase() === "admin") {
-    return Number.POSITIVE_INFINITY;
-  }
-  const plan = String(user?.plan || "free").toLowerCase();
-  return plan === "vip" ? 50 : 10;
-}
+function getDailyLimit(user) { return dailyLimit(user); }
 
 function normalizeGenerationQuality(raw) {
   return String(raw || "").toLowerCase() === "advanced" ? "advanced" : "normal";
@@ -551,16 +484,6 @@ function getUsageSnapshot(store, user, dateKey = getShanghaiDateKey()) {
   };
 }
 
-function bumpUsage(store, user, dateKey = getShanghaiDateKey(), amount = 1) {
-  if (!store.usageDaily || typeof store.usageDaily !== "object") {
-    store.usageDaily = {};
-  }
-  if (!store.usageDaily[user.id] || typeof store.usageDaily[user.id] !== "object") {
-    store.usageDaily[user.id] = {};
-  }
-  const delta = Math.max(1, Math.floor(Number(amount) || 1));
-  store.usageDaily[user.id][dateKey] = Number(store.usageDaily[user.id][dateKey] || 0) + delta;
-}
 
 async function logUsageEvent(user, usedAt = new Date(), count = 1) {
   if (!user?.id) return;
@@ -632,10 +555,11 @@ async function ensureAdminSeed() {
     name: ADMIN_NAME,
     passwordHash: pw.hash,
     role: "admin",
-    plan: "vip",
+    plan: "plus",
+    permanentPlan: "plus",
     createdAt: new Date().toISOString()
   });
-  await writeAuthStore(store);
+  await prisma.user.create({data:store.users[store.users.length - 1]});
   console.log(`[auth] Seeded admin user: ${ADMIN_EMAIL}`);
 }
 
@@ -3622,11 +3546,11 @@ app.post("/api/auth/register", async (req, res) => {
       name,
       passwordHash: pw.hash,
       role,
-      plan: role === "admin" ? "vip" : "free",
+      plan: role === "admin" ? "plus" : "free",
+      permanentPlan: role === "admin" ? "plus" : "free",
       createdAt: new Date().toISOString()
     };
-    store.users.push(user);
-    await writeAuthStore(store);
+    await prisma.user.create({data:user});
 
     res.status(201).json({ ok: true, user: publicUser(user) });
   } catch (error) {
@@ -3678,7 +3602,7 @@ app.get("/api/usage", async (req, res) => {
     if (!user) return;
     const store = await readAuthStore();
     const usage = getUsageSnapshot(store, user);
-    res.json({ ok: true, usage, role: user.role || "user", plan: user.plan || "free" });
+    res.json({ ok: true, usage, role: user.role || "user", plan: effectivePlan(user), user: publicUser(user) });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to get usage.", detail: error.message });
@@ -3817,56 +3741,9 @@ app.post("/api/library/sync", async (req, res) => {
   }
 });
 
-app.post("/api/upgrade/request", async (req, res) => {
-  try {
-    const user = await requireAuth(req, res);
-    if (!user) return;
-    const role = String(user.role || "").toLowerCase();
-    const plan = String(user.plan || "free").toLowerCase();
-    if (role === "admin" || plan === "vip") {
-      return res.json({ ok: true, submitted: false, message: "Already VIP/admin." });
-    }
-
-    const store = await readAuthStore();
-    if (!Array.isArray(store.vipRequests)) {
-      store.vipRequests = [];
-    }
-
-    const hasPending = store.vipRequests.some((x) => x.userId === user.id && x.status === "pending");
-    if (hasPending) {
-      return res.status(409).json({ error: "You already have a pending VIP request." });
-    }
-
-    const payerName = String(req.body.payerName || "").trim();
-    const amount = String(req.body.amount || "10").trim();
-    const paidAt = String(req.body.paidAt || "").trim();
-    const proofCode = String(req.body.proofCode || "").trim();
-    const proofImageUrl = String(req.body.proofImageUrl || "").trim();
-    const note = String(req.body.note || "").trim();
-
-    const requestItem = {
-      id: `vipreq_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
-      userId: user.id,
-      userEmail: user.email,
-      payerName: payerName || user.name || user.email,
-      amount: amount || "10",
-      paidAt: paidAt || new Date().toISOString(),
-      proofCode,
-      proofImageUrl,
-      note,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      reviewedAt: "",
-      reviewerId: "",
-      reviewNote: ""
-    };
-    store.vipRequests.unshift(requestItem);
-    await writeAuthStore(store);
-    res.json({ ok: true, submitted: true, request: requestItem });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to submit VIP request.", detail: error.message });
-  }
+app.post("/api/upgrade/request", async (req,res) => {
+  if (!await requireAuth(req,res)) return;
+  res.status(410).json({error:"旧版充值申请已关闭，请到套餐页面查看。"});
 });
 
 app.get("/api/upgrade/request/me", async (req, res) => {
@@ -4074,9 +3951,11 @@ app.post("/api/admin/users/:id/plan", async (req, res) => {
     const targetPlan = String(req.body?.plan || "")
       .trim()
       .toLowerCase();
-    if (!["free", "vip"].includes(targetPlan)) {
-      return res.status(400).json({ error: "Invalid plan. Use free or vip." });
+    if (!["free", "plus", "pro"].includes(targetPlan)) {
+      return res.status(400).json({ error: "Invalid plan. Use free, plus or pro." });
     }
+    const term = req.body.term;
+    if (targetPlan !== 'free' && !['monthly','lifetime'].includes(term)) return res.status(400).json({error:'Choose monthly or lifetime.'});
 
     const currentUser = await prisma.user.findUnique({ where: { id: userId } });
     if (!currentUser) {
@@ -4087,14 +3966,10 @@ app.post("/api/admin/users/:id/plan", async (req, res) => {
       return res.status(403).json({ error: "Cannot change admin plan." });
     }
 
-    const currentPlan = String(currentUser.plan || "free").toLowerCase();
-    if (currentPlan === targetPlan) {
-      return res.json({ ok: true, unchanged: true, user: publicUser(currentUser) });
-    }
-
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { plan: targetPlan }
+    const updated = await transaction(prisma, async tx => {
+      const user = await tx.user.findUnique({where:{id:userId}});
+      const data = targetPlan === 'free' ? {plan:'free',permanentPlan:'free',planExpiresAt:null} : grant(user,PRODUCTS[targetPlan+'_'+term]);
+      return tx.user.update({where:{id:userId},data});
     });
 
     res.json({ ok: true, user: publicUser(updated) });
@@ -4104,62 +3979,25 @@ app.post("/api/admin/users/:id/plan", async (req, res) => {
   }
 });
 
-app.post("/api/admin/vip-requests/:id/approve", async (req, res) => {
-  try {
-    const admin = await requireAdmin(req, res);
-    if (!admin) return;
-    const id = String(req.params.id || "").trim();
-    const store = await readAuthStore();
-    const reqIdx = (store.vipRequests || []).findIndex((x) => x.id === id);
-    if (reqIdx === -1) {
-      return res.status(404).json({ error: "Request not found." });
-    }
-    const reqItem = store.vipRequests[reqIdx];
-    if (reqItem.status !== "pending") {
-      return res.status(409).json({ error: "Request already reviewed." });
-    }
-    reqItem.status = "approved";
-    reqItem.reviewedAt = new Date().toISOString();
-    reqItem.reviewerId = admin.id;
-    reqItem.reviewNote = String(req.body.note || "").trim();
-
-    const userIdx = store.users.findIndex((x) => x.id === reqItem.userId);
-    if (userIdx !== -1) {
-      store.users[userIdx].plan = "vip";
-    }
-    await writeAuthStore(store);
-    res.json({ ok: true, request: reqItem });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to approve request.", detail: error.message });
-  }
-});
-
-app.post("/api/admin/vip-requests/:id/reject", async (req, res) => {
-  try {
-    const admin = await requireAdmin(req, res);
-    if (!admin) return;
-    const id = String(req.params.id || "").trim();
-    const store = await readAuthStore();
-    const reqIdx = (store.vipRequests || []).findIndex((x) => x.id === id);
-    if (reqIdx === -1) {
-      return res.status(404).json({ error: "Request not found." });
-    }
-    const reqItem = store.vipRequests[reqIdx];
-    if (reqItem.status !== "pending") {
-      return res.status(409).json({ error: "Request already reviewed." });
-    }
-    reqItem.status = "rejected";
-    reqItem.reviewedAt = new Date().toISOString();
-    reqItem.reviewerId = admin.id;
-    reqItem.reviewNote = String(req.body.note || "").trim();
-    await writeAuthStore(store);
-    res.json({ ok: true, request: reqItem });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to reject request.", detail: error.message });
-  }
-});
+for (const action of ['approve','reject']) {
+  app.post('/api/admin/vip-requests/:id/'+action,async(req,res)=>{
+    try {
+      const admin=await requireAdmin(req,res); if(!admin)return;
+      const request=await transaction(prisma,async tx=>{
+        const item=await tx.vipRequest.findUnique({where:{id:req.params.id}});
+        if(!item || item.status!=='pending')return null;
+        if(action==='approve') {
+          const user=await tx.user.findUnique({where:{id:item.userId}});
+          if(!user)throw Error('User not found');
+          await tx.user.update({where:{id:user.id},data:grant(user,PRODUCTS.plus_lifetime)});
+        }
+        return tx.vipRequest.update({where:{id:item.id},data:{status:action==='approve'?'approved':'rejected',reviewedAt:new Date().toISOString(),reviewerId:admin.id,reviewNote:String(req.body.note || '').slice(0,1000)}});
+      });
+      if(!request)return res.status(409).json({error:'Request missing or already reviewed.'});
+      res.json({ok:true,request});
+    } catch(error) {res.status(500).json({error:'Failed to review request.'});}
+  });
+}
 
 app.post("/api/auth/logout", async (req, res) => {
   try {
@@ -4312,6 +4150,7 @@ app.post("/api/vocab/detail", async (req, res) => {
 });
 
 app.post("/api/generate", async (req, res) => {
+  let creditReservation = null;
   try {
     const authedUser = await requireAuth(req, res);
     if (!authedUser) return;
@@ -4349,6 +4188,8 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ error: "Too many words. Please keep it under 120 words." });
     }
 
+    creditReservation = await reserveCredits(prisma,authedUser,getShanghaiDateKey(),generationProfile.usageCost);
+    if (!creditReservation) return res.status(429).json({error:'今日积分不足，请明日再试或升级套餐。'});
     const selectedModel = generationProfile.model;
     const isAdmin = String(authedUser?.role || "").toLowerCase() === "admin";
     const traceStore = { calls: [] };
@@ -4836,8 +4677,7 @@ app.post("/api/generate", async (req, res) => {
     const { lexicon, baseLexicon, contextGlosses, runs, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle } = generated;
 
     const storeAfter = await readAuthStore();
-    bumpUsage(storeAfter, authedUser, getShanghaiDateKey(), generationProfile.usageCost);
-    await writeAuthStore(storeAfter);
+    creditReservation = null;
     try {
       await logUsageEvent(authedUser, new Date(), generationProfile.usageCost);
     } catch (usageLogError) {
@@ -4868,11 +4708,15 @@ app.post("/api/generate", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    try { await refundCredits(prisma,creditReservation); } catch (refundError) {console.error('Credit refund failed',refundError.code);}
     res.status(500).json({ error: "Failed to generate article.", detail: error.message });
   }
 });
 
+registerBilling(app,{db:prisma,provider:createFastSpring(),requireAuth,publicUser});
+
 async function bootstrap() {
+  await prisma.user.updateMany({where:{plan:'vip'},data:{plan:'plus',permanentPlan:'plus',planExpiresAt:null}});
   await ensureAdminSeed();
   app.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);

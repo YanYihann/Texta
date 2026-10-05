@@ -19,7 +19,30 @@ model User {
   passwordHash String
   role         String @default("user")
   plan         String @default("free")
+  permanentPlan String @default("free")
+  planExpiresAt DateTime?
   createdAt    String
+}
+
+model PaymentOrder {
+  id           String @id
+  userId       String
+  product      String
+  amountFen    Int
+  provider     String
+  status       String @default("pending")
+  requestKey   String
+  tradeNo      String? @unique
+  providerSessionId String?
+  checkoutUrl String?
+  paymentProof String
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  paidAt       DateTime?
+
+  @@unique([userId, requestKey])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model Session {

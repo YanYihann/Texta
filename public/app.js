@@ -470,18 +470,18 @@ function renderUsage(usage, user = currentUser) {
   latestUsage = usage || null;
   if (!usageTextEl) return;
   const isAdmin = String(user?.role || "").toLowerCase() === "admin";
-  const isVip = String(user?.plan || "").toLowerCase() === "vip";
+  const plan = user?.plan === 'vip' ? 'plus' : user?.plan || 'free';
   if (isAdmin || usage?.isUnlimited) {
-    usageTextEl.textContent = "今日剩余次数：无限（管理员）";
+    usageTextEl.textContent = "今日剩余积分：无限（管理员）";
   } else {
     const remaining = Number(usage?.remaining ?? 0);
-    const limit = Number(usage?.limit ?? (isVip ? 50 : 10));
-    const planLabel = isVip ? "VIP" : "普通";
-    usageTextEl.textContent = `今日剩余次数：${remaining} / ${limit}（${planLabel}）`;
+    const limit = Number(usage?.limit ?? ({plus:50,pro:150}[plan] || 10));
+    const planLabel = ({plus:'Plus',pro:'Pro'})[plan] || 'Free';
+    usageTextEl.textContent = `今日剩余积分：${remaining} / ${limit}（${planLabel}）`;
   }
 
   if (upgradeVipBtnEl) {
-    if (isAdmin || isVip) {
+    if (isAdmin) {
       upgradeVipBtnEl.classList.add("hidden");
     } else {
       upgradeVipBtnEl.classList.remove("hidden");
@@ -511,6 +511,7 @@ async function refreshUsage() {
     const response = await apiFetch("/api/usage");
     if (!response.ok) return;
     const data = await response.json();
+    if (data.user) currentUser = data.user;
     renderUsage(data.usage || null);
   } catch {
     // Ignore usage refresh errors.
@@ -536,8 +537,7 @@ async function loadMe() {
     const data = await response.json();
     currentUser = data.user || null;
     const isAdmin = String(currentUser?.role || "").toLowerCase() === "admin";
-    const isVip = String(currentUser?.plan || "").toLowerCase() === "vip";
-    const roleText = isAdmin ? "管理员" : isVip ? "VIP用户" : "普通用户";
+    const roleText = isAdmin ? "管理员" : ({vip:'Plus 用户',plus:'Plus 用户',pro:'Pro 用户'})[currentUser?.plan] || "普通用户";
     userBadgeEl.textContent = `${currentUser?.name || currentUser?.email || "用户"} · ${roleText}`;
     logoutBtnEl.classList.remove("hidden");
     await refreshUsage();
@@ -3505,7 +3505,7 @@ generateBtn.addEventListener("click", async () => {
       if (data && data.usage) {
         renderUsage(data.usage);
       }
-      throw new Error(data.error || "今日次数已用完");
+      throw new Error(data.error || "今日积分已用完");
     }
       if (!response.ok) {
         throw new Error((data && (data.detail || data.error)) || "请求失败");
@@ -3517,7 +3517,7 @@ generateBtn.addEventListener("click", async () => {
       const usedCost = Number(data?.usageCost || (generationQuality === "advanced" ? 5 : 1));
       const elapsedMs = generationStartAtMs ? Date.now() - generationStartAtMs : 0;
       stopGenerationElapsedTimer();
-      statusEl.textContent = `生成完成（本次消耗：${usedCost} 次，思考耗时：${formatElapsedSeconds(elapsedMs)}）。`;
+      statusEl.textContent = `生成完成（本次消耗：${usedCost} 积分，思考耗时：${formatElapsedSeconds(elapsedMs)}）。`;
     } catch (error) {
       const elapsedMs = generationStartAtMs ? Date.now() - generationStartAtMs : 0;
       stopGenerationElapsedTimer();

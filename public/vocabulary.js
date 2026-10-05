@@ -162,7 +162,7 @@
   });
   function settings() {
     modeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.generationMode === generationModeSelect.value)));
-    const quality = generationQualitySelect.value === 'advanced' ? '高级生成 · 5 次' : '普通生成 · 1 次';
+    const quality = generationQualitySelect.value === 'advanced' ? '高级生成 · 5 积分' : '普通生成 · 1 积分';
     document.getElementById('generationSummary').textContent = text(quality) + (quickModeInput.checked ? ` · ${text('短文章')}` : '');
   }
   modeButtons.forEach(button => button.addEventListener('click', () => {

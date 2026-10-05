@@ -1,0 +1,41 @@
+.pricing-shell { width: min(1120px,90%); margin: 52px auto 64px; }
+.pricing-heading { text-align: center; }
+.pricing-heading h1 { margin: 0 0 12px; font-size: clamp(27px,3vw,38px); line-height: 1.35; letter-spacing: -.025em; font-weight: 650; }
+.pricing-heading > p { color: var(--muted); margin: 8px 0; }
+.pricing-heading .current-plan { display: inline-block; margin-top: 10px; color: var(--primary); font-size: 14px; }
+.billing-period { display: flex; width: fit-content; margin: 28px auto 16px; padding: 4px; gap: 4px; border-radius: 12px; background: var(--soft); }
+body .billing-period button { border: 0; color: var(--muted); padding: 8px 24px; min-width: 128px; }
+body .billing-period button[aria-pressed="true"] { background: var(--panel); color: var(--primary); box-shadow: var(--control-shadow); font-weight: 600; }
+.billing-availability { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 28px; }
+.pricing-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
+.pricing-card { padding: 30px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+.pricing-card.plus-card { border-color: var(--primary); background: color-mix(in srgb,var(--soft) 35%,var(--panel)); }
+.pricing-card h2 { font: 600 32px/1.2 var(--font-display); margin: 0 0 10px; }
+.plan-description { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+.plan-price { display: flex; align-items: baseline; gap: 5px; margin: 0 0 26px; color: var(--muted); }
+.plan-price strong { font: 600 52px/1.1 var(--font-display); color: var(--text); letter-spacing: -.035em; font-variant-numeric: lining-nums tabular-nums; }
+.plan-price .currency { font-size: 24px; color: var(--text); }
+.plan-price > span:last-child { font-size: 13px; margin-left: 4px; }
+.pricing-card > button { width: 100%; }
+body .pricing-card > button:disabled { opacity: 1; background: var(--soft); border-color: var(--line); color: var(--muted); }
+.pricing-card ul { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 16px; font-size: 14px; }
+.pricing-card li { padding-left: 24px; position: relative; }
+.pricing-card li::before { content: ''; position: absolute; left: 2px; top: 6px; width: 10px; height: 6px; border: solid var(--primary); border-width: 0 0 1.5px 1.5px; transform: rotate(-45deg); }
+.pricing-notes { text-align: center; margin-top: 28px; color: var(--muted); font-size: 13px; }
+.pricing-notes p { margin: 8px 0; }
+.billing-message { color: var(--primary); text-align: center; }
+.billing-message.is-error { color: var(--warning); }
+#resumePaymentBtn { display: flex; margin: 18px auto; }
+#paymentDialog { width: min(440px,calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; border: 0; border-radius: 16px; padding: 24px; background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
+#paymentDialog::backdrop { background: var(--overlay); }
+.payment-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.payment-dialog-head h2 { margin: 0; }
+.payment-method { display: flex; justify-content: space-between; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+#paymentTerms,#paymentDescription,#paymentStatus { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+#confirmPaymentBtn { width: 100%; }
+#paymentQrStep { text-align: center; }
+#paymentQr { display: block; max-width: 100%; height: auto; margin: 16px auto; border-radius: 8px; }
+#paymentQrStep p { font-size: 13px; margin-bottom: 8px; color: var(--muted); }
+#paymentQrStep .payment-warning { font-size: 15px; color: var(--warning); }
+@media (max-width: 800px) { .pricing-card { padding: 24px 18px; } .pricing-grid { gap: 12px; } .plan-price strong { font-size: 44px; } }
+@media (max-width: 620px) { .pricing-shell { margin-top: 32px; } .pricing-grid { grid-template-columns: minmax(0,1fr); gap: 16px; } .pricing-card { padding: 24px; } .plan-price strong { font-size: 48px; } .pricing-heading h1 { font-size: 27px; } }

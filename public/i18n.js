@@ -1,5 +1,41 @@
 (() => {
   const dictionary = {
+    'FastSpring · 支付宝':'FastSpring · Alipay','等待支付确认':'Waiting for payment confirmation',
+    '通过 FastSpring 安全支付，到账后自动开通。':'Pay securely through FastSpring. Your plan activates after payment confirmation.',
+    '请在 FastSpring 支付窗口中选择支付宝，按提示完成付款。':'Choose Alipay in the FastSpring checkout and follow the payment instructions.',
+    '打开支付窗口':'Open checkout','订单有效期：':'Order expires in: ',
+    '订单已过期。如已支付，系统仍会核对到账结果。':'This order has expired. Completed payments will still be verified.',
+    '购买后生效一个月，同套餐续费顺延，到期不自动扣款。升级至 Pro 立即生效，原 Plus 剩余时间不折抵。':'One month of access. Same-plan renewals extend your expiry. No automatic charges. Pro upgrades start immediately; unused Plus time is not credited.',
+    '返回学习':'Back to study','为你的学习，选择更多可能':'Choose your learning plan','从每天的练习，到更密集的备考。':'From daily practice to focused exam preparation.',
+    '正在读取当前套餐…':'Loading your plan…','当前套餐：':'Current plan: ','永久 ':'Lifetime ','有效期至 ':'Until ','登录后查看你的当前套餐':'Sign in to view your current plan',
+    '套餐期限':'Plan duration','按月购买':'Monthly','永久套餐':'Lifetime','套餐比较':'Compare plans',
+    '购买暂未开放，支付服务正在准备中。':'Purchases are paused while payment services are being prepared.',
+    '先从每日练习开始':'Start with daily practice','让日常学习更从容':'More room for everyday learning','为高强度备考留足空间':'For intensive exam preparation',
+    '免费':'Free','免费套餐':'Free plan','即将开放':'Coming soon','/ 月':'/ month','一次支付':'one-time',
+    '每天 10 积分':'10 credits per day','每天 50 积分':'50 credits per day','每天 150 积分':'150 credits per day',
+    '词汇生成学习文章':'Vocabulary-based study articles','收藏夹与生词本':'Favorites and vocabulary notebook','文章与词汇导出':'Article and vocabulary exports',
+    '包含 Free 的全部功能':'Everything in Free','包含 Plus 的全部功能':'Everything in Plus','适合持续积累词汇':'Build vocabulary consistently','适合更密集的文章练习':'Practice with more articles',
+    '购买后生效一个月':'One month of access','一次购买，永久有效':'One payment, lifetime access',
+    '按月套餐为一次性购买，到期不会自动扣款。':'Monthly plans are one-time purchases and do not renew automatically.',
+    '永久套餐一次性支付，无需按月续费。':'Pay once for lifetime access. No monthly renewals.',
+    '积分每天北京时间 00:00 重置，不累计。普通生成消耗 1 积分，高级生成消耗 5 积分。':'Credits reset at 00:00 Beijing time and do not roll over. Standard generation costs 1 credit; advanced generation costs 5.',
+    '永久套餐同样按日补充积分，并非无限积分。':'Lifetime plans also have daily credit limits.',
+    '查看待支付订单':'Resume payment','确认套餐':'Confirm your plan','关闭支付窗口':'Close payment window','支付方式':'Payment method','支付宝':'Alipay','确定支付':'Confirm payment',
+    '支付宝订单付款二维码':'Alipay payment QR code','支付后，请勿手动关闭弹窗！':'After payment, please do not close this window!',
+    '到账确认后将自动开通套餐并关闭窗口。':'Your plan activates and this window closes after payment is confirmed.',
+    '支持支付宝扫码付款，到账后自动开通。':'Pay with Alipay. Your plan activates after payment confirmation.',
+    '已拥有':'Already included','当前套餐等级更高':'Higher plan active','续费套餐':'Renew plan','选择套餐':'Choose plan','请先登录':'Sign in first',
+    '支付宝扫码支付':'Scan with Alipay','Plus 月度套餐':'Plus monthly','Pro 月度套餐':'Pro monthly','永久 Plus':'Lifetime Plus','永久 Pro':'Lifetime Pro',
+    '正在等待到账确认…':'Waiting for payment confirmation…','支付成功，套餐已生效。':'Payment confirmed. Your plan is active.',
+    '二维码已过期，请勿继续付款。如已支付，系统仍会核对到账结果。':'This QR code has expired. Do not pay again. We will continue checking any completed payment.',
+    '二维码有效期：':'QR code expires in: ','暂时无法查询付款结果，将继续重试。':'Unable to check payment right now. Retrying automatically.',
+    '购买后生效一个月，同套餐续费顺延，到期不自动扣款。':'One month of access. Renewals extend the same plan. No automatic charges.',
+    '一次购买，永久有效。每天积分重置，不累计。':'Lifetime access. Credits reset daily and do not roll over.',
+    '暂时无法连接账户服务，请稍后刷新。':'Unable to connect to your account. Please refresh later.',
+    '查看 Plus / Pro 套餐':'View Plus / Pro plans','Plus 用户':'Plus user','Pro 用户':'Pro user','历史充值审核':'Previous payment requests',
+    '普通生成 · 1 积分':'Standard · 1 credit','高级生成 · 5 积分':'Advanced · 5 credits',
+    '示例仅用于预览，不消耗积分。':'This example is for preview and uses no credits.',
+    '普通生成用于日常练习；高级生成质量更高但消耗积分更多。':'Standard generation is for daily practice; advanced generation uses more credits.',
     'Tab 补全为':'Tab to complete to',
     '难度':'Level','双语文章':'Bilingual article','更多设置':'More settings','短文章':'Short article',
     '输入的词汇':'Entered vocabulary','编辑词汇':'Edit word','删除词汇':'Remove word','建议拼写':'Suggested spelling',
@@ -84,13 +120,13 @@
     [/^(\d+) \/ 120 个词$/, n => `${n} / 120 words`],
     [/^(\d+) 个单词$/, n => `${n} words`],
     [/^显示 (\d+) \/ (\d+) 个单词$/, (n,total) => `${n} of ${total} words`],
-    [/^今日剩余次数：\s*(\d+) \/ (\d+)（(.+)）$/, (n,total,plan) => `Daily credits: ${n} / ${total} (${dictionary[plan] || plan})`],
-    [/^今日剩余次数：无限（管理员）$/, () => 'Daily credits: unlimited (administrator)'],
-    [/^(.+) · (普通用户|VIP用户|管理员)$/, (name,role) => `${name} · ${dictionary[role]}`],
+    [/^今日剩余积分：\s*(\d+) \/ (\d+)（(.+)）$/, (n,total,plan) => `Daily credits: ${n} / ${total} (${dictionary[plan] || plan})`],
+    [/^今日剩余积分：无限（管理员）$/, () => 'Daily credits: unlimited (administrator)'],
+    [/^(.+) · (普通用户|VIP用户|Plus 用户|Pro 用户|管理员)$/, (name,role) => `${name} · ${dictionary[role]}`],
     [/^将陌生词添加到生词本（(\d+)）$/, n => `Add unfamiliar words (${n})`],
     [/^已将 (\d+) 个陌生词加入生词本。$/, n => `${n} unfamiliar words added to notebook.`],
     [/^文件识别完成，当前共 (\d+) 个单词。$/, n => `File imported. ${n} words in total.`],
-    [/^生成完成（本次消耗：(\d+) 次，思考耗时：(.+)）。$/, (n,time) => `Complete · ${n} credits · ${time}`],
+    [/^生成完成（本次消耗：(\d+) 积分，思考耗时：(.+)）。$/, (n,time) => `Complete · ${n} credits · ${time}`],
     [/^生成失败：(.+)（已思考：(.+)）$/, (error,time) => `Generation failed: ${error} (${time})`],
     [/^正在生成…（已思考：(.+)）$/, time => `Generating… (${time})`],
     [/^登录失败：(.+)$/, error => `Sign-in failed: ${dictionary[error] || error}`],
@@ -163,7 +199,7 @@
     document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
     document.querySelectorAll('.language-toggle').forEach(button => { button.textContent = language === 'zh' ? '中文 / EN' : 'EN / 中文'; button.setAttribute('aria-label', language === 'zh' ? 'Switch to English' : '切换为中文'); });
     apply();
-    const pageTitle = document.body.classList.contains('payment-page') ? ['升级 VIP','Upgrade to VIP'] : document.body.classList.contains('admin-page') ? ['管理','Administration'] : document.body.classList.contains('auth-page') ? ['登录','Sign in'] : ['词汇学习','Vocabulary study'];
+    const pageTitle = document.body.classList.contains('payment-page') ? ['Plus 与 Pro 套餐','Plus and Pro plans'] : document.body.classList.contains('admin-page') ? ['管理','Administration'] : document.body.classList.contains('auth-page') ? ['登录','Sign in'] : ['词汇学习','Vocabulary study'];
     document.title = `Texta · ${pageTitle[language === 'zh' ? 0 : 1]}`;
     document.dispatchEvent(new CustomEvent('texta:language',{detail:language}));
   }

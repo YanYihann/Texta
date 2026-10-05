@@ -79,7 +79,8 @@ function formatRolePlan(user) {
   const role = String(user?.role || "").toLowerCase();
   const plan = String(user?.plan || "").toLowerCase();
   if (role === "admin") return "管理员";
-  if (plan === "vip") return "VIP 用户";
+  if (["plus","vip"].includes(plan)) return user.permanentPlan === "plus" ? "永久 Plus" : "Plus 用户";
+  if (plan === "pro") return user.permanentPlan === "pro" ? "永久 Pro" : "Pro 用户";
   return "普通用户";
 }
 
@@ -87,7 +88,8 @@ function getRoleKey(user) {
   const role = String(user?.role || "").toLowerCase();
   const plan = String(user?.plan || "").toLowerCase();
   if (role === "admin") return "admin";
-  if (plan === "vip") return "vip";
+  if (["plus","vip"].includes(plan)) return "plus";
+  if (plan === "pro") return "pro";
   return "user";
 }
 
@@ -95,32 +97,10 @@ function isAdminUser(user) {
   return String(user?.role || "").toLowerCase() === "admin";
 }
 
-function getPlanActionLabel(user) {
-  const plan = String(user?.plan || "free").toLowerCase();
-  return plan === "vip" ? "Set to User" : "Set to VIP";
-}
-
-function getPlanActionTarget(user) {
-  const plan = String(user?.plan || "free").toLowerCase();
-  return plan === "vip" ? "free" : "vip";
-}
-
 function renderPlanAction(user) {
-  if (isAdminUser(user)) return "";
-  const userId = String(user?.id || "");
-  const isBusy = pendingPlanUserId === userId;
-  return `
-    <button
-      type="button"
-      class="usage-plan-btn"
-      data-plan-toggle="1"
-      data-user-id="${escapeHtml(userId)}"
-      data-target-plan="${getPlanActionTarget(user)}"
-      ${isBusy ? 'disabled aria-busy="true"' : ""}
-    >
-      ${isBusy ? "Processing..." : getPlanActionLabel(user)}
-    </button>
-  `;
+  if (isAdminUser(user)) return '';
+  const options={free:'Free',plus_monthly:'Plus 一个月',pro_monthly:'Pro 一个月',plus_lifetime:'永久 Plus',pro_lifetime:'永久 Pro'};
+  return '<select aria-label="设置账户套餐" data-plan-select="'+escapeHtml(user.id)+'" '+(pendingPlanUserId===user.id?'disabled':'')+'><option value="">设置套餐…</option>'+Object.entries(options).map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('')+'</select>';
 }
 
 function toTimeValue(value) {
@@ -229,7 +209,7 @@ function mergeUpdatedUser(updatedUser) {
   allUsers[idx] = { ...allUsers[idx], ...updatedUser };
 }
 
-async function changeUserPlan(userId, targetPlan) {
+async function changeUserPlan(userId, targetPlan, term) {
   const { response, data } = await fetchJson(
     `/api/admin/users/${encodeURIComponent(userId)}/plan`,
     {
@@ -238,7 +218,7 @@ async function changeUserPlan(userId, targetPlan) {
         Authorization: `Bearer ${getToken()}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ plan: targetPlan })
+      body: JSON.stringify({ plan: targetPlan, term })
     },
     0
   );
@@ -315,28 +295,16 @@ refreshUsageBtnEl.addEventListener("click", async () => {
   }
 });
 
-usageUserListEl.addEventListener("click", async (event) => {
-  const target = event.target;
-  const button = target instanceof Element ? target.closest("[data-plan-toggle='1']") : null;
-  if (!button) return;
-
-  const userId = String(button.getAttribute("data-user-id") || "").trim();
-  const targetPlan = String(button.getAttribute("data-target-plan") || "").trim().toLowerCase();
-  if (!userId || !["free", "vip"].includes(targetPlan)) return;
-
+usageUserListEl.addEventListener('change',async event=>{
+  const select=event.target.closest('[data-plan-select]'); if(!select || !select.value)return;
+  const userId=select.dataset.planSelect, [targetPlan,term]=select.value.split('_');
+  const name=allUsers.find(user=>user.id===userId)?.name || userId;
+  if(!confirm('将 '+name+' 的套餐设置为 '+select.selectedOptions[0].textContent+'？')) {select.value='';return;}
   try {
-    pendingPlanUserId = userId;
-    filterUsers();
-    usageStatusEl.textContent = targetPlan === "vip" ? "Upgrading to VIP..." : "Switching to normal user...";
-    await changeUserPlan(userId, targetPlan);
-    pendingPlanUserId = "";
-    filterUsers();
-    usageStatusEl.textContent = targetPlan === "vip" ? "Updated: now VIP" : "Updated: now normal user";
-  } catch (error) {
-    pendingPlanUserId = "";
-    filterUsers();
-    usageStatusEl.textContent = `Update failed: ${error.message}`;
-  }
+    pendingPlanUserId=userId;filterUsers();await changeUserPlan(userId,targetPlan,term);
+    usageStatusEl.textContent='套餐已更新。';
+  } catch(error) {usageStatusEl.textContent='更新失败：'+error.message;}
+  finally {pendingPlanUserId='';filterUsers();}
 });
 
 ensureAdmin()

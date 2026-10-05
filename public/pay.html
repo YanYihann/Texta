@@ -1,44 +1,29 @@
 <!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Texta VIP 支付</title>
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="shortcut icon" href="./favicon.svg" />
-  <link rel="stylesheet" href="./workspace.css?v=20261004" /><link rel="stylesheet" href="./controls.css?v=20261005-controls1"><script src="./theme.js?v=20261005-controls1"></script>
-<script src="./i18n.js?v=20261004" defer></script>
-</head>
-  <body class="auth-page payment-page">
-<header class="site-header"><a class="wordmark" href="./app.html">Texta</a><div class="header-tools"><a href="./app.html">返回主页面</a><button class="language-toggle" type="button" aria-label="切换界面语言">中文 / EN</button></div></header>
-    <main class="auth-page-wrap">
-      <section class="auth-card solo pay-card">
-        <h1>升级 VIP</h1>
-        <p class="auth-subtitle">支付 10 元可升级 VIP（每日 50 次）</p>
-
-        <div class="pay-box">
-          <div class="pay-title">收款码</div>
-          <div class="pay-qr-placeholder">
-            <img id="payQrImage" src="./assets/pay-qr.jpg" alt="收款码" />
-          </div>
-          <p class="pay-tip">扫码付款后，提交支付凭证供管理员审核。</p>
-        </div>
-
-        <div id="payMsg" class="auth-msg" role="status" aria-live="polite"></div>
-        <label for="payerName">付款人昵称</label>
-        <input id="payerName" type="text" placeholder="例如：张三" />
-        <label for="proofCode">支付凭证号（可选）</label>
-        <input id="proofCode" type="text" placeholder="例如：订单号/转账单号" />
-        <label for="proofImageUrl">凭证图片链接（可选）</label>
-        <input id="proofImageUrl" type="text" placeholder="粘贴图片URL，或先留空" />
-        <label for="proofNote">备注（可选）</label>
-        <input id="proofNote" type="text" placeholder="补充说明" />
-        <button id="submitVipRequestBtn" class="primary-btn" type="button">提交支付凭证</button>
-        <a class="upgrade-link" href="./app.html">返回主页面</a>
-      </section>
-    </main>
-
-    <script src="./site-config.js?v=2026.03.25.181412"></script>
-    <script src="./pay.js?v=20261005-controls1"></script>
-  </body>
-</html>
+<html lang="zh-CN"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#f6f7f4">
+  <title>Texta · Plus 与 Pro 套餐</title><link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./workspace.css?v=20261004"><link rel="stylesheet" href="./controls.css?v=20261005-controls1"><link rel="stylesheet" href="./billing.css?v=20261005-plans1">
+  <script src="./theme.js?v=20261005-controls1"></script><script src="./i18n.js?v=20261005-plans1" defer></script>
+</head><body class="payment-page">
+  <header class="site-header"><a class="wordmark" href="./app.html">Texta</a><div class="header-tools"><a href="./app.html">返回学习</a><button class="language-toggle" type="button" aria-label="切换界面语言">中文 / EN</button></div></header>
+  <main class="pricing-shell">
+    <header class="pricing-heading"><h1>为你的学习，选择更多可能</h1><p>从每天的练习，到更密集的备考。</p><p id="currentPlan" class="current-plan" role="status">正在读取当前套餐…</p></header>
+    <div class="billing-period" role="group" aria-label="套餐期限"><button type="button" data-term="monthly" aria-pressed="true">按月购买</button><button type="button" data-term="lifetime" aria-pressed="false">永久套餐</button></div>
+    <p id="billingAvailability" class="billing-availability" role="status">购买暂未开放，支付服务正在准备中。</p>
+    <section class="pricing-grid" aria-label="套餐比较">
+      <article class="pricing-card"><h2>Free</h2><p class="plan-description">先从每日练习开始</p><p class="plan-price"><span class="currency">¥</span><strong>0</strong><span>免费</span></p><button id="freePlanBtn" type="button" disabled>免费套餐</button><ul><li><strong>每天 10 积分</strong></li><li>词汇生成学习文章</li><li>收藏夹与生词本</li><li>文章与词汇导出</li></ul></article>
+      <article class="pricing-card plus-card"><h2>Plus</h2><p class="plan-description">让日常学习更从容</p><p class="plan-price"><span class="currency">¥</span><strong id="plusPrice">9.9</strong><span class="price-period">/ 月</span></p><button id="buyPlusBtn" class="primary-btn" data-plan="plus" type="button" disabled>即将开放</button><ul><li><strong>每天 50 积分</strong></li><li>包含 Free 的全部功能</li><li>适合持续积累词汇</li><li class="plan-duration">购买后生效一个月</li></ul></article>
+      <article class="pricing-card pro-card"><h2>Pro</h2><p class="plan-description">为高强度备考留足空间</p><p class="plan-price"><span class="currency">¥</span><strong id="proPrice">19.9</strong><span class="price-period">/ 月</span></p><button id="buyProBtn" class="primary-btn" data-plan="pro" type="button" disabled>即将开放</button><ul><li><strong>每天 150 积分</strong></li><li>包含 Plus 的全部功能</li><li>适合更密集的文章练习</li><li class="plan-duration">购买后生效一个月</li></ul></article>
+    </section>
+    <div class="pricing-notes"><p id="termNote">按月套餐为一次性购买，到期不会自动扣款。</p><p id="creditNote">积分每天北京时间 00:00 重置，不累计。普通生成消耗 1 积分，高级生成消耗 5 积分。</p><p>永久套餐同样按日补充积分，并非无限积分。</p></div>
+    <p id="payMsg" class="billing-message" role="status" aria-live="polite"></p><button id="resumePaymentBtn" class="hidden" type="button">查看待支付订单</button>
+  </main>
+  <dialog id="paymentDialog" aria-labelledby="paymentTitle" aria-describedby="paymentDescription">
+    <div class="payment-dialog-head"><h2 id="paymentTitle">确认套餐</h2><button id="closePaymentBtn" class="text-btn" type="button" aria-label="关闭支付窗口"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <p id="paymentDescription"></p>
+    <div id="paymentConfirm"><div class="payment-method"><span>支付方式</span><strong>FastSpring · 支付宝</strong></div><p id="paymentTerms"></p><button id="confirmPaymentBtn" class="primary-btn" type="button">确定支付</button></div>
+    <div id="paymentQrStep" class="hidden"><p>请在 FastSpring 支付窗口中选择支付宝，按提示完成付款。</p><button id="reopenCheckoutBtn" type="button">打开支付窗口</button><p class="payment-warning"><strong>支付后，请勿手动关闭弹窗！</strong></p><p>到账确认后将自动开通套餐并关闭窗口。</p><p id="paymentCountdown"></p></div>
+    <p id="paymentStatus" role="status" aria-live="polite"></p>
+  </dialog>
+  <script src="./site-config.js?v=20261005"></script><script src="./pay.js?v=20261005-plans1"></script>
+</body></html>

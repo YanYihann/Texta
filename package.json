@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:billing": "node --test tests/billing.cjs"
   },
   "dependencies": {
     "@prisma/client": "^6.13.0",
