@@ -1,0 +1,51 @@
+/* Policy pages extend the existing Texta palette and reading typography. */
+.legal-shell { max-width: 1080px; margin: 0 auto; padding: 64px 28px 80px; }
+.legal-heading { max-width: 740px; margin-bottom: 36px; }
+.legal-heading h1 { font: 600 clamp(30px, 4vw, 46px)/1.2 var(--font-display); margin-bottom: 18px; }
+.legal-heading p { color: var(--muted); }
+.legal-meta { font-size: 15px; margin-bottom: 22px; }
+.legal-layout { display: grid; grid-template-columns: 200px minmax(0, 740px); gap: 48px; align-items: start; }
+.legal-toc { position: sticky; top: 100px; border-top: 1px solid var(--line); padding-top: 18px; }
+.legal-toc strong { display: block; margin-bottom: 10px; }
+.legal-toc ol { list-style: none; padding: 0; margin: 0; }
+.legal-toc a { display: block; padding: 9px 0; text-decoration: none; line-height: 1.5; }
+.legal-toc a:hover { text-decoration: underline; }
+.legal-copy { font-size: 16px; line-height: 1.85; overflow-wrap: anywhere; }
+.legal-copy section { margin-bottom: 34px; scroll-margin-top: 100px; }
+.legal-copy h2 { font-size: 21px; margin-bottom: 12px; }
+.legal-copy p, .legal-copy ul { margin-bottom: 14px; }
+.legal-copy ul { padding-left: 24px; }
+.legal-copy li { margin-bottom: 8px; }
+.legal-summary { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 32px; }
+.legal-summary p:last-child { margin-bottom: 0; }
+.legal-table-wrap { overflow-x: auto; margin: 20px 0; }
+.legal-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.legal-table th, .legal-table td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.legal-table th { background: var(--soft); font-weight: 600; }
+.policy-footer { max-width: 1080px; margin: 0 auto; padding: 24px 28px 36px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+.policy-footer nav, .account-policy-links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.policy-footer nav a { display: inline-flex; align-items: center; min-height: 44px; }
+.policy-footer p { margin: 12px 0 0; overflow-wrap: anywhere; }
+.account-policy-links { border-top: 1px solid var(--line); padding-top: 14px; gap: 6px 18px; font-size: 15px; }
+.account-policy-links a { min-height: 32px; display: inline-flex; align-items: center; }
+.auth-service-note, .auth-policy-note { font-size: 15px; color: var(--muted); line-height: 1.7; }
+.auth-service-note { margin-bottom: 24px; }
+.auth-policy-note { margin: 8px 0 0; }
+html[lang="en"] .auth-service-note span[lang="en"] { display: none; }
+.auth-page > .policy-footer { width: min(100%, 1080px); }
+html[data-legal-language="zh"] [data-legal-lang="en"], html[data-legal-language="en"] [data-legal-lang="zh"] { display: none; }
+@media (max-width: 720px) {
+  .legal-shell { padding: 36px 20px 40px; }
+  .legal-layout { display: block; }
+  .legal-toc { position: static; margin-bottom: 28px; }
+  .legal-toc ol { display: flex; flex-wrap: wrap; gap: 0 20px; }
+  .legal-heading { margin-bottom: 24px; }
+  .policy-footer { padding-inline: 20px; }
+  .legal-table th, .legal-table td { padding: 10px 8px; }
+}
+@media print {
+  .site-header, .legal-toc, .policy-footer, .skip-link { display: none; }
+  .legal-shell { padding: 0; }
+  .legal-layout { display: block; }
+  .legal-copy section { break-inside: avoid; }
+}

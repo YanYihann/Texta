@@ -1,5 +1,15 @@
 (() => {
   const dictionary = {
+    '服务条款':'Terms of Service','隐私政策':'Privacy Policy','退款政策':'Refund Policy','联系客服':'Contact support','网站政策':'Site policies',
+    '将英语词汇变成双语学习文章，结合词汇解释、收藏夹与生词本，帮助你积累和复习。':'Learn English vocabulary with AI-assisted bilingual articles, explanations, favorites and a personal notebook.',
+    '注册前请阅读':'Before registering, read the ', '及':' and ',
+    '。注册即表示同意服务条款；需单独同意的数据处理会另行说明。':'. Registration means you agree to the Terms of Service. Data processing requiring separate consent will be explained separately.',
+    '永久 Plus ¥49.9，永久 Pro ¥99.9，一次支付。永久套餐同样按日补充积分，并非无限积分。':'Lifetime Plus costs ¥49.9 and Lifetime Pro ¥99.9, paid once. Lifetime plans provide daily credits, not unlimited credits.',
+    '购买后 7 天内且未使用付费权益，可申请全额退款。详情见':'Request a full refund within 7 days if paid benefits are unused. See the ',
+    '；购买前请阅读':'; before purchasing, read the ', '和':' and ',
+    '确认前请阅读':'Before confirming, read the ', '、':', ', '。':'.',
+    '。付款交易适用':'. Payment transactions are subject to the ', 'FastSpring 销售条款':'FastSpring Terms of Sale',
+    '© 2026 Texta · 中国个人运营 · 1963372275@qq.com':'© 2026 Texta · Individually operated in China · 1963372275@qq.com',
     'FastSpring · 支付宝':'FastSpring · Alipay','等待支付确认':'Waiting for payment confirmation',
     '通过 FastSpring 安全支付，到账后自动开通。':'Pay securely through FastSpring. Your plan activates after payment confirmation.',
     '请在 FastSpring 支付窗口中选择支付宝，按提示完成付款。':'Choose Alipay in the FastSpring checkout and follow the payment instructions.',
@@ -197,6 +207,13 @@
     language = next === 'en' ? 'en' : 'zh';
     try { localStorage.setItem('texta_language',language); } catch { /* Storage may be unavailable. */ }
     document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
+    document.querySelectorAll('a[href]').forEach(link => {
+      const url = new URL(link.getAttribute('href'), location.href);
+      if (url.origin === location.origin && /\/(terms|privacy|refund)\.html$/.test(url.pathname)) {
+        url.searchParams.set('lang', language);
+        link.setAttribute('href', url.pathname + url.search + url.hash);
+      }
+    });
     document.querySelectorAll('.language-toggle').forEach(button => { button.textContent = language === 'zh' ? '中文 / EN' : 'EN / 中文'; button.setAttribute('aria-label', language === 'zh' ? 'Switch to English' : '切换为中文'); });
     apply();
     const pageTitle = document.body.classList.contains('payment-page') ? ['Plus 与 Pro 套餐','Plus and Pro plans'] : document.body.classList.contains('admin-page') ? ['管理','Administration'] : document.body.classList.contains('auth-page') ? ['登录','Sign in'] : ['词汇学习','Vocabulary study'];
