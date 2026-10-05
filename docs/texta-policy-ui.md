@@ -25,6 +25,12 @@ The new policy pages load `workspace.css` and `legal.css` without `controls.css`
 
 The ordinary reading-extension contract passes. This documentation pass checks source evidence. Rendered layout, responsiveness and interaction verification belong to the main review and are not claimed here.
 
+## Production follow-up: proxy disclosure and public contact
+
+The main production check identified Cloudflare as the actual website proxy and found its email obfuscation in served HTML. The follow-up adds a Cloudflare provider row to both language versions of the existing privacy table and wraps public support links/footer addresses with `email_off` HTML comments. The added row uses the existing table structure and styling. The comments have no rendered box or visual styling effect, and the native `mailto:` links and address text remain in the source without a JavaScript prerequisite.
+
+Rechecked all six affected pages: comment pairs are balanced (five pairs on each policy page, two on sign-in and payment, one in the workspace account menu), and no public support-email occurrence sits outside a protected segment. The CSS, policy-language script, interface translations and incumbent visual files have no follow-up diff. The ordinary-extension outcome remains pass; confirmation that Cloudflare preserves the address in the final served HTML belongs to the main production check.
+
 ## Preexisting documentation drift preserved
 
 The sidecar predates the October 5 shared-control refinement. Its definition-panel preview has a literal 10px corner while the current design document specifies 14px panels. Several preview controls keep an 8px radius fallback and the older line/hover vocabulary. Its input preview describes the previous resizable textarea, while the design document additionally records the later unified vocabulary composer. These are inherited documentation/preview differences, not new policy tokens.
