@@ -43,12 +43,29 @@ test('payment binding rejects changed order, amount, currency, proof, item and t
 });
 test('session request and returned checkout are checked before exposing payment',async()=>{
   const order={id:'TX-session',product:'plus_monthly',amountFen:990,paymentProof:'proof'};
-  let body;const valid={id:'session-123',live:true,currency:'CNY',expires:'2026-12-31T00:00:00Z',cart:{withTaxNetTotal:9.9,lineItems:[{productPath:'plus-monthly',quantity:1}]},checkoutUrls:{webcheckoutUrl:'https://texta.onfastspring.com/session/session-123'}};
+  let body;const valid={id:'session-123',live:true,currency:'CNY',expires:'2026-12-31T00:00:00Z',cart:{withTaxNetTotal:9.9,lineItems:[{productPath:'plus-monthly',quantity:1,quantityBehavior:'LOCK'}]},checkoutUrls:{webcheckoutUrl:'https://texta.onfastspring.com/session/session-123'}};
   const p=createFastSpring(env,async(url,opts)=>{body=JSON.parse(opts.body);return {ok:true,json:async()=>valid};});
   assert.equal((await p.createSession(order)).providerSessionId,'session-123');assert.equal(body.orderTags.textaProof,'proof');assert.deepEqual(body.paymentMethodsOrder,['ALIPAY']);
   for(const mutation of [{live:false},{currency:'USD'},{cart:{...valid.cart,withTaxNetTotal:10.9}},{checkoutUrls:{webcheckoutUrl:'https://evil.example/pay'}}]) {
     const bad=createFastSpring(env,async()=>({ok:true,json:async()=>({...valid,...mutation})}));await assert.rejects(()=>bad.createSession(order));
   }
+  assert.equal(body.cart.lineItems[0].quantityBehavior,'LOCK');
+  const unlocked=createFastSpring(env,async()=>({ok:true,json:async()=>({...valid,cart:{...valid.cart,lineItems:[{...valid.cart.lineItems[0],quantityBehavior:'ALLOW'}]}})}));
+  await assert.rejects(()=>unlocked.createSession(order));
+});
+
+test('private test probe validates Test mode and cannot open public or live purchases',async()=>{
+  const order={id:'configuration-test',product:'plus_monthly',amountFen:990,paymentProof:'test-proof'};
+  let body;
+  const response={id:'test-session',live:false,currency:'CNY',expires:'2026-12-31T00:00:00Z',cart:{withTaxNetTotal:9.9,lineItems:[{productPath:'plus-monthly',quantity:1,quantityBehavior:'LOCK'}]},checkoutUrls:{webcheckoutUrl:'https://texta.test.onfastspring.com/session/test-session'}};
+  const request=async(url,opts)=>{body=JSON.parse(opts.body);return {ok:true,json:async()=>response};};
+  const testProvider=createFastSpring({...env,FASTSPRING_MODE:'test',BILLING_ENABLED:'false'},request);
+  assert.equal(testProvider.enabled,false);
+  await assert.rejects(()=>testProvider.createSession(order));
+  assert.match((await testProvider.createTestSession(order)).checkoutUrl,/texta\.test\.onfastspring\.com/);
+  assert.equal(body.live,false);
+  await assert.rejects(()=>createFastSpring(env,request).createTestSession(order));
+  await assert.rejects(()=>createFastSpring({...env,FASTSPRING_MODE:'test'},request).createTestSession(order));
 });
 test('HTTP webhook verifies raw signature and acknowledges test events without grants',async()=>{
   const express=require('express'),app=express();let writes=0;

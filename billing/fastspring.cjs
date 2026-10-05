@@ -14,6 +14,24 @@ function createFastSpring(env=process.env, request=fetch) {
   const configured=Boolean(env.FASTSPRING_USERNAME && env.FASTSPRING_PASSWORD && secret.length>=32 && /^texta\/[a-zA-Z0-9_-]+$/.test(checkoutPath));
   const enabled=configured && live && env.BILLING_ENABLED==='true';
   const productPath=id=>env['FASTSPRING_PRODUCT_'+id.toUpperCase()] || id.replaceAll('_','-');
+  async function sessionFor(order,sessionLive) {
+      const response=await request('https://api.fastspring.com/v2/checkouts/'+checkoutPath+'/sessions',{
+        method:'POST',signal:AbortSignal.timeout(20000),
+        headers:{Authorization:'Basic '+Buffer.from(env.FASTSPRING_USERNAME+':'+env.FASTSPRING_PASSWORD).toString('base64'),'Content-Type':'application/json'},
+        body:JSON.stringify({locale:'zh',country:'CN',live:sessionLive,
+          orderTags:{textaOrder:order.id,textaProof:order.paymentProof},
+          cart:{lineItems:[{productPath:productPath(order.product),quantity:1,quantityBehavior:'LOCK',quantityDefault:1}]},paymentMethodsOrder:['ALIPAY']})
+      });
+      if(!response.ok) throw Error('FASTSPRING_SESSION_FAILED');
+      const session=await response.json();
+      const checkoutUrl=new URL(session.checkoutUrls?.webcheckoutUrl || '');
+      // Fail closed before showing a checkout with a different currency, tax-inclusive total or mode.
+      if(session.live!==sessionLive || session.currency!=='CNY' || amountFen(session.cart?.withTaxNetTotal)!==order.amountFen ||
+        checkoutUrl.protocol!=='https:' || checkoutUrl.hostname!==(sessionLive?'texta.onfastspring.com':'texta.test.onfastspring.com') ||
+        session.cart?.lineItems?.length!==1 || session.cart.lineItems[0].productPath!==productPath(order.product) ||
+        session.cart.lineItems[0].quantity!==1 || session.cart.lineItems[0].quantityBehavior!=='LOCK' || !session.id || !Number.isFinite(Date.parse(session.expires))) throw Error('FASTSPRING_CHECKOUT_MISMATCH');
+      return {providerSessionId:session.id,checkoutUrl:checkoutUrl.href,expiresAt:new Date(session.expires)};
+  }
   return {
     enabled, configured, live, productPath,
     verify(raw,signature) {
@@ -24,22 +42,12 @@ function createFastSpring(env=process.env, request=fetch) {
     },
     async createSession(order) {
       if (!enabled) throw Error('PAYMENTS_PAUSED');
-      const response=await request('https://api.fastspring.com/v2/checkouts/'+checkoutPath+'/sessions',{
-        method:'POST',signal:AbortSignal.timeout(20000),
-        headers:{Authorization:'Basic '+Buffer.from(env.FASTSPRING_USERNAME+':'+env.FASTSPRING_PASSWORD).toString('base64'),'Content-Type':'application/json'},
-        body:JSON.stringify({locale:'zh',country:'CN',live:true,
-          orderTags:{textaOrder:order.id,textaProof:order.paymentProof},
-          cart:{lineItems:[{productPath:productPath(order.product),quantity:1}]},paymentMethodsOrder:['ALIPAY']})
-      });
-      if(!response.ok) throw Error('FASTSPRING_SESSION_FAILED');
-      const session=await response.json();
-      const checkoutUrl=new URL(session.checkoutUrls?.webcheckoutUrl || '');
-      // Fail closed before showing a checkout with a different currency, tax-inclusive total or mode.
-      if(session.live!==true || session.currency!=='CNY' || amountFen(session.cart?.withTaxNetTotal)!==order.amountFen ||
-        checkoutUrl.protocol!=='https:' || checkoutUrl.hostname!=='texta.onfastspring.com' ||
-        session.cart?.lineItems?.length!==1 || session.cart.lineItems[0].productPath!==productPath(order.product) ||
-        session.cart.lineItems[0].quantity!==1 || !session.id || !Number.isFinite(Date.parse(session.expires))) throw Error('FASTSPRING_CHECKOUT_MISMATCH');
-      return {providerSessionId:session.id,checkoutUrl:checkoutUrl.href,expiresAt:new Date(session.expires)};
+      return sessionFor(order,true);
+    },
+    // Local configuration probe only. Public order routes never call this method.
+    async createTestSession(order) {
+      if (!configured || env.FASTSPRING_MODE!=='test' || env.BILLING_ENABLED==='true') throw Error('TEST_CHECKOUT_DISABLED');
+      return sessionFor(order,false);
     }
   };
 }
