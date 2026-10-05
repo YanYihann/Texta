@@ -1,5 +1,6 @@
 (() => {
   const dictionary = {
+    'Tab 补全为':'Tab to complete to',
     '难度':'Level','双语文章':'Bilingual article','更多设置':'More settings','短文章':'Short article',
     '输入的词汇':'Entered vocabulary','编辑词汇':'Edit word','删除词汇':'Remove word','建议拼写':'Suggested spelling',
     '逗号或回车添加 · 点击词汇编辑':'Comma or Enter to add · Select a word to edit',

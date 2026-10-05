@@ -2208,7 +2208,12 @@ function refreshMobileNav() {
 function renderSpelling() {
   const words = splitWords(wordsInput.value);
   const map = new Map(spellState.map((x) => [String(x.word || "").toLowerCase(), x]));
-  if (window.TextaVocabulary) window.TextaVocabulary.render(words, map);
+  if (window.TextaVocabulary) {
+    window.TextaVocabulary.render(words, map);
+    spellHintsEl.classList.add("hidden");
+    spellHintsEl.replaceChildren();
+    return;
+  }
   if (words.length === 0) {
     spellHintsEl.classList.add("hidden");
     spellHintsEl.innerHTML = "";
@@ -2282,6 +2287,7 @@ function scheduleSpellcheck() {
   if (spellTimer) {
     clearTimeout(spellTimer);
   }
+  if (window.TextaVocabulary) return;
   spellTimer = setTimeout(runSpellcheck, 350);
 }
 

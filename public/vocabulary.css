@@ -15,7 +15,16 @@ body .input-panel .chip .chip-edit { min-width: 0; padding: 6px 4px 6px 16px; fo
 body .input-panel .chip .chip-remove { flex: 0 0 40px; padding: 8px; }
 .input-panel .chip-remove svg { width: 15px; height: 15px; }
 body .input-panel .chip button:hover { background: color-mix(in srgb,var(--primary) 9%,transparent); }
-body .input-panel #wordDraft { display: block; resize: none; width: 100%; min-height: 52px; max-height: 140px; padding: 10px 3px; border: 0; border-radius: 4px; background: transparent; box-shadow: none; font: 20px/1.6 var(--font-reading); }
+body .input-panel #wordDraft { display: block; position: relative; z-index: 1; resize: none; width: 100%; min-height: 52px; max-height: 140px; padding: 10px 3px; border: 0; border-radius: 4px; background: transparent; box-shadow: none; font: 700 20px/1.6 var(--font-reading); }
+.draft-surface { position: relative; overflow: hidden; border-radius: 4px; }
+.draft-paint { position: absolute; inset: 0; padding: 10px 3px; color: var(--text); font: 700 20px/1.6 var(--font-reading); white-space: pre-wrap; overflow-wrap: break-word; pointer-events: none; }
+body .input-panel .has-paint #wordDraft { color: transparent; caret-color: var(--primary); }
+body .input-panel .has-paint #wordDraft::selection { color: var(--text); background: var(--highlight-en); }
+.draft-surface:focus-within { outline: 1px solid var(--primary); outline-offset: 3px; }
+.spelling-letter { color: var(--warning); text-decoration: underline wavy; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.draft-ghost { display: inline-block; width: 0; white-space: pre; color: var(--muted); animation: completion-appear 220ms var(--ease-out) both; }
+.draft-ghost kbd { display: inline-block; margin-left: 10px; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; font: 500 11px/19px var(--font-ui); vertical-align: 2px; }
+@keyframes completion-appear { from { opacity: 0; } to { opacity: 1; } }
 body .input-panel #wordDraft:focus-visible { outline: 1px solid var(--primary); outline-offset: 3px; }
 body .input-panel #wordDraft::placeholder { font: 16px/2 var(--font-ui); }
 .input-panel .input-tools { margin-top: 20px; align-items: baseline; }
@@ -73,3 +82,10 @@ body .input-panel #generateBtn.is-loading svg { display: none; }
   body .input-panel #generateBtn { min-width: 142px; }
 }
 @media (forced-colors: active) { .generation-mode button[aria-pressed="true"] { outline: 2px solid Highlight; } }
+@media (forced-colors: active) {
+  body .input-panel .has-paint #wordDraft { color: CanvasText; }
+  .draft-paint { color: transparent; }
+  .draft-paint .spelling-letter { color: transparent; text-decoration-color: LinkText; }
+  .draft-ghost { color: GrayText; }
+}
+@media (prefers-reduced-motion: reduce) { .draft-ghost { animation: none; opacity: 1; } }

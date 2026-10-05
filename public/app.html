@@ -5,8 +5,8 @@
   <meta name="theme-color" content="#f6f7f4"><title>Texta · 词汇学习</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./workspace.css?v=20261004-clean11"><link rel="stylesheet" href="./controls.css?v=20261005-controls1"><script src="./theme.js?v=20261005-controls1"></script>
-  <link rel="stylesheet" href="./vocabulary.css?v=20261005-editor1">
-  <script src="./i18n.js?v=20261005-editor1" defer></script>
+  <link rel="stylesheet" href="./vocabulary.css?v=20261005-assist1">
+  <script src="./i18n.js?v=20261005-assist1" defer></script>
 </head>
 <body class="workspace-page">
   <a class="skip-link" href="#wordDraft">跳到词汇输入</a>
@@ -40,7 +40,8 @@
         <div class="vocabulary-editor">
           <div id="wordChips" class="word-chips" aria-label="输入的词汇"></div>
           <button id="expandWordsBtn" class="text-btn hidden" type="button" aria-expanded="false" aria-controls="wordChips">展开全部词汇</button>
-          <textarea id="wordDraft" rows="1" aria-describedby="inputHelp wordEntryHelp wordCount" placeholder="粘贴或输入你想学习的单词与短语…" spellcheck="false"></textarea>
+          <div class="draft-surface"><div id="draftPaint" class="draft-paint" aria-hidden="true"></div><textarea id="wordDraft" rows="1" aria-describedby="inputHelp wordEntryHelp wordCount completionStatus" placeholder="粘贴或输入你想学习的单词与短语…" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea></div>
+          <span id="completionStatus" class="sr-only" role="status" aria-live="polite"></span>
         </div>
         <div class="input-tools"><span id="wordEntryHelp" class="field-help">逗号或回车添加 · 点击词汇编辑</span><span id="wordCount" class="count" aria-live="polite">0 / 120 个词</span></div>
         <p id="inputHelp" class="field-help sr-only">短语中的空格会保留。支持 TXT、Markdown、CSV 和 JSON 文件。</p>
@@ -151,4 +152,4 @@
       </div>
     </section>
 
-<script src="./site-config.js?v=20261004-clean11"></script><script src="./app.js?v=20261005-editor1"></script><script src="./vocabulary.js?v=20261005-editor1"></script><script src="./library.js?v=20261004-clean11"></script><script src="./workspace.js?v=20261005-editor1"></script></body></html>
+<script src="./site-config.js?v=20261004-clean11"></script><script src="./app.js?v=20261005-assist1"></script><script src="./word-assist.js?v=20261005-assist1"></script><script src="./vocabulary.js?v=20261005-assist1"></script><script src="./library.js?v=20261004-clean11"></script><script src="./workspace.js?v=20261005-assist1"></script></body></html>
