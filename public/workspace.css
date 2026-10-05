@@ -80,6 +80,10 @@ h3 { font-size: 18px; }
 .library-tab.active::after { transform: scaleX(1); }
 .header-tools { margin-left: auto; display: flex; align-items: center; gap: var(--space-md); }
 .language-toggle { border: 0; padding: 8px; white-space: nowrap; }
+.header-account-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.plans-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--radius); color: var(--primary); background: var(--panel); font-weight: 600; text-decoration: none; white-space: nowrap; transition: background-color var(--fast), border-color var(--fast), color var(--fast); }
+.plans-button:hover { background: var(--soft); border-color: var(--primary); }
+.plans-button:active { background: var(--soft); }
 .account-menu, .export-menu { position: relative; }
 summary { list-style: none; display: flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius); padding: 8px 12px; }
 summary::-webkit-details-marker { display: none; }
@@ -367,6 +371,21 @@ body.admin-page input::placeholder,body.payment-page input::placeholder { color:
   .export-popover { right: 0; left: auto; width: min(300px,100%); max-height: min(420px,calc(100dvh - 180px)); overflow-y: auto; }
   .account-popover { width: min(300px,90vw); }
   .auth-page .site-header { padding-bottom: 12px; }
+}
+@media (min-width: 861px) and (max-width: 1280px) {
+  .workspace-page .site-header { gap: 20px; }
+  .workspace-page .library-tab { padding-inline: 12px; }
+  .workspace-page .header-tools, .header-account-actions { gap: 8px; }
+}
+@media (min-width: 861px) and (max-width: 1000px) {
+  .workspace-page .site-header { padding: 12px 5% 0; flex-wrap: wrap; gap: 12px; }
+  .workspace-page .library-tabs { width: 100%; order: 3; }
+}
+@media (max-width: 520px) {
+  .workspace-page .header-tools { display: contents; }
+  .workspace-page .language-toggle { margin-left: auto; }
+  .workspace-page .header-account-actions { width: 100%; justify-content: flex-end; gap: 8px; }
+  .workspace-page .plans-button { padding-inline: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 @media print { .site-header,.input-panel,.status-row,.actions,.mobile-bottom-nav { display: none !important; } body { background: var(--white); } .app-shell { width: 100%; } .reading-workspace { display: block; } .glossary-panel { position: static; } }

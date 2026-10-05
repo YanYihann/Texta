@@ -42,7 +42,7 @@
     '购买后生效一个月，同套餐续费顺延，到期不自动扣款。':'One month of access. Renewals extend the same plan. No automatic charges.',
     '一次购买，永久有效。每天积分重置，不累计。':'Lifetime access. Credits reset daily and do not roll over.',
     '暂时无法连接账户服务，请稍后刷新。':'Unable to connect to your account. Please refresh later.',
-    '查看 Plus / Pro 套餐':'View Plus / Pro plans','Plus 用户':'Plus user','Pro 用户':'Pro user','历史充值审核':'Previous payment requests',
+    'Plus / Pro 套餐':'Plus / Pro plans','Plus 用户':'Plus user','Pro 用户':'Pro user','历史充值审核':'Previous payment requests',
     '普通生成 · 1 积分':'Standard · 1 credit','高级生成 · 5 积分':'Advanced · 5 credits',
     '示例仅用于预览，不消耗积分。':'This example is for preview and uses no credits.',
     '普通生成用于日常练习；高级生成质量更高但消耗积分更多。':'Standard generation is for daily practice; advanced generation uses more credits.',

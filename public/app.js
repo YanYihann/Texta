@@ -27,7 +27,6 @@ const favoritesListEl = document.getElementById("favoritesList");
 const userBadgeEl = document.getElementById("userBadge");
 const logoutBtnEl = document.getElementById("logoutBtn");
 const usageTextEl = document.getElementById("usageText");
-const upgradeVipBtnEl = document.getElementById("upgradeVipBtn");
 const adminReviewLinkEl = document.getElementById("adminReviewLink");
 const adminUsageLinkEl = document.getElementById("adminUsageLink");
 const brandEl = document.querySelector(".brand");
@@ -478,14 +477,6 @@ function renderUsage(usage, user = currentUser) {
     const limit = Number(usage?.limit ?? ({plus:50,pro:150}[plan] || 10));
     const planLabel = ({plus:'Plus',pro:'Pro'})[plan] || 'Free';
     usageTextEl.textContent = `今日剩余积分：${remaining} / ${limit}（${planLabel}）`;
-  }
-
-  if (upgradeVipBtnEl) {
-    if (isAdmin) {
-      upgradeVipBtnEl.classList.add("hidden");
-    } else {
-      upgradeVipBtnEl.classList.remove("hidden");
-    }
   }
 
   if (adminReviewLinkEl) {
