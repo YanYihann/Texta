@@ -6,17 +6,18 @@ const { AsyncLocalStorage } = require('node:async_hooks');
 const { parseMixedResponse, generateMixedStory, limitsFor } = require('../generation/mixed.cjs');
 const { generateBilingualStory } = require('../generation/bilingual.cjs');
 const { bilingualAnswer } = require('./fixtures/bilingual.cjs');
+const fullStory = article => '周五，小明答应在读书活动前修好工坊的旧桌子，却发现桌腿比预想中松得更厉害。\n\n' + article + '他先请邻居扶稳桌面，再检查松动的位置；虽然时间不多，但先解决关键问题，才能避免返工。换好零件后，他又放上几本厚书试了一遍，确认桌面不再摇晃。第二天，孩子们围坐着读书，他也放心地把工具收进箱子。';
 
 function answer(article = '我们的<w1>预算</w1>有限，先完成<w2>流程</w2>。') {
   const words=['budget','process'];
-  return JSON.stringify({ title: '修好仪器', article: article.replace(/<w(\d+)>(.*?)<\/w\1>/g,(_,id,meaning)=>`⟦${words[id-1]||'extra'}|n.|${meaning}⟧`),
+  return JSON.stringify({ title: '修好仪器', article: fullStory(article.replace(/<w(\d+)>(.*?)<\/w\1>/g,(_,id,meaning)=>`⟦${words[id-1]||'extra'}|n.|${meaning}⟧`)),
     vocabulary: [{ word: 'budget', pos: 'n.', meaning: '预算' }, { word: 'process', pos: 'n.', meaning: '流程' }] });
 }
 
 test('adjacent tags retain exact English boundaries and matching contextual meanings', () => {
   const result = parseMixedResponse(answer('我们的<w1>预算</w1><w2>流程</w2>需要调整。'), ['Budget', 'process']);
   assert.deepEqual(result.issues, []);
-  assert.equal(result.article, '我们的Budget process需要调整。');
+  assert.equal(result.article, fullStory('我们的Budget process需要调整。'));
   assert.deepEqual(result.glosses.map(row => row.meaning), ['预算', '流程']);
 });
 
@@ -27,27 +28,26 @@ test('malformed, missing, repeated, unknown, extra English, wrong meanings and v
     answer('我们的<w1>预算</w1>有限，<w2>流程</w2><w3>标准</w3>都要改。'),
     answer('我们的<w1>预算</w1>limited，先完成<w2>流程</w2>。'),
     answer('我们的<w1>budget</w1>有限，先完成<w2>流程</w2>。'),
-    answer('今天天气很好。我们的<w1>预算</w1>有限，先完成<w2>流程</w2>。'),
-    answer('背'.repeat(90) + '<w1>预算</w1><w2>流程</w2>要调整。')]) {
+    answer('背'.repeat(300) + '<w1>预算</w1><w2>流程</w2>要调整。')]) {
     assert.ok(parseMixedResponse(response, ['budget', 'process']).issues.length, response);
   }
   const duplicateGloss = JSON.parse(answer()); duplicateGloss.vocabulary.push(duplicateGloss.vocabulary[0]);
   assert.ok(parseMixedResponse(JSON.stringify(duplicateGloss), ['budget', 'process']).issues.length);
   const repeatedMeaning = parseMixedResponse(answer('我们的<w1>预算</w1>预算有限，先完成<w2>流程</w2>。'), ['budget','process']);
-  assert.equal(repeatedMeaning.article,'我们的budget有限，先完成process。');
+  assert.equal(repeatedMeaning.article,fullStory('我们的budget有限，先完成process。'));
   assert.equal(repeatedMeaning.boundaryNormalizations,1);
 });
 
 test('phrases, capitalization, apostrophes and hyphens are restored verbatim', () => {
   const words = ['take care of', "don't", 'well-being'];
-  const response = JSON.stringify({title:'照顾家人',article:"我⟦take care of|phr.|照顾⟧母亲，她说⟦don't|phr.|不要⟧忽视自己的⟦well-being|n.|身心健康⟧。",
+  const response = JSON.stringify({title:'照顾家人',article:fullStory("我⟦take care of|phr.|照顾⟧母亲，她说⟦don't|phr.|不要⟧忽视自己的⟦well-being|n.|身心健康⟧。"),
     vocabulary: [{word:words[0],pos:'phr.',meaning:'照顾'},{word:words[1],pos:'phr.',meaning:'不要'},{word:words[2],pos:'n.',meaning:'身心健康'}]});
-  assert.equal(parseMixedResponse(response, words).article, "我take care of母亲，她说don't忽视自己的well-being。");
+  assert.equal(parseMixedResponse(response, words).article, fullStory("我take care of母亲，她说don't忽视自己的well-being。"));
 });
 
 test('a 120-word result is one story request and is not capped by the former fixed token budget', async () => {
   const words = Array.from({ length:120 }, (_, index) => `word-${index}`);
-  const response = JSON.stringify({title:'同一任务', article: words.map(word => `我们检查⟦${word}|n.|材料⟧。`).join(''),
+  const response = JSON.stringify({title:'同一任务', article: '小明负责修好工坊的桌子。' + words.map(word => `他先检查⟦${word}|n.|材料⟧，确认后再继续。`).join(''),
     vocabulary: words.map(word => ({word,pos:'n.',meaning:'材料'}))});
   let calls = 0;
   const result = await generateMixedStory({words,model:'mock',callText:async (_,options) => {
@@ -63,7 +63,7 @@ test('one bounded regeneration includes diagnostics, never appends filler; trans
     calls++; if (calls === 1) return answer('我们的<w1>预算</w1>有限。');
     assert.match(prompt, /缺少process/); return answer();
   }});
-  assert.equal(calls,2); assert.equal(result.article,'我们的budget有限，先完成process。');
+  assert.equal(calls,2); assert.equal(result.article,fullStory('我们的budget有限，先完成process。'));
   calls=0;
   await assert.rejects(() => generateMixedStory({words:['budget','process'],callText:async()=>{calls++;return '{}';}}), /未通过检查/);
   assert.equal(calls,2);
@@ -104,7 +104,7 @@ test('production API uses only direct A for mixed mode, preserves runs and refun
   const valid=await call({words:'Budget,budget,process',generationMode:'mixed',generationQuality:'advanced',quickMode:true});
   assert.equal(valid.status,200); assert.equal(modelCalls,1); assert.equal(reservationCost,1);
   assert.equal(valid.result.generationQuality,'normal'); assert.equal(valid.result.usageCost,1);
-  assert.equal(valid.result.article,'我们的Budget有限，先完成process。');
+  assert.equal(valid.result.article,fullStory('我们的Budget有限，先完成process。'));
   assert.deepEqual(Array.from(valid.result.runs.filter(row=>row.type==='word').map(row=>row.displayMeaning)),['预算','流程']);
   assert.equal(valid.result.runs.map(row=>row.text).join(''),valid.result.article);
   assert.equal(valid.result.contextGlosses.length,2); assert.equal(valid.result.baseLexicon.length,2);
@@ -123,14 +123,30 @@ test('production API uses only direct A for mixed mode, preserves runs and refun
 });
 
 test('known missing closing delimiters are repaired without changing meanings; ambiguous malformed tags still fail',()=>{
-  const good=JSON.parse(answer());good.article='我们的⟦budget|n.|预算⟦process|n.|流程⟧需要调整。';
+  const good=JSON.parse(answer());good.article=fullStory('我们的⟦budget|n.|预算⟦process|n.|流程⟧需要调整。');
   const fixed=parseMixedResponse(JSON.stringify(good),['budget','process']);
-  assert.deepEqual(fixed.issues,[]);assert.equal(fixed.article,'我们的budget process需要调整。');assert.equal(fixed.formatNormalizations,1);
-  good.article='我们的⟦budget|n.|未知义项⟦process|n.|流程⟧需要调整。';
+  assert.deepEqual(fixed.issues,[]);assert.equal(fixed.article,fullStory('我们的budget process需要调整。'));assert.equal(fixed.formatNormalizations,1);
+  good.article=fullStory('我们的⟦budget|n.|未知义项⟦process|n.|流程⟧需要调整。');
   assert.ok(parseMixedResponse(JSON.stringify(good),['budget','process']).issues.length);
-  good.article='我们从⟦budget|n.|预算⟧控制⟦process|n.|流程⟧。';
+  good.article=fullStory('我们从⟦budget|n.|预算⟧控制⟦process|n.|流程⟧。');
   good.vocabulary[0].meaning='预算；预算额';
   assert.deepEqual(parseMixedResponse(JSON.stringify(good),['budget','process']).issues,[]);
+});
+
+test('complete mixed stories allow background and transitions but reject tiny output and missing protagonist', () => {
+  const valid = JSON.parse(answer());
+  const parsed = parseMixedResponse(JSON.stringify(valid), ['budget','process']);
+  assert.deepEqual(parsed.issues, []);
+  assert.ok(parsed.chineseChars >= limitsFor(['budget','process'], false).hardMin);
+  valid.article = '小明检查⟦budget|n.|预算⟧，修改⟦process|n.|流程⟧。';
+  assert.ok(parseMixedResponse(JSON.stringify(valid), ['budget','process']).issues.some(issue => issue.includes('至少')));
+  valid.article = JSON.parse(answer()).article.replace('小明', '小华');
+  assert.ok(parseMixedResponse(JSON.stringify(valid), ['budget','process']).issues.some(issue => issue.includes('主角')));
+  const six = ['a','b','c','d','e','f'];
+  assert.equal(limitsFor(six, false).minChinese, 180);
+  assert.equal(limitsFor(six, false).maxChinese, 280);
+  assert.equal(limitsFor(six, true).minChinese, 110);
+  assert.equal(limitsFor(six, true).maxChinese, 180);
 });
 
 test('mixed sentence translation uses exact contextual meanings locally and detail hydration preserves them',()=>{
