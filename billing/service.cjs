@@ -78,7 +78,7 @@ function createBilling({db, provider, now=()=>new Date()}) {
 function registerBilling(app,{db,provider,requireAuth,publicUser}) {
   const billing = createBilling({db,provider});
   app.get('/api/billing/plans',async(req,res)=>{
-    res.json({products:Object.values(PRODUCTS),paymentsAvailable:Boolean(provider.enabled),currency:'CNY',dailyReset:'Asia/Shanghai',advancedUsageCost:Math.max(1,Number(process.env.ADVANCED_USAGE_COST || 5))});
+    res.json({products:Object.values(PRODUCTS),paymentsAvailable:Boolean(provider.enabled),currency:'CNY',dailyReset:'Asia/Shanghai',generationUsageCost:1});
   });
   app.post('/api/billing/orders',async(req,res)=>{
     try {

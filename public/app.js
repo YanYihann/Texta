@@ -1,8 +1,7 @@
 ﻿const wordsInput = document.getElementById("words");
-const levelSelect = document.getElementById("level");
 const generationModeSelect = document.getElementById("generationMode");
 const generationQualitySelect = document.getElementById("generationQuality");
-const quickModeInput = document.getElementById("quickMode");
+const shortModeInput = document.getElementById("shortMode");
 const wordFileInput = document.getElementById("wordFileInput");
 const uploadWordsBtn = document.getElementById("uploadWordsBtn");
 const clearWordsBtn = document.getElementById("clearWordsBtn");
@@ -67,6 +66,7 @@ let latestWords = [];
 let latestLexicon = [];
 let latestBaseLexicon = [];
 let latestContextLexicon = [];
+let latestSentencePairs = [];
 let latestContextGlosses = [];
 let latestRuns = [];
 let latestParagraphsEn = [];
@@ -635,7 +635,7 @@ function normalizeGenerationModeValue(raw) {
 }
 
 function normalizeGenerationQualityValue(raw) {
-  return String(raw || "").toLowerCase() === "advanced" ? "advanced" : "normal";
+  return "normal";
 }
 
 function normalizeLibraryModeValue(raw) {
@@ -806,6 +806,24 @@ function resolveIpaFromItem(item, accent) {
   return "";
 }
 
+function sanitizeSentencePairs(rows) {
+  return (Array.isArray(rows) ? rows : []).slice(0, 360).filter(row =>
+    Number.isInteger(row?.paragraph) && row.paragraph >= 0 && row.paragraph < 120 &&
+    typeof row.en === 'string' && row.en.length > 0 && row.en.length <= 2000 &&
+    typeof row.zh === 'string' && row.zh.length > 0 && row.zh.length <= 2000
+  ).map(row => ({ paragraph: row.paragraph, en: row.en, zh: row.zh }));
+}
+
+function validateSentencePairs(rows, paragraphsEn, paragraphsZh) {
+  const pairs = sanitizeSentencePairs(rows);
+  if (!pairs.length || paragraphsEn.length !== paragraphsZh.length || pairs.some(pair => pair.paragraph >= paragraphsEn.length)) return [];
+  for (let i = 0; i < paragraphsEn.length; i++) {
+    const group = pairs.filter(pair => pair.paragraph === i);
+    if (group.map(pair => pair.en).join(' ') !== paragraphsEn[i] || group.map(pair => pair.zh).join('') !== paragraphsZh[i]) return [];
+  }
+  return pairs;
+}
+
 function normalizeFavorite(item) {
   const nowIso = new Date().toISOString();
   const id = String(item?.id || "").trim() || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -830,6 +848,7 @@ function normalizeFavorite(item) {
     paragraphsEn: Array.isArray(item?.paragraphsEn) ? item.paragraphsEn : [],
     paragraphsZh: Array.isArray(item?.paragraphsZh) ? item.paragraphsZh : [],
     alignment: Array.isArray(item?.alignment) ? item.alignment : [],
+    sentencePairs: sanitizeSentencePairs(item?.sentencePairs),
     generationMode,
     generationQuality,
     missing: Array.isArray(item?.missing) ? item.missing : [],
@@ -1721,6 +1740,26 @@ function highlightEnglishWordsWithKeys(text, words) {
   return renderSenseSuperscript(html);
 }
 
+function highlightAlignedParagraph(text, alignment, paragraph, language) {
+  const rows = Array.isArray(alignment) ? alignment : [];
+  if (!rows.some(row => Array.isArray(row.occurrences))) return null;
+  const spans = rows.flatMap(row => (Array.isArray(row.occurrences) ? row.occurrences : [])
+    .filter(hit => hit.paragraph === paragraph).map(hit => ({
+      start: hit[`${language}Start`], end: hit[`${language}End`], row
+    }))).sort((a, b) => a.start - b.start);
+  let cursor = 0, html = '';
+  for (const span of spans) {
+    const { start, end, row } = span;
+    const terms = language === 'en' ? row.english_forms : row.zh_terms;
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < cursor || end <= start || end > text.length ||
+        !Array.isArray(terms) || !terms.includes(text.slice(start, end))) return null;
+    html += escapeHtml(text.slice(cursor, start));
+    html += `<mark class="vocab-${language}" data-word-key="${escapeHtml(keyifyWord(row.word))}">${escapeHtml(text.slice(start, end))}<sup class="sense-marker">${escapeHtml(row.marker || '①')}</sup></mark>`;
+    cursor = end;
+  }
+  return html + escapeHtml(text.slice(cursor));
+}
+
 function highlightEnglishWithAlignment(text, words, alignment) {
   const rows = Array.isArray(alignment) ? alignment : [];
   if (rows.length === 0) {
@@ -2480,8 +2519,8 @@ function renderParagraphBlocks(
   articleBlocksEl.innerHTML = paragraphsEn
     .map((en, i) => {
       const zh = paragraphsZh[i] || "";
-      const enHtml = highlightEnglishWithAlignment(en, words, alignment).replace(/\n/g, "<br>");
-      const zhHtml = highlightChineseWithAlignment(zh, zhTermKeyPairs, alignment).replace(/\n/g, "<br>");
+      const enHtml = (highlightAlignedParagraph(en, alignment, i, 'en') ?? highlightEnglishWithAlignment(en, words, alignment)).replace(/\n/g, "<br>");
+      const zhHtml = (highlightAlignedParagraph(zh, alignment, i, 'zh') ?? highlightChineseWithAlignment(zh, zhTermKeyPairs, alignment)).replace(/\n/g, "<br>");
 
       return `
         <article class=\"para-card\" data-idx=\"${i}\" style=\"animation-delay:${Math.min(i * 40, 220)}ms\">
@@ -2561,9 +2600,14 @@ function mergeDetailedEntryIntoState(entry) {
   vocabDetailErrorTipByKey.delete(key);
   notebookHydrationLastAttemptByKey.delete(key);
 
-  latestLexicon = upsertWordEntryByKey(latestLexicon, key, mergedEntry);
+  const contextGloss = latestContextGlosses.find(row => keyifyWord(row?.word) === key);
+  const contextEntry = contextGloss?.contextMeaning ? {
+    ...mergedEntry, pos: contextGloss.pos || mergedEntry.pos,
+    senses: [{ marker: contextGloss.marker || "①", meaning: contextGloss.contextMeaning }]
+  } : mergedEntry;
   latestBaseLexicon = upsertWordEntryByKey(latestBaseLexicon, key, mergedEntry);
-  latestContextLexicon = upsertWordEntryByKey(latestContextLexicon, key, mergedEntry);
+  latestContextLexicon = upsertWordEntryByKey(latestContextLexicon, key, contextEntry);
+  latestLexicon = latestContextGlosses.length ? latestContextLexicon : latestBaseLexicon;
   if (isWordInNotebook(key)) {
     notebookEntries = upsertWordEntryByKey(notebookEntries, key, mergedEntry);
     saveNotebookEntries();
@@ -2666,43 +2710,6 @@ async function ensureVocabDetailForKey(key) {
   mergeDetailedEntryIntoState(detail);
   refreshVocabularySurfaces();
   updateGlossaryFollow([normalizedKey]);
-}
-
-function collectPendingVocabDetailHydrationTargets() {
-  const source = Array.isArray(latestLexicon) && latestLexicon.length > 0 ? latestLexicon : latestBaseLexicon;
-  const seen = new Set();
-  const targets = [];
-  for (const item of source) {
-    const key = keyifyWord(item?.word || item?.key || "");
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    const current = findLexiconItemByKey(key) || item;
-    const word = String(current?.word || item?.word || "").trim();
-    if (!word) continue;
-    if (!needsVocabHydration(current)) continue;
-    targets.push({ key, word });
-  }
-  return targets;
-}
-
-async function prefetchVocabDetailEntriesForCurrentArticle() {
-  const targets = collectPendingVocabDetailHydrationTargets();
-  if (targets.length === 0) return;
-
-  console.log("[detail-prefetch] start targets =", targets.map((t) => t.word));
-  const settled = await Promise.all(
-    targets.map(async (target) => {
-      const detail = await fetchVocabDetailEntry(target.word);
-      if (!detail) return false;
-      mergeDetailedEntryIntoState(detail);
-      return true;
-    })
-  );
-  const updated = settled.some(Boolean);
-  if (updated) {
-    refreshVocabularySurfaces();
-  }
-  console.log("[detail-prefetch] done");
 }
 
 function collectPendingNotebookVocabHydrationTargets(entries) {
@@ -2809,6 +2816,15 @@ function splitContextSentences(text) {
   if (!source) return [];
   if (typeof Intl.Segmenter === "function") return [...new Intl.Segmenter("en", { granularity: "sentence" }).segment(source)].map(row => row.segment.trim()).filter(Boolean);
   return source.split(/(?<=[.!?。！？])\s+/u).filter(Boolean);
+}
+
+function translateMixedSentence(sentence, contextGlosses) {
+  const meanings = new Map((contextGlosses || []).filter(row => row?.word && row?.contextMeaning)
+    .map(row => [String(row.word).trim().toLowerCase(), String(row.contextMeaning)]));
+  if (!meanings.size) return String(sentence || "");
+  const words = [...meanings.keys()].sort((a, b) => b.length - a.length).map(word => escapeRegExp(word).replace(/\s+/g, "\\s+"));
+  const pattern = new RegExp(`(^|[^A-Za-z])(${words.join("|")})(?:[①②③④⑤⑥⑦⑧⑨⑩])?(?=$|[^A-Za-z])`, "gi");
+  return String(sentence || "").replace(pattern, (_, prefix, word) => prefix + (meanings.get(word.toLowerCase().replace(/\s+/g, " ")) || word));
 }
 
 async function fetchContextTranslation(payload) {
@@ -2954,18 +2970,24 @@ function renderLexiconCard(item, showContext = false) {
     if (paragraphIndex >= 0) {
       const paragraph = latestParagraphsEn[paragraphIndex];
       const sentences = splitContextSentences(paragraph);
-      const sentence = sentences.find(matchesWord) || paragraph;
+      const savedPair = latestSentencePairs.find(pair => pair.paragraph === paragraphIndex && matchesWord(pair.en));
+      const sentence = savedPair?.en || sentences.find(matchesWord) || paragraph;
       const context = createSection("在本文中");
       const sentenceEl = document.createElement("p"); sentenceEl.className = "context-sentence"; sentenceEl.innerHTML = highlightEnglishWordsWithKeys(sentence, [word]);
       const sourceLabel = document.createElement("div"); sourceLabel.className = "context-translation-label"; sourceLabel.textContent = "原文例句";
       context.appendChild(sourceLabel); context.appendChild(sentenceEl);
       const translation = String(latestParagraphsZh[paragraphIndex] || "").trim();
       const alignment = latestAlignment.filter(row => keyifyWord(row.word) === key);
-      const termPairs = buildChineseTermKeyPairsFromAlignment(alignment, [item]);
+      const isMixedContext = latestGenerationMode === "mixed";
+      const termPairs = isMixedContext
+        ? latestContextGlosses.filter(row => row.contextMeaning).map(row => ({ term: row.contextMeaning, keys: [keyifyWord(row.word)] }))
+        : buildChineseTermKeyPairsFromAlignment(alignment, [item]);
       const label = document.createElement("div"); label.className = "context-translation-label"; label.textContent = "例句译文";
       context.appendChild(label);
       renderContextTranslation(context, { sentence, paragraph, paragraphTranslation: translation, terms: termPairs.map(pair => pair.term) }, termPairs, latestAlignment,
-        sentences.length === 1 && translation && !/翻译生成失败/.test(translation) ? translation : "");
+        isMixedContext ? translateMixedSentence(sentence, latestContextGlosses) : savedPair?.zh
+          ? savedPair.zh
+          : sentences.length === 1 && translation && !/翻译生成失败/.test(translation) ? translation : "");
     }
   }
 
@@ -3105,7 +3127,7 @@ function renderNotebookView() {
   });
   notebookEntriesEl.replaceChildren(frag);
   if (currentLibraryMode === "notebook" && !notebookPrefetchInFlight) {
-    void prefetchNotebookVocabDetails(filteredRows);
+    // Vocabulary details load when a learner opens a word, rather than for every notebook row.
   }
 
   if (currentNotebookFocusKey) {
@@ -3309,12 +3331,18 @@ function applyArticleData(data) {
   latestBaseLexicon = incomingBaseLexicon.length > 0 ? incomingBaseLexicon : incomingLexicon;
   latestContextLexicon = incomingLexicon.length > 0 ? incomingLexicon : latestBaseLexicon;
   latestContextGlosses = sanitizeContextGlossesForUi(data.contextGlosses);
+  latestContextLexicon = latestContextLexicon.map(entry => {
+    const gloss = latestContextGlosses.find(row => keyifyWord(row.word) === keyifyWord(entry.word));
+    return gloss?.contextMeaning ? { ...entry, pos: gloss.pos || entry.pos,
+      senses: [{ marker: gloss.marker || '①', meaning: gloss.contextMeaning }] } : entry;
+  });
   latestRuns = sanitizeRunsForUi(data.runs);
   latestParagraphsEn = Array.isArray(data.paragraphsEn) && data.paragraphsEn.length > 0 ? data.paragraphsEn : splitParagraphs(latestArticle);
   latestParagraphsZh = Array.isArray(data.paragraphsZh) ? data.paragraphsZh : [];
   latestAlignment = Array.isArray(data.alignment) ? data.alignment : [];
+  latestSentencePairs = validateSentencePairs(data.sentencePairs, latestParagraphsEn, latestParagraphsZh);
   latestGenerationMode = normalizeGenerationModeValue(data.generationMode || "mixed");
-  latestLexicon = latestGenerationMode === "mixed" ? latestContextLexicon : latestBaseLexicon;
+  latestLexicon = latestContextGlosses.length ? latestContextLexicon : latestBaseLexicon;
   latestGenerationQuality = normalizeGenerationQualityValue(data.generationQuality || "normal");
   if (generationModeSelect) {
     generationModeSelect.value = latestGenerationMode;
@@ -3406,6 +3434,7 @@ function favoriteFromCurrent() {
     paragraphsEn: latestParagraphsEn,
     paragraphsZh: latestParagraphsZh,
     alignment: latestAlignment,
+    sentencePairs: latestSentencePairs,
     generationMode: latestGenerationMode,
     generationQuality: latestGenerationQuality,
     missing: [],
@@ -3443,10 +3472,9 @@ function saveCurrentArticleToHistory() {
 generateBtn.addEventListener("click", async () => {
   if (generateBtn.disabled) return;
   const wordsText = wordsInput.value.trim();
-  const level = levelSelect.value;
   const generationMode = String(generationModeSelect?.value || "mixed");
-  const generationQuality = String(generationQualitySelect?.value || "normal").toLowerCase() === "advanced" ? "advanced" : "normal";
-  const quickMode = Boolean(quickModeInput.checked);
+  const generationQuality = "normal";
+  const shortMode = Boolean(shortModeInput.checked);
 
   if (!wordsText) {
     statusEl.textContent = "请先输入单词。";
@@ -3482,7 +3510,7 @@ generateBtn.addEventListener("click", async () => {
       retryCount: 0,
       timeoutMs: 300000,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ words: wordsText, level, quickMode, generationMode, generationQuality })
+      body: JSON.stringify({ words: wordsText, shortMode, generationMode, generationQuality })
     });
 
     const data = await response.json();
@@ -3504,8 +3532,7 @@ generateBtn.addEventListener("click", async () => {
 
       applyArticleData({ ...data, words: requestedWords });
       saveCurrentArticleToHistory();
-      void prefetchVocabDetailEntriesForCurrentArticle();
-      const usedCost = Number(data?.usageCost || (generationQuality === "advanced" ? 5 : 1));
+      const usedCost = Number(data?.usageCost || 1);
       const elapsedMs = generationStartAtMs ? Date.now() - generationStartAtMs : 0;
       stopGenerationElapsedTimer();
       statusEl.textContent = `生成完成（本次消耗：${usedCost} 积分，思考耗时：${formatElapsedSeconds(elapsedMs)}）。`;

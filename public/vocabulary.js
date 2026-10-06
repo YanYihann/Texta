@@ -162,14 +162,14 @@
   });
   function settings() {
     modeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.generationMode === generationModeSelect.value)));
-    const quality = generationQualitySelect.value === 'advanced' ? '高级生成 · 5 积分' : '普通生成 · 1 积分';
-    document.getElementById('generationSummary').textContent = text(quality) + (quickModeInput.checked ? ` · ${text('短文章')}` : '');
+    const quality = '普通生成 · 1 积分';
+    document.getElementById('generationSummary').textContent = text(quality) + (shortModeInput.checked ? ` · ${text('短文模式')}` : '');
   }
   modeButtons.forEach(button => button.addEventListener('click', () => {
     generationModeSelect.value = button.dataset.generationMode;
     generationModeSelect.dispatchEvent(new Event('change', {bubbles: true}));
   }));
-  [generationModeSelect, generationQualitySelect, quickModeInput].forEach(control => control.addEventListener('change', settings));
+  [generationModeSelect, generationQualitySelect, shortModeInput].forEach(control => control.addEventListener('change', settings));
   document.addEventListener('click', event => { if (!more.contains(event.target)) more.open = false; });
   more.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); more.open = false; more.querySelector('summary').focus(); } });
   for (const name of ['texta:ready', 'texta:article', 'texta:open-article']) {

@@ -85,7 +85,7 @@
     try {
       const catalogue=await api('/api/billing/plans');products=catalogue.products || [];available=catalogue.paymentsAvailable===true;
       products.forEach(product=>{if(prices[product.plan])prices[product.plan][product.term]=String(product.amountFen/100);});
-      byId('creditNote').textContent=`积分每天北京时间 00:00 重置，不累计。普通生成消耗 1 积分，高级生成消耗 ${catalogue.advancedUsageCost} 积分。`;
+      byId('creditNote').textContent=`积分每天北京时间 00:00 重置，不累计。每次文章生成消耗 1 积分。`;
       if(localStorage.getItem('texta_auth_token')) {user=(await api('/api/auth/me')).user;if(user.plan==='vip'){user.plan='plus';user.permanentPlan='plus';}}
       if(user&&localStorage.getItem(storageKey()))byId('resumePaymentBtn').classList.remove('hidden');
     } catch(error) {available=false;message.textContent=tr('暂时无法连接账户服务，请稍后刷新。');message.classList.add('is-error');}

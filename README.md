@@ -41,6 +41,8 @@ The current production frontend lives in `public/` and is deployed through GitHu
 
 ## How it works
 
+The generation rewrite removes difficulty tiers and replaces Quick mode with Short article mode. Both reading modes generate their content in one request, with at most one validation retry. Bilingual output contains paired English/Chinese sentences and contextual word markers; the server derives highlights and alignment directly. Full dictionary details load on demand. See [bilingual generation](docs/bilingual-generation.md) and [mixed generation](docs/mixed-direct-generation.md) for prompts, budgets, validation, and testing limitations.
+
 ```mermaid
 flowchart LR
   U["Learner"] --> W["Static web app<br/>public/"]
@@ -83,7 +85,6 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/texta?schema=public
 OPENAI_API_KEY=your_key
 OPENAI_MODEL=deepseek-v3.2
 OPENAI_MODEL_NORMAL=deepseek-v3.2
-OPENAI_MODEL_ADVANCED=deepseek-v3.2
 OPENAI_API_MODE=chat
 OPENAI_BASE_URL=https://api.302.ai/v1
 OPENAI_TIMEOUT_MS=60000
@@ -186,5 +187,3 @@ No `LICENSE` file is currently included. Add an explicit license before treating
 README structure is inspired by [Best-README-Template](https://github.com/othneildrew/Best-README-Template) and the examples curated in [awesome-readme](https://github.com/matiassingers/awesome-readme).
 
 <p align="right"><a href="#readme-top">Back to top</a></p>
-
-

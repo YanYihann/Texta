@@ -33,8 +33,6 @@ body .input-panel #wordDraft::placeholder { font: 16px/2 var(--font-ui); }
 .input-panel .spell-hints { font-size: 14px; margin-top: 12px; }
 body .input-panel #expandWordsBtn { font-size: 13px; margin-bottom: 8px; }
 body .input-panel .generation-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 20px 32px; border-top: 1px solid var(--line); border-radius: 0 0 20px 20px; background: color-mix(in srgb,var(--soft) 28%,var(--panel)); }
-.input-panel .level-setting { display: flex; gap: 12px; flex-shrink: 0; }
-.input-panel .level-setting select { width: auto; min-width: 100px; background: var(--field); }
 .generation-mode { display: flex; gap: 4px; padding: 4px; background: var(--soft); border-radius: 12px; }
 body .generation-mode button { border: 0; background: transparent; color: var(--muted); min-height: 40px; padding: 8px 14px; font-size: 14px; border-radius: 8px; }
 body .generation-mode button[aria-pressed="true"] { color: var(--primary); background: var(--panel); box-shadow: var(--control-shadow); font-weight: 600; }

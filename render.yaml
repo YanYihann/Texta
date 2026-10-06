@@ -14,8 +14,6 @@ services:
         value: deepseek-v3.2
       - key: OPENAI_MODEL_NORMAL
         value: deepseek-v3.2
-      - key: OPENAI_MODEL_ADVANCED
-        value: deepseek-v3.2
       - key: OPENAI_API_MODE
         value: chat
       - key: OPENAI_BASE_URL

@@ -9,14 +9,14 @@ const {effectivePlan, dailyLimit, normalizePlan, grant, PRODUCTS} = require('./b
 const {createFastSpring} = require('./billing/fastspring.cjs');
 const {registerBilling, transaction} = require('./billing/service.cjs');
 const {reserveCredits, refundCredits} = require('./billing/credits.cjs');
+const {generateMixedStory} = require('./generation/mixed.cjs');
+const {generateBilingualStory} = require('./generation/bilingual.cjs');
 
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL_NORMAL = process.env.OPENAI_MODEL_NORMAL || process.env.OPENAI_MODEL || "deepseek-v3.2";
-const OPENAI_MODEL_ADVANCED = process.env.OPENAI_MODEL_ADVANCED || OPENAI_MODEL_NORMAL;
-const ADVANCED_USAGE_COST = Math.max(1, Number(process.env.ADVANCED_USAGE_COST || 5));
 const OPENAI_API_MODE = String(process.env.OPENAI_API_MODE || "chat").toLowerCase();
 
 function normalizeBaseUrl(raw) {
@@ -441,7 +441,8 @@ function getShanghaiHourBucket(date = new Date()) {
 function getDailyLimit(user) { return dailyLimit(user); }
 
 function normalizeGenerationQuality(raw) {
-  return String(raw || "").toLowerCase() === "advanced" ? "advanced" : "normal";
+  // Accept legacy saved articles and clients, but all new generation uses one tier.
+  return "normal";
 }
 
 function normalizeGenerationMode(raw) {
@@ -454,14 +455,6 @@ function isMixedGenerationMode(raw) {
 }
 
 function getGenerationProfile(rawQuality) {
-  const quality = normalizeGenerationQuality(rawQuality);
-  if (quality === "advanced") {
-    return {
-      quality,
-      model: OPENAI_MODEL_ADVANCED,
-      usageCost: ADVANCED_USAGE_COST
-    };
-  }
   return {
     quality: "normal",
     model: OPENAI_MODEL_NORMAL,
@@ -610,6 +603,14 @@ function normalizeStringArray(raw, maxItems = 200, itemMaxLen = 500) {
     .slice(0, maxItems);
 }
 
+function sanitizeSentencePairs(rows) {
+  return (Array.isArray(rows) ? rows : []).slice(0, 360).filter(row =>
+    Number.isInteger(row?.paragraph) && row.paragraph >= 0 && row.paragraph < 120 &&
+    typeof row.en === 'string' && row.en.length > 0 && row.en.length <= 2000 &&
+    typeof row.zh === 'string' && row.zh.length > 0 && row.zh.length <= 2000
+  ).map(row => ({ paragraph: row.paragraph, en: row.en, zh: row.zh }));
+}
+
 function parseAlignmentPayload(rawAlignment) {
   if (Array.isArray(rawAlignment)) {
     return {
@@ -618,7 +619,7 @@ function parseAlignmentPayload(rawAlignment) {
       generationQuality: "normal",
       baseLexicon: [],
       contextGlosses: [],
-      runs: []
+      runs: [], sentencePairs: []
     };
   }
 
@@ -631,7 +632,8 @@ function parseAlignmentPayload(rawAlignment) {
       generationQuality: normalizeGenerationQuality(meta.generationQuality),
       baseLexicon: Array.isArray(meta.baseLexicon) ? meta.baseLexicon : [],
       contextGlosses: Array.isArray(meta.contextGlosses) ? meta.contextGlosses : [],
-      runs: Array.isArray(meta.runs) ? meta.runs : []
+      runs: Array.isArray(meta.runs) ? meta.runs : [],
+      sentencePairs: sanitizeSentencePairs(meta.sentencePairs)
     };
   }
 
@@ -641,7 +643,7 @@ function parseAlignmentPayload(rawAlignment) {
     generationQuality: "normal",
     baseLexicon: [],
     contextGlosses: [],
-    runs: []
+    runs: [], sentencePairs: []
   };
 }
 
@@ -651,7 +653,8 @@ function buildAlignmentPayload(
   rawGenerationQuality,
   rawBaseLexicon = [],
   rawContextGlosses = [],
-  rawRuns = []
+  rawRuns = [],
+  rawSentencePairs = []
 ) {
   const parsed = parseAlignmentPayload(rawAlignment);
   const baseLexicon = Array.isArray(rawBaseLexicon) && rawBaseLexicon.length > 0 ? rawBaseLexicon : parsed.baseLexicon;
@@ -665,7 +668,8 @@ function buildAlignmentPayload(
       generationQuality: normalizeGenerationQuality(rawGenerationQuality || parsed.generationQuality),
       baseLexicon: cloneJsonSafe(Array.isArray(baseLexicon) ? baseLexicon.slice(0, 300) : [], []),
       contextGlosses: cloneJsonSafe(Array.isArray(contextGlosses) ? contextGlosses.slice(0, 300) : [], []),
-      runs: cloneJsonSafe(Array.isArray(runs) ? runs.slice(0, 3000) : [], [])
+      runs: cloneJsonSafe(Array.isArray(runs) ? runs.slice(0, 3000) : [], []),
+      sentencePairs: sanitizeSentencePairs(Array.isArray(rawSentencePairs) && rawSentencePairs.length ? rawSentencePairs : parsed.sentencePairs)
     }
   };
 }
@@ -700,7 +704,8 @@ function sanitizeFavoritesPayload(rawList) {
         raw?.generationQuality,
         raw?.baseLexicon,
         raw?.contextGlosses,
-        raw?.runs
+        raw?.runs,
+        raw?.sentencePairs
       ),
       missing: cloneJsonSafe(Array.isArray(raw?.missing) ? raw.missing.slice(0, 120) : [], []),
       createdAt: normalizeIso(raw?.createdAt, now),
@@ -718,7 +723,7 @@ function sanitizeNotebookSource(raw) {
   const alignment = parseAlignmentPayload(source.alignment);
   return { ...source, alignment: alignment.items, generationMode: alignment.generationMode,
     generationQuality: alignment.generationQuality, baseLexicon: alignment.baseLexicon,
-    contextGlosses: alignment.contextGlosses, runs: alignment.runs };
+    contextGlosses: alignment.contextGlosses, runs: alignment.runs, sentencePairs: alignment.sentencePairs };
 }
 
 function sanitizeNotebookPayload(rawList) {
@@ -1257,10 +1262,12 @@ async function callOpenAIText(prompt, options = {}) {
   const maxTokens = Number.isFinite(options.maxTokens) ? options.maxTokens : undefined;
   const model = String(options.model || OPENAI_MODEL_NORMAL).trim() || OPENAI_MODEL_NORMAL;
   const step = String(options.step || "unknown");
+  const retryCount = Number.isFinite(options.retryCount) ? Math.max(0, Math.floor(options.retryCount)) : OPENAI_RETRY_COUNT;
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? Math.min(OPENAI_TIMEOUT_MS, Math.max(1000, options.timeoutMs)) : OPENAI_TIMEOUT_MS;
 
-  for (let attempt = 1; attempt <= OPENAI_RETRY_COUNT + 1; attempt += 1) {
+  for (let attempt = 1; attempt <= retryCount + 1; attempt += 1) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const startedAt = Date.now();
 
     try {
@@ -1275,6 +1282,7 @@ async function callOpenAIText(prompt, options = {}) {
             ? {
                 model,
                 messages: [{ role: "user", content: prompt }],
+                ...(Number.isFinite(options.temperature) ? { temperature: options.temperature } : {}),
                 ...(maxTokens ? { max_tokens: maxTokens } : {})
               }
             : {
@@ -1310,7 +1318,7 @@ async function callOpenAIText(prompt, options = {}) {
     } catch (error) {
       const isTimeout = error?.name === "AbortError";
       const retryable = isTimeout || isRetryableNetworkError(error);
-      const hasNext = attempt <= OPENAI_RETRY_COUNT;
+      const hasNext = attempt <= retryCount;
       recordModelTrace({
         step,
         model,
@@ -1329,7 +1337,7 @@ async function callOpenAIText(prompt, options = {}) {
 
       if (isTimeout) {
         throw new Error(
-          `OpenAI request timeout after ${OPENAI_TIMEOUT_MS}ms. Check network/proxy or increase OPENAI_TIMEOUT_MS in .env.`
+          `OpenAI request timeout after ${timeoutMs}ms. Check network/proxy or increase OPENAI_TIMEOUT_MS in .env.`
         );
       }
 
@@ -1472,62 +1480,6 @@ async function generateLexicon(words, quickMode, model, detailLevel = "full") {
   return cloneJsonSafe(finalLexicon, []);
 }
 
-async function planMixedUsage(words, lexicon, quickMode, model) {
-  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
-  if (sourceWords.length === 0) return [];
-
-  const lexGuide = (Array.isArray(lexicon) ? lexicon : [])
-    .map((item) => {
-      const word = String(item?.word || "").trim();
-      if (!word) return "";
-      const senses = Array.isArray(item?.senses) ? item.senses : [];
-      const primary = senses[0];
-      const primaryText = primary ? `${primary.meaning}` : "词义待补充";
-      const alt = senses
-        .slice(1, 3)
-        .map((s) => s.meaning)
-        .join("; ");
-      const tail = alt ? ` | secondary: ${alt}` : "";
-      return `${word} (${item?.pos || "-"}) => ${primaryText}${tail}`;
-    })
-    .filter(Boolean)
-    .join("\n");
-
-  const prompt = [
-    "You are planning natural usage for a Chinese-first mixed-language passage.",
-    "The final target style is a fluent Chinese mini-scene with only the supplied English words embedded, e.g. 清晨，我们沿着由granite构成的山路前进，脚下的terrain起伏不平。",
-    "Plan for DIRECT mixed-language writing. Do not plan a Chinese draft to be translated later.",
-    "Coverage has highest priority: every input word must have a natural slot in the final passage.",
-    "First infer the overall theme of the word list. Examples: natural geography, weather/climate, emotion/psychology, campus life, technology/society, abstract concepts.",
-    "If most words share a theme, choose one coherent scene around that theme.",
-    "If the words are random, create one plausible story scene that can naturally contain all of them.",
-    "For random words like apple/thunder/library/dragon/nervous/machine, a good scene is: a student studies in a library during thunder, eats an apple, reads a dragon story, hears a machine, and feels nervous.",
-    "Arrange words by story logic, not by input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
-    "For each word, choose a grammar role matching its POS: nouns as objects/places/items, verbs as actions, adjectives modifying Chinese nouns, academic terms in class/research contexts, abstract words in reflection.",
-    "Return ONLY JSON array in the same order as input words.",
-    "Each item format:",
-    '{"word": string, "pos": string, "meaning": string, "scene": string, "allowed_pattern": string, "avoid": string, "must_keep_english": boolean, "preferred_pattern": string, "forbidden_chinese_only": string[], "allowed_templates": string[]}',
-    "Rules:",
-    "1) meaning should be the most natural context-appropriate Chinese meaning for daily-life usage, not just dictionary default.",
-    "2) scene should be a short label for the shared theme/scene, e.g. geography-field-trip, storm-observation, campus-day, lab-accident, family-memory.",
-    "3) allowed_pattern should describe the natural Chinese grammar slot for this English word.",
-    "4) avoid should mention awkward/collocation mistakes to prevent forced usage.",
-    "5) Avoid isolated example sentences. Every word should belong to the same coherent passage whenever possible.",
-    "6) For must-keep words (budget/relax/process/standard/attitude/motivation/cover/reject/derive/contribute/expenses/vacation), set must_keep_english=true and provide preferred_pattern / forbidden_chinese_only / allowed_templates.",
-    `Words: ${sourceWords.join(", ")}`,
-    "Lexicon candidates:",
-    lexGuide
-  ].join("\n");
-
-  try {
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 420 : 900, model, step: "mixed_plan" });
-    const parsed = extractJsonArray(text);
-    return normalizeMixedUsagePlan(parsed, sourceWords, lexicon);
-  } catch (error) {
-    console.error("Failed to plan mixed usage:", error.message);
-    return buildFallbackMixedUsagePlan(sourceWords, lexicon);
-  }
-}
 
 function normalizeOrigin(rawOrigin) {
   const value = String(rawOrigin || "").trim();
@@ -1603,342 +1555,8 @@ function splitWordsForDenseChunks(words, minSize = 4, maxSize = 6) {
   return groups;
 }
 
-async function generateMixedDenseArticleByChunks(words, level, quickMode, lexicon, extraConstraint, model, usagePlan) {
-  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
-  if (sourceWords.length === 0) {
-    return { title: defaultTitleByDate(0), article: "", chunks: [] };
-  }
 
-  const groups = splitWordsForDenseChunks(sourceWords, 4, 6);
-  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-  const usageRows = Array.isArray(usagePlan) ? usagePlan : [];
-  const buildDenseChunkWithCoverage = async (groupWords, groupLexicon, groupPlan, constraintText) => {
-    const planMap = new Map((Array.isArray(groupPlan) ? groupPlan : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-    const lexMapLocal = new Map((Array.isArray(groupLexicon) ? groupLexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-    const localContextRows = groupWords.map((word) => {
-      const key = String(word || "").toLowerCase();
-      const plan = planMap.get(key);
-      const lexItem = lexMapLocal.get(key);
-      const contextMeaning = String(plan?.meaning || lexItem?.senses?.[0]?.meaning || "").trim();
-      const hints = buildMustKeepEnglishHints(word, contextMeaning);
-      return {
-        word,
-        contextMeaning,
-        mustKeepEnglish: Boolean(plan?.mustKeepEnglish ?? hints.mustKeepEnglish),
-        preferredPattern: String(plan?.preferredPattern || hints.preferredPattern || "").trim(),
-        forbiddenChineseOnly: normalizeChinesePhraseList(plan?.forbiddenChineseOnly || hints.forbiddenChineseOnly || [], 10),
-        allowedTemplates: Array.isArray(plan?.allowedTemplates) ? plan.allowedTemplates : hints.allowedTemplates
-      };
-    });
 
-    let pack = await generateArticlePackage(
-      groupWords,
-      level,
-      quickMode,
-      groupLexicon,
-      "mixed_dense",
-      constraintText,
-      model,
-      groupPlan
-    );
-    let article = String(pack?.article || "").trim();
-    let localMissing = findMissingWords(article, groupWords);
-    let localSoftIssues = findSoftMissingByChineseSubstitution(article, localContextRows);
-
-    if (localMissing.length > 0) {
-      const localRetryConstraint = [
-        constraintText,
-        "Important local fix: every target word in this chunk must appear as the exact English token.",
-        "Coverage is validated by exact literal English surface forms.",
-        "Chinese translation does NOT count as usage.",
-        "Never replace a target word with Chinese-only wording.",
-        `Missing local words: ${localMissing.join(", ")}.`
-      ]
-        .filter(Boolean)
-        .join(" ");
-      pack = await generateArticlePackage(
-        groupWords,
-        level,
-        quickMode,
-        groupLexicon,
-        "mixed_dense",
-        localRetryConstraint,
-        model,
-        groupPlan
-      );
-      article = String(pack?.article || "").trim();
-      localMissing = findMissingWords(article, groupWords);
-      localSoftIssues = findSoftMissingByChineseSubstitution(article, localContextRows);
-    }
-
-    if (localSoftIssues.length > 0) {
-      article = restoreEnglishIntoChinesePhrase(article, localSoftIssues);
-      localMissing = findMissingWords(article, groupWords);
-      localSoftIssues = findSoftMissingByChineseSubstitution(article, localContextRows);
-    }
-
-    if (localMissing.length > 0) {
-      localMissing = findMissingWords(article, groupWords);
-    }
-
-    return {
-      pack,
-      article,
-      localMissing
-    };
-  };
-
-  if (groups.length <= 1) {
-    const singleConstraint = [
-      extraConstraint,
-      "Dense chunk 1/1.",
-      `Use ALL these target words in this chunk: ${sourceWords.join(", ")}.`,
-      "The first sentence must contain at least one target word.",
-      "Do not write a long Chinese-only introduction before the first target word.",
-      "Before the first target word, allow at most 12 Chinese characters.",
-      "Start directly with the mixed content, not with background setup."
-    ]
-      .filter(Boolean)
-      .join(" ");
-    const single = await buildDenseChunkWithCoverage(sourceWords, lexicon, usageRows, singleConstraint);
-    return {
-      ...single.pack,
-      article: single.article,
-      chunks: [
-        {
-          index: 0,
-          words: sourceWords.slice(),
-          article: single.article
-        }
-      ],
-      hasDeterministicChunkAppend: false
-    };
-  }
-
-  const parts = [];
-  const chunks = [];
-  let title = "";
-
-  for (let i = 0; i < groups.length; i += 1) {
-    const groupWords = groups[i];
-    const groupSet = new Set(groupWords.map((w) => String(w || "").toLowerCase()));
-    const groupLexicon = groupWords.map((w) => lexMap.get(String(w || "").toLowerCase())).filter(Boolean);
-    const groupPlan = usageRows.filter((item) => groupSet.has(String(item?.word || "").toLowerCase()));
-    const denseConstraint = [
-      `Dense chunk ${i + 1}/${groups.length}.`,
-      `Use ALL these target words in this chunk: ${groupWords.join(", ")}.`,
-      "The first sentence must contain at least one target word.",
-      "Do not write a long Chinese-only introduction before the first target word.",
-      "Before the first target word, allow at most 12 Chinese characters.",
-      "Start directly with the mixed content, not with background setup."
-    ].join(" ");
-    const finalConstraint = [extraConstraint, denseConstraint].filter(Boolean).join(" ");
-    const localPack = await buildDenseChunkWithCoverage(groupWords, groupLexicon, groupPlan, finalConstraint);
-    const pack = localPack.pack;
-    if (!title) {
-      title = String(pack?.title || "").trim();
-    }
-    const article = String(localPack?.article || "").trim();
-    parts.push(article);
-    chunks.push({
-      index: i,
-      words: groupWords.slice(),
-      article
-    });
-  }
-
-  return {
-    title: title || defaultTitleByDate(sourceWords.length),
-    article: parts.filter(Boolean).join("\n\n"),
-    chunks,
-    hasDeterministicChunkAppend: false
-  };
-}
-
-async function generateMixedArticleByScenes(words, level, quickMode, lexicon, extraConstraint, model, usagePlan) {
-  const groups = splitWordsForMixedScenes(words, usagePlan);
-  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-  if (groups.length <= 1) {
-    return generateArticlePackage(words, level, quickMode, lexicon, "mixed", extraConstraint, model, usagePlan);
-  }
-
-  const parts = [];
-  let title = "";
-  for (let i = 0; i < groups.length; i += 1) {
-    const groupWords = groups[i];
-    const groupSet = new Set(groupWords.map((w) => String(w || "").toLowerCase()));
-    const groupLexicon = groupWords.map((w) => lexMap.get(String(w || "").toLowerCase())).filter(Boolean);
-    const groupPlan = (Array.isArray(usagePlan) ? usagePlan : []).filter((item) => groupSet.has(String(item?.word || "").toLowerCase()));
-    const sceneConstraint = [
-      `Micro-scene ${i + 1}/${groups.length}.`,
-      `Only focus on these target words in this part: ${groupWords.join(", ")}.`,
-      "Do not intentionally use target words that are assigned to other micro-scenes."
-    ].join(" ");
-    const finalConstraint = [extraConstraint, sceneConstraint].filter(Boolean).join(" ");
-    const pack = await generateArticlePackage(groupWords, level, quickMode, groupLexicon, "mixed", finalConstraint, model, groupPlan);
-    if (!title) {
-      title = String(pack?.title || "").trim();
-    }
-    parts.push(String(pack?.article || "").trim());
-  }
-
-  return {
-    title: title || defaultTitleByDate(words.length),
-    article: parts.filter(Boolean).join("\n\n")
-  };
-}
-
-async function generateArticlePackage(
-  words,
-  level,
-  quickMode,
-  lexicon,
-  generationMode = "standard",
-  extraConstraint = "",
-  model,
-  usagePlan = []
-) {
-  const promptLevel = levelToPromptText(level);
-  const modeKey = String(generationMode || "").toLowerCase();
-  const isMixedMode = isMixedGenerationMode(modeKey);
-  const isDenseMixedMode = modeKey === "mixed_dense";
-  const lengthRule = isMixedMode
-    ? isDenseMixedMode
-      ? "Use high-density mixed flow: prefer 4-8 short sentences, not a long narrative paragraph."
-      : "Write one coherent short scene of 6-10 natural Chinese sentences."
-    : quickMode
-      ? "Length: 120-180 words."
-      : words.length > 16
-        ? "Length: 320-450 words."
-        : "Length: 220-320 words.";
-  const paragraphRule = isMixedMode
-    ? isDenseMixedMode
-      ? "Use 4-8 short lines or short paragraphs, separated by blank lines when needed."
-      : "Use 1-3 paragraphs separated by blank lines, with clear beginning, development, and ending."
-    : quickMode
-      ? "Use 2-3 short paragraphs separated by blank lines."
-      : words.length > 16
-        ? "Use 4-5 paragraphs separated by blank lines."
-        : "Use 3-4 paragraphs separated by blank lines.";
-
-  const vocabGuide = (lexicon || [])
-    .map((item) => {
-      const senses = Array.isArray(item?.senses) ? item.senses : [];
-      const primary = senses[0];
-      const primaryText = primary ? `preferred: ${primary.meaning}` : "preferred: use the most natural context meaning";
-      const alternates = senses
-        .slice(1, 3)
-        .map((s) => s.meaning)
-        .join("; ");
-      return alternates
-        ? `${item.word} (${item.pos || "-"}): ${primaryText}; alternatives: ${alternates}`
-        : `${item.word} (${item.pos || "-"}): ${primaryText}`;
-    })
-    .join("\n");
-  const protectedTokens = isMixedMode ? buildProtectedWordTokens(words) : [];
-  const protectedTokenList = protectedTokens.map((item) => item.token);
-  const protectedTargetGuide = isMixedMode ? buildProtectedTargetGuide(protectedTokens, lexicon, usagePlan) : "";
-  const rawUsagePlanGuide = isMixedMode ? buildMixedUsagePlanGuide(usagePlan, words) : "";
-  const rawRequiredWordPlan = isMixedMode ? buildMixedRequiredWordPlan(words, lexicon, usagePlan) : "";
-  const usagePlanGuide = isMixedMode ? convertWordsInTextToProtectedTokens(rawUsagePlanGuide, protectedTokens) : rawUsagePlanGuide;
-  const requiredWordPlan = isMixedMode ? convertWordsInTextToProtectedTokens(rawRequiredWordPlan, protectedTokens) : rawRequiredWordPlan;
-  const promptExtraConstraint = isMixedMode ? convertWordsInTextToProtectedTokens(extraConstraint, protectedTokens) : extraConstraint;
-
-  const modeRules = isMixedMode
-    ? [
-        isDenseMixedMode
-          ? "Write high-density Chinese mixed flow using protected tokens."
-          : "Write a Chinese-first mixed-language short passage. The backend will replace protected tokens with English words after generation.",
-        "Return ONLY valid JSON. Do not output markdown or explanations.",
-        "HARD RULES, highest priority:",
-        "1) Use every protected token exactly as written, such as ⟦T1⟧ and ⟦T2⟧.",
-        "2) Never translate, delete, rename, split, or modify protected tokens.",
-        "3) Do NOT write the real English target words directly in the article body; use protected tokens only.",
-        "4) All non-protected-token content in article must be Chinese.",
-        "5) Coverage of protected tokens is more important than naturalness; improve naturalness only after all protected tokens are included.",
-        "6) The first sentence must include at least one protected token; do not write a Chinese-only introduction.",
-        "7) If the article body has no protected token, the answer is invalid.",
-        "8) The JSON title must be Chinese in mixed mode.",
-        "Protected target guide:",
-        protectedTargetGuide,
-        "Writing goal:",
-        "Write one coherent Chinese mini-scene, not isolated example sentences.",
-        "First infer the common domain of the protected tokens. If they share a domain, build the whole passage around that domain.",
-        "If the tokens are semantically random, create one believable daily-life, school, travel, field-trip, lab, or weather-observation scene that can contain them.",
-        "Arrange protected tokens by story logic rather than input order: background -> place -> action -> change/conflict -> result -> feeling/summary.",
-        "Place each protected token in a natural grammar slot based on its POS: noun as object/place/item/concept, verb as action/change, adjective before a Chinese noun, academic term in a class/research note, abstract word in reflection.",
-        isDenseMixedMode ? "Use 4-8 short Chinese sentences or short lines." : "Use 6-10 natural Chinese sentences.",
-        isDenseMixedMode ? "Prefer 1-2 protected tokens per sentence." : "Prefer 1-3 protected tokens per sentence when they naturally belong together.",
-        "Do not add long Chinese-only setup before the first protected token.",
-        "Do not use glossary parentheses such as 中文（⟦T1⟧）.",
-        "Do not output Chinese meaning + protected token duplicates such as 残忍⟦T1⟧ or 无菌⟦T2⟧.",
-        "Do not output word lists, keyword sections, dictionary lines, or standalone examples.",
-        "When Chinese characters directly connect with a protected token, keep compact form like 看到⟦T1⟧ or 感到⟦T2⟧.",
-        "If a protected token is hard to place naturally, add a brief observation, notebook sentence, classroom remark, object, action, or feeling inside the same scene."
-      ]
-    : [
-        "Write an English IELTS-style article.",
-        "The JSON title and article body must be English only.",
-        "Do not output Chinese characters in the title or article body; Chinese translation is generated separately later."
-      ];
-  const bodyLabel = isMixedMode ? "Passage" : "Article";
-
-  const prompt = [
-    ...modeRules,
-    "Return ONLY JSON object:",
-    '{"title":"...", "article":"..."}',
-    `Level: ${promptLevel}.`,
-    lengthRule,
-    paragraphRule,
-    `${bodyLabel} must be plain text paragraphs separated by blank lines.`,
-    isMixedMode ? "Every protected token must appear in article exactly as written." : "Every target word must appear at least once.",
-    isMixedMode ? "Use the context-appropriate meaning from the protected token guide." : "Use the most natural context-appropriate meaning for each word in the exact scene.",
-    isMixedMode ? "Protected-token coverage is more important than naturalness." : "Naturalness is more important than using default dictionary sense.",
-    isMixedMode ? "Do not remove a hard protected token just because it is awkward; integrate it as a short observation inside the same scene." : "Do not force a target word into an unnatural sentence just for coverage.",
-    isMixedMode ? "If a protected token is difficult to place naturally, integrate it as a brief observation, classroom note, object, action, or reflection inside the same scene." : "If a word is difficult to place naturally, put it in a separate short micro-scene.",
-    "Do not include sense markers in the article body.",
-    "The output should read smoothly even for someone who ignores the vocabulary-learning purpose.",
-    isMixedMode ? "Make title concise and natural." : "Make title concise, natural, and English-only.",
-    isMixedMode ? "Protected token guide:" : "Vocabulary guide:",
-    isMixedMode ? protectedTargetGuide : vocabGuide,
-    isMixedMode ? "Mandatory target-word placement plan:" : "",
-    isMixedMode ? requiredWordPlan : "",
-    isMixedMode ? `Exact protected token checklist: ${protectedTokenList.map((w) => `"${w}"`).join(", ")}` : "",
-    isMixedMode ? "Usage planning hints:" : "",
-    isMixedMode ? usagePlanGuide : "",
-    promptExtraConstraint
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  const maxTokens = isDenseMixedMode ? (quickMode ? 300 : 580) : quickMode ? 420 : words.length > 16 ? 1200 : 820;
-  const text = await callOpenAIText(prompt, { maxTokens, model, step: "article" });
-  const parsed = extractJsonObject(text);
-
-  if (parsed && typeof parsed.title === "string" && typeof parsed.article === "string") {
-    return {
-      title: parsed.title.trim() || defaultTitleByDate(words.length),
-      article: isMixedMode ? finalizeProtectedMixedArticle(parsed.article, words, protectedTokens) : parsed.article.trim()
-    };
-  }
-
-  const looseParsed = extractTitleArticleLoose(text);
-  if (looseParsed && looseParsed.article) {
-    return {
-      title: looseParsed.title || defaultTitleByDate(words.length),
-      article: isMixedMode ? finalizeProtectedMixedArticle(looseParsed.article, words, protectedTokens) : looseParsed.article
-    };
-  }
-
-  const lines = text.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
-  const guessedTitle = lines[0] || defaultTitleByDate(words.length);
-  const guessedArticle = lines.slice(1).join("\n\n") || text;
-
-  return {
-    title: guessedTitle.replace(/^title\s*:\s*/i, "").trim() || defaultTitleByDate(words.length),
-    article: isMixedMode ? finalizeProtectedMixedArticle(guessedArticle, words, protectedTokens) : guessedArticle.trim()
-  };
-}
 
 function appendMissingWordsSentence(article, missingWords, lexicon) {
   if (!missingWords.length) return article;
@@ -2200,15 +1818,6 @@ function defaultTitleByDate(wordCount) {
   return `Vocabulary ${y}-${m}-${d} (${wordCount} words)`;
 }
 
-function levelToPromptText(level) {
-  if (level === "初级") {
-    return "beginner";
-  }
-  if (level === "高级") {
-    return "advanced";
-  }
-  return "intermediate";
-}
 
 function normalizeChinesePhraseList(values, maxItems = 8) {
   return Array.from(
@@ -3041,54 +2650,6 @@ function shouldRunContextRefine(words, lexicon, generationMode, generationQualit
   return missingContextCount > 0;
 }
 
-async function refineMixedLexiconByContext(words, lexicon, article, quickMode, model) {
-  const vocab = Array.isArray(lexicon) ? lexicon : [];
-  if (!Array.isArray(words) || words.length === 0 || vocab.length === 0) {
-    return vocab;
-  }
-
-  const contextMap = buildWordContextSnippetMap(article, words);
-  const guide = words
-    .map((word) => {
-      const item = vocab.find((x) => String(x?.word || "").toLowerCase() === String(word || "").toLowerCase());
-      const senses = Array.isArray(item?.senses) ? item.senses : [];
-      const sensesText = senses.map((s) => `${s.marker} ${String(s?.meaning || "").trim()}`).join("; ");
-      const ctx = contextMap.get(String(word || "").toLowerCase()) || "";
-      return `${word} | context: ${ctx || "(no context found)"} | candidates: ${sensesText || "(none)"}`;
-    })
-    .join("\n");
-
-  const prompt = [
-    "You are refining Chinese glosses for an IELTS mixed Chinese-English cloze article.",
-    "Return ONLY JSON array in same order as input words.",
-    "Each item format: {\"word\": string, \"pos\": string, \"meaning\": string}.",
-    "pos must be an English POS tag like n., v., adj., adv., prep., pron., conj., num., det., int.",
-    "meaning must match the article context exactly and be concise Chinese (2-8 chars).",
-    "meaning should be suitable for direct visual display under the word.",
-    "Keep meaning short, natural, and learner-friendly.",
-    "Avoid dictionary-style wording, abstract phrasing, or overly literal glosses.",
-    "Prioritize the most common IELTS exam sense in this context.",
-    "Avoid rare/archaic senses and avoid literal dictionary noise.",
-    "When context is lab cleanliness, sterility should be 无菌 (not 不育).",
-    "When context is emotional anger, bristle should be 发怒/恼火 (not 竖起).",
-    "Do not include English in meaning.",
-    `Words: ${words.join(", ")}`,
-    "Word context + candidate senses:",
-    guide
-  ].join("\n");
-
-  try {
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 420 : 820, model, step: "refine_context" });
-    const parsed = extractJsonArray(text);
-    if (!Array.isArray(parsed)) {
-      return vocab;
-    }
-    return mergeLexiconWithContextMeanings(vocab, parsed);
-  } catch (error) {
-    console.error("Failed to refine context meanings:", error.message);
-    return vocab;
-  }
-}
 
 function normalizeMixedSemanticReview(rows, words) {
   const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
@@ -3129,147 +2690,8 @@ function normalizeMixedSemanticReview(rows, words) {
   });
 }
 
-async function reviewMixedSemantics(words, lexicon, article, quickMode, model) {
-  const sourceWords = Array.isArray(words) ? words.map((w) => String(w || "").trim()).filter(Boolean) : [];
-  if (sourceWords.length === 0) return [];
 
-  const contextMap = buildWordContextSnippetMap(article, sourceWords);
-  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-  const reviewGuide = sourceWords
-    .map((word) => {
-      const item = lexMap.get(String(word || "").toLowerCase());
-      const pos = normalizePosTag(item?.pos || "");
-      const primaryMeaning =
-        Array.isArray(item?.senses) && item.senses.length > 0 ? String(item.senses[0]?.meaning || "").trim() : "词义待补充";
-      const ctx = contextMap.get(String(word || "").toLowerCase()) || "(no hit)";
-      return `${word} (${pos || "-"}) => ${primaryMeaning}; context: ${ctx}`;
-    })
-    .join("\n");
 
-  const prompt = [
-    "You are reviewing semantic naturalness for a Chinese-first mixed-language passage.",
-    "Return ONLY JSON array in the same order as input words.",
-    "Each item format:",
-    '{"word": string, "natural": boolean, "meaning_ok": boolean, "reason": string, "suggestion": string}',
-    "Rules:",
-    "1) natural=false when the sentence sounds forced, collocation is odd, or native-like Chinese mixed speech would not say it this way.",
-    "2) meaning_ok=false when the displayed Chinese meaning does not match the sentence context.",
-    "3) reason/suggestion should be concise Chinese, no markdown.",
-    "4) Be strict and practical; do not mark everything true.",
-    "5) Coverage is validated by exact literal English surface forms.",
-    "6) Chinese translation does NOT count as usage.",
-    "7) Do not suggest replacing the target word with a Chinese-only paraphrase.",
-    "8) The target word must remain visible in English.",
-    '9) If the target word is "Derive", "Sterility", "Plume", "Bristle", "Cricket", etc., do not suggest translating it away.',
-    `Words: ${sourceWords.join(", ")}`,
-    "Word guide:",
-    reviewGuide,
-    "Passage:",
-    String(article || "")
-  ].join("\n");
-
-  try {
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 420 : 900, model, step: "review_semantics" });
-    const parsed = extractJsonArray(text);
-    return normalizeMixedSemanticReview(parsed, sourceWords);
-  } catch (error) {
-    console.error("Failed to review mixed semantics:", error.message);
-    return normalizeMixedSemanticReview([], sourceWords);
-  }
-}
-
-async function rewriteAwkwardMixedClauses(article, reviewRows, lexicon, quickMode, model) {
-  const source = String(article || "").trim();
-  if (!source) return source;
-  const issues = (Array.isArray(reviewRows) ? reviewRows : [])
-    .filter((row) => !row?.natural || !row?.meaningOk)
-    .map((row) => ({
-      word: String(row?.word || "").trim(),
-      reason: String(row?.reason || "").trim(),
-      suggestion: String(row?.suggestion || "").trim()
-    }))
-    .filter((row) => row.word);
-  if (issues.length === 0) return source;
-
-  const lexMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-  const issueGuide = issues
-    .map((issue) => {
-      const item = lexMap.get(String(issue.word || "").toLowerCase());
-      const pos = normalizePosTag(item?.pos || "");
-      const primaryMeaning =
-        Array.isArray(item?.senses) && item.senses.length > 0 ? String(item.senses[0]?.meaning || "").trim() : "词义待补充";
-      return `${issue.word} (${pos || "-"}) => ${primaryMeaning}`;
-    })
-    .join("\n");
-
-  const prompt = [
-    "You are revising awkward lines in a Chinese-first mixed-language passage.",
-    "Return ONLY the fully revised passage text, no JSON, no markdown.",
-    "Keep the same overall voice and paragraph rhythm.",
-    "Only rewrite clauses/sentences that are semantically awkward or collocation-wrong.",
-    "Do not add glossary sections, keyword lists, or dictionary-style lines.",
-    "Do not output Chinese gloss + English word duplicates (e.g., 残忍cruel / 无菌sterility with direct duplicate meaning).",
-    "Highest priority: keep every target word visible exactly as written; coverage is more important than style.",
-    "Keep target words in their original form.",
-    "Coverage is validated by exact literal English surface forms.",
-    "Chinese translation does NOT count as usage.",
-    "Do not remove, translate away, or paraphrase away any target English word.",
-    "Keep every target word visible in exact English form.",
-    'If the target word is "Derive", "Sterility", "Plume", "Bristle", "Cricket", etc., do not translate it away.',
-    "If one word is hard to place naturally, move it to a short separate micro-scene.",
-    "Problem words and notes JSON:",
-    JSON.stringify(issues, null, 2),
-    "Vocabulary guide:",
-    issueGuide,
-    "Original passage:",
-    source
-  ].join("\n");
-
-  try {
-    const revised = await callOpenAIText(prompt, { maxTokens: quickMode ? 520 : 980, model, step: "rewrite_awkward" });
-    const cleaned = cleanMixedArtifactText(revised);
-    return cleaned || source;
-  } catch (error) {
-    console.error("Failed to rewrite awkward mixed clauses:", error.message);
-    return source;
-  }
-}
-
-async function generateParagraphTranslations(paragraphs, lexicon, quickMode, model) {
-  if (!paragraphs.length) {
-    return [];
-  }
-
-  const vocabHints = lexicon
-    .map((item) => {
-      const sensesText = item.senses.map((s) => `${s.marker} ${s.meaning}`).join("; ");
-      return `${item.word}: ${sensesText}`;
-    })
-    .join("\n");
-
-  const prompt = [
-    "Translate each English paragraph into Chinese.",
-    "Return ONLY JSON array of strings, same order and same length.",
-    "Keep markers like ①② in translation when they appear.",
-    "Use concise natural Chinese.",
-    "Vocabulary guide:",
-    vocabHints,
-    "Paragraphs JSON:",
-    JSON.stringify(paragraphs)
-  ].join("\n");
-
-  const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 520 : 980, model, step: "translate_paragraphs" });
-  const parsed = extractJsonArray(text);
-
-  if (!Array.isArray(parsed)) {
-    return paragraphs.map(() => "(该段翻译生成失败，请重试)");
-  }
-
-  return paragraphs.map((_, i) => {
-    const value = parsed[i];
-    return typeof value === "string" && value.trim() ? value.trim() : "(该段翻译生成失败，请重试)";
-  });
-}
 
 function buildWordFormRegex(word) {
   const base = String(word || "").toLowerCase();
@@ -3468,56 +2890,6 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
   return output;
 }
 
-async function generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, model, generationMode = "standard") {
-  if (!Array.isArray(words) || words.length === 0) {
-    return [];
-  }
-
-  if (String(generationMode || "").toLowerCase() === "mixed") {
-    return [];
-  }
-
-  const localAlignment = normalizeAlignment(words, lexicon, [], paragraphsEn, paragraphsZh);
-
-  const vocabHints = lexicon
-    .map((item) => {
-      const sensesText = item.senses.map((s) => `${s.marker} ${s.meaning}`).join("; ");
-      return `${item.word}: ${sensesText}`;
-    })
-    .join("\n");
-
-  const prompt = [
-    "You align IELTS target words to bilingual article terms.",
-    "Return ONLY JSON object with key \"items\".",
-    "items[] format:",
-    "{\"word\": string, \"marker\": \"①-⑩\", \"english_forms\": string[], \"zh_terms\": string[]}",
-    "Rules:",
-    "1) word must be one of target words.",
-    "2) english_forms: forms actually appearing in English article, include variants like literacy, drainage, mishaps when aligned.",
-    "3) zh_terms: Chinese terms that MUST appear literally in Chinese translation.",
-    "4) marker should match the closest sense marker in vocabulary guide.",
-    "5) No explanation text.",
-    `Target words: ${words.join(", ")}`,
-    "Vocabulary guide:",
-    vocabHints,
-    "English paragraphs JSON:",
-    JSON.stringify(paragraphsEn || []),
-    "Chinese paragraphs JSON:",
-    JSON.stringify(paragraphsZh || [])
-  ].join("\n");
-
-  try {
-    const text = await callOpenAIText(prompt, { maxTokens: quickMode ? 680 : 1200, model, step: "alignment" });
-    const parsedObj = extractJsonObject(text);
-    if (parsedObj) {
-      return normalizeAlignment(words, lexicon, parsedObj, paragraphsEn, paragraphsZh);
-    }
-    const parsedArr = extractJsonArray(text);
-    return normalizeAlignment(words, lexicon, parsedArr, paragraphsEn, paragraphsZh);
-  } catch {
-    return localAlignment;
-  }
-}
 
 app.post("/api/auth/register", async (req, res) => {
   try {
@@ -3647,6 +3019,7 @@ app.get("/api/library", async (req, res) => {
         baseLexicon: Array.isArray(alignmentParsed.baseLexicon) ? alignmentParsed.baseLexicon : [],
         contextGlosses: Array.isArray(alignmentParsed.contextGlosses) ? alignmentParsed.contextGlosses : [],
         runs: Array.isArray(alignmentParsed.runs) ? alignmentParsed.runs : [],
+        sentencePairs: alignmentParsed.sentencePairs,
         generationMode: alignmentParsed.generationMode,
         generationQuality: alignmentParsed.generationQuality,
         missing: Array.isArray(row.missing) ? row.missing : [],
@@ -4109,16 +3482,8 @@ app.post("/api/vocab/detail", async (req, res) => {
     console.log("[api/vocab/detail] full lexicon =", fullLexicon);
     const baseLexicon = buildBaseLexiconForResponse(fullLexicon);
     let entry = Array.isArray(baseLexicon) && baseLexicon.length > 0 ? baseLexicon[0] : null;
-    if (entry && hasSparseDetailEntry(entry) && selectedModel !== OPENAI_MODEL_ADVANCED) {
-      const richerLexicon = await generateLexicon([word], false, OPENAI_MODEL_ADVANCED, "full");
-      const richerBaseLexicon = buildBaseLexiconForResponse(richerLexicon);
-      const richerEntry = Array.isArray(richerBaseLexicon) && richerBaseLexicon.length > 0 ? richerBaseLexicon[0] : null;
-      if (detailEntryScore(richerEntry) > detailEntryScore(entry)) {
-        entry = richerEntry;
-      }
-    }
     if (entry && hasSparseDetailEntry(entry)) {
-      const enriched = await enrichSingleWordDetailEntry(word, entry, OPENAI_MODEL_ADVANCED || selectedModel);
+      const enriched = await enrichSingleWordDetailEntry(word, entry, selectedModel);
       if (detailEntryScore(enriched) >= detailEntryScore(entry)) {
         entry = enriched;
       }
@@ -4161,7 +3526,7 @@ app.post("/api/generate", async (req, res) => {
 
     if (!usageBefore.isUnlimited && Number(usageBefore.remaining || 0) < generationProfile.usageCost) {
       return res.status(429).json({
-        error: `Insufficient quota. ${generationQuality === "advanced" ? "Advanced generation" : "Normal generation"} requires ${generationProfile.usageCost} use(s).`,
+        error: `Insufficient quota. Generation requires ${generationProfile.usageCost} use(s).`,
         usage: usageBefore,
         needed: generationProfile.usageCost,
         generationQuality
@@ -4172,8 +3537,8 @@ app.post("/api/generate", async (req, res) => {
     }
 
     const rawWords = String(req.body.words || "");
-    const level = String(req.body.level || "中级");
-    const quickMode = Boolean(req.body.quickMode);
+    // Honor saved requests from older clients; removed difficulty values have no effect.
+    const shortMode = Boolean(req.body.shortMode ?? req.body.quickMode);
     const generationMode = String(req.body.generationMode || "mixed").toLowerCase() === "mixed" ? "mixed" : "standard";
     if (!looksLikeWordListOnlyInput(rawWords)) {
       return res.status(400).json({ error: "Please provide a word list only, not a full article or paragraph." });
@@ -4195,486 +3560,39 @@ app.post("/api/generate", async (req, res) => {
     const traceStore = { calls: [] };
 
     const generateContent = async () => {
-      let lexicon = await generateLexicon(words, quickMode, selectedModel, generationMode === "mixed" ? "core" : "full");
-      const baseLexiconRaw = cloneJsonSafe(lexicon, []);
-      let mixedUsagePlan =
-        generationMode === "mixed" ? await planMixedUsage(words, lexicon, quickMode, selectedModel) : [];
-      const mixedLexiconMap = new Map((Array.isArray(lexicon) ? lexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-      const mixedUsageRows = Array.isArray(mixedUsagePlan) ? mixedUsagePlan : [];
-      const rebuildMixedArticleFromChunks = (pack) => {
-        const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
-        return chunks
-          .map((chunk) => String(chunk?.article || "").trim())
-          .filter(Boolean)
-          .join("\n\n");
-      };
-      const summarizeBetweenWordIssues = (issues) =>
-        (Array.isArray(issues) ? issues : [])
-          .slice(0, 4)
-          .map((row) => `${row.from}->${row.to}:${row.chineseChars}字`)
-          .join("; ");
-      const computeSparseIssues = (articleText) => {
-        if (generationMode !== "mixed") {
-          return { betweenWordIssues: [], leadIssue: null, tailIssue: null };
-        }
-        const runsForGapCheck = buildArticleRuns(articleText, words, []);
-        return {
-          betweenWordIssues: findLargeWordGapsFromRuns(runsForGapCheck, 90),
-          leadIssue: findLeadWordGapFromRuns(runsForGapCheck, 80),
-          tailIssue: findTailWordGapFromRuns(runsForGapCheck, 120)
-        };
-      };
-      const recomputeDiagnostics = (articleText) =>
-        buildGenerationDiagnostics(articleText, words, generationMode, computeSparseIssues);
-      const getChunkIndexByWord = (pack) => {
-        const map = new Map();
-        const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
-        chunks.forEach((chunk, idx) => {
-          (Array.isArray(chunk?.words) ? chunk.words : []).forEach((word) => {
-            const key = String(word || "").trim().toLowerCase();
-            if (key && !map.has(key)) {
-              map.set(key, idx);
-            }
-          });
-        });
-        return map;
-      };
-      const pickRetryChunkIndexes = (pack, missingWords, overusedWords, betweenWordIssues, leadIssue, tailIssue) => {
-        const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
-        if (chunks.length === 0) return [];
-        const wordChunkMap = getChunkIndexByWord(pack);
-        const set = new Set();
-
-        if (leadIssue) {
-          set.add(0);
-        }
-        if (tailIssue) {
-          set.add(chunks.length - 1);
-        }
-        for (const word of Array.isArray(missingWords) ? missingWords : []) {
-          const idx = wordChunkMap.get(String(word || "").trim().toLowerCase());
-          if (Number.isInteger(idx)) set.add(idx);
-        }
-        for (const word of Array.isArray(overusedWords) ? overusedWords : []) {
-          const idx = wordChunkMap.get(String(word || "").trim().toLowerCase());
-          if (Number.isInteger(idx)) set.add(idx);
-        }
-        for (const issue of Array.isArray(betweenWordIssues) ? betweenWordIssues : []) {
-          const fromIdx = wordChunkMap.get(String(issue?.from || "").trim().toLowerCase());
-          const toIdx = wordChunkMap.get(String(issue?.to || "").trim().toLowerCase());
-          if (Number.isInteger(fromIdx)) set.add(fromIdx);
-          if (Number.isInteger(toIdx)) set.add(toIdx);
-        }
-        if (set.size === 0) {
-          set.add(0);
-        }
-        return Array.from(set).sort((a, b) => a - b);
-      };
-      const regenerateMixedChunks = async (pack, chunkIndexes, extraConstraint = "", strictLead = false) => {
-        const chunks = Array.isArray(pack?.chunks) ? pack.chunks : [];
-        if (chunks.length === 0) return pack;
-        const indexes = Array.from(new Set(Array.isArray(chunkIndexes) ? chunkIndexes : [])).filter(
-          (idx) => Number.isInteger(idx) && idx >= 0 && idx < chunks.length
-        );
-        if (indexes.length === 0) return pack;
-        for (const idx of indexes) {
-          const chunk = chunks[idx];
-          const chunkWords = Array.isArray(chunk?.words) ? chunk.words : [];
-          if (chunkWords.length === 0) continue;
-          const chunkSet = new Set(chunkWords.map((w) => String(w || "").toLowerCase()));
-          const chunkLexicon = chunkWords.map((w) => mixedLexiconMap.get(String(w || "").toLowerCase())).filter(Boolean);
-          const chunkPlan = mixedUsageRows.filter((item) => chunkSet.has(String(item?.word || "").toLowerCase()));
-          const chunkPlanMap = new Map((Array.isArray(chunkPlan) ? chunkPlan : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-          const chunkLexMap = new Map((Array.isArray(chunkLexicon) ? chunkLexicon : []).map((item) => [String(item?.word || "").toLowerCase(), item]));
-          const chunkContextRows = chunkWords.map((word) => {
-            const key = String(word || "").toLowerCase();
-            const plan = chunkPlanMap.get(key);
-            const lexItem = chunkLexMap.get(key);
-            const contextMeaning = String(plan?.meaning || lexItem?.senses?.[0]?.meaning || "").trim();
-            const hints = buildMustKeepEnglishHints(word, contextMeaning);
-            return {
-              word,
-              contextMeaning,
-              mustKeepEnglish: Boolean(plan?.mustKeepEnglish ?? hints.mustKeepEnglish),
-              preferredPattern: String(plan?.preferredPattern || hints.preferredPattern || "").trim(),
-              forbiddenChineseOnly: normalizeChinesePhraseList(plan?.forbiddenChineseOnly || hints.forbiddenChineseOnly || [], 10),
-              allowedTemplates: Array.isArray(plan?.allowedTemplates) ? plan.allowedTemplates : hints.allowedTemplates
-            };
-          });
-          const strictLeadRules =
-            strictLead && idx === 0
-              ? [
-                  "The passage must start with a target word in the first sentence.",
-                  "The first sentence must contain a target word.",
-                  "Before the first target word, allow at most 8 Chinese characters.",
-                  "No Chinese-only intro."
-                ]
-              : [];
-          const denseConstraint = [
-            extraConstraint,
-            `Regenerate only this failed dense chunk ${idx + 1}/${chunks.length}.`,
-            strictLeadRules.join(" "),
-            "Coverage is validated by exact literal English surface forms.",
-            "Chinese translation does NOT count as usage.",
-            "Never replace a target word with Chinese-only wording."
-          ]
-            .filter(Boolean)
-            .join(" ");
-          let regenerated = await generateArticlePackage(
-            chunkWords,
-            level,
-            quickMode,
-            chunkLexicon,
-            "mixed_dense",
-            denseConstraint,
-            selectedModel,
-            chunkPlan
-          );
-          let chunkArticle = String(regenerated?.article || "").trim();
-          let localMissing = findMissingWords(chunkArticle, chunkWords);
-          let localSoftIssues = findSoftMissingByChineseSubstitution(chunkArticle, chunkContextRows);
-
-          if (localMissing.length > 0) {
-            const localRetryConstraint = [
-              denseConstraint,
-              "Important local fix: every target word in this chunk must appear as the exact English token.",
-              "Coverage is validated by exact literal English surface forms.",
-              "Chinese translation does NOT count as usage.",
-              "Never replace a target word with Chinese-only wording.",
-              `Missing local words: ${localMissing.join(", ")}.`
-            ]
-              .filter(Boolean)
-              .join(" ");
-            regenerated = await generateArticlePackage(
-              chunkWords,
-              level,
-              quickMode,
-              chunkLexicon,
-              "mixed_dense",
-              localRetryConstraint,
-              selectedModel,
-              chunkPlan
-            );
-            chunkArticle = String(regenerated?.article || "").trim();
-            localMissing = findMissingWords(chunkArticle, chunkWords);
-            localSoftIssues = findSoftMissingByChineseSubstitution(chunkArticle, chunkContextRows);
-          }
-
-          if (localSoftIssues.length > 0) {
-            chunkArticle = restoreEnglishIntoChinesePhrase(chunkArticle, localSoftIssues);
-            localMissing = findMissingWords(chunkArticle, chunkWords);
-            localSoftIssues = findSoftMissingByChineseSubstitution(chunkArticle, chunkContextRows);
-          }
-
-          chunks[idx] = {
-            ...chunk,
-            article: chunkArticle,
-            words: chunkWords.slice()
-          };
-          if (idx === 0) {
-            pack.title = String(regenerated?.title || pack?.title || "").trim() || pack?.title || "";
-          }
-        }
-
-        pack.chunks = chunks;
-        pack.article = rebuildMixedArticleFromChunks(pack);
-        pack.hasDeterministicChunkAppend = false;
-        return pack;
-      };
-      const generateMainArticle = async (extraConstraint = "") => {
-        if (generationMode === "mixed") {
-          if (words.length <= 24) {
-            return generateArticlePackage(words, level, quickMode, lexicon, generationMode, extraConstraint, selectedModel, mixedUsagePlan);
-          }
-          return generateMixedDenseArticleByChunks(
-            words,
-            level,
-            quickMode,
-            lexicon,
-            extraConstraint,
-            selectedModel,
-            mixedUsagePlan
-          );
-        }
-        return generateArticlePackage(words, level, quickMode, lexicon, generationMode, extraConstraint, selectedModel, []);
-      };
-
-      let articlePack = await generateMainArticle("");
       if (generationMode === "mixed") {
-        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-      }
-      let diagnostics = recomputeDiagnostics(articlePack.article);
-      let { missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics;
-      let standardLanguageIssue = generationMode !== "mixed" && hasStandardEnglishLanguageIssue(articlePack);
-
-      const retryCount = generationMode === "mixed" ? 2 : quickMode ? 1 : 2;
-      for (
-        let i = 0;
-        i < retryCount &&
-        (missing.length > 0 ||
-          overused.length > 0 ||
-          unexpectedEnglish.length > 0 ||
-          sparseDiagnostics.betweenWordIssues.length > 0 ||
-          sparseDiagnostics.leadIssue !== null ||
-          sparseDiagnostics.tailIssue !== null ||
-          standardLanguageIssue);
-        i += 1
-      ) {
-        const retryConstraint =
-          generationMode === "mixed"
-            ? [
-                `Important fix (round ${i + 1}): ALL target words must be included.`,
-                `Missing words: ${missing.join(", ")}.`,
-                overused.length > 0
-                  ? `Overused words (too many repeats): ${overused.join(", ")}. Reduce each to 1 occurrence, max 2.`
-                  : "",
-                unexpectedEnglish.length > 0
-                  ? `Unexpected non-target English tokens found: ${unexpectedEnglish.join(", ")}. Remove or translate them into Chinese. Only target words may remain in English.`
-                  : "",
-                sparseDiagnostics.betweenWordIssues.length > 0
-                  ? `Large Chinese gap(s) between adjacent target words: ${summarizeBetweenWordIssues(
-                      sparseDiagnostics.betweenWordIssues
-                    )}.`
-                  : "",
-                sparseDiagnostics.leadIssue
-                  ? `Lead Chinese-only gap before first target word is too long (${sparseDiagnostics.leadIssue.chineseChars} chars).`
-                  : "",
-                sparseDiagnostics.tailIssue
-                  ? `Tail Chinese-only gap after last target word is too long (${sparseDiagnostics.tailIssue.chineseChars} chars).`
-                  : "",
-                "Highest priority: fix exact target-token coverage before improving style.",
-                "Keep one coherent mixed Chinese-English short passage. Do not split into unrelated fragments.",
-                "Preserve narrative order and story flow while fixing coverage issues.",
-                "Chinese connects the story; only target words stay in English.",
-                "Coverage is validated by exact literal English surface forms.",
-                "Chinese translation does NOT count as usage.",
-                "Never replace a target word with Chinese-only wording.",
-                "Every target word must appear in the final passage as the exact English token from input.",
-                "All other words must be Chinese. Do not include any non-target English token in the article body.",
-                "A short Chinese setup is allowed if it improves coherence.",
-                "Do not add dictionary explanations, word lists, or standalone example sentences.",
-                "The final article should feel like a complete scene rather than a vocabulary exercise."
-              ]
-                .filter(Boolean)
-                .join(" ")
-            : [
-                `Important fix (round ${i + 1}): write a complete English IELTS-style article.`,
-                missing.length > 0 ? `Missing target words that must appear in English: ${missing.join(", ")}.` : "",
-                standardLanguageIssue ? "The previous title or article contained Chinese. Rewrite it in English only." : "",
-                "The JSON title must be English only.",
-                "The article body must be English only.",
-                "Do not output any Chinese characters in title or article.",
-                "Use every target word naturally in the English article.",
-                "Do not add Chinese explanations, Chinese translations, glossary lines, or vocabulary-list sections.",
-                "Chinese paragraph translations are generated separately after this step."
-              ]
-                .filter(Boolean)
-                .join(" ");
-
-        if (generationMode === "mixed" && Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
-          const retryChunkIndexes = pickRetryChunkIndexes(
-            articlePack,
-            missing,
-            overused,
-            sparseDiagnostics.betweenWordIssues,
-            sparseDiagnostics.leadIssue,
-            sparseDiagnostics.tailIssue
-          );
-          articlePack = await regenerateMixedChunks(articlePack, retryChunkIndexes, retryConstraint, Boolean(sparseDiagnostics.leadIssue));
-        } else {
-          articlePack = await generateMainArticle(retryConstraint);
-        }
-        if (generationMode === "mixed") {
-          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-          if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
-            articlePack.chunks = articlePack.chunks.map((chunk) => ({
-              ...chunk,
-              article: normalizeMixedArticleStyle(chunk?.article || "", chunk?.words || [], lexicon)
-            }));
-            articlePack.article = rebuildMixedArticleFromChunks(articlePack);
-          }
-        }
-        diagnostics = recomputeDiagnostics(articlePack.article);
-        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-        standardLanguageIssue = generationMode !== "mixed" && hasStandardEnglishLanguageIssue(articlePack);
+        const story = await generateMixedStory({ words, quickMode: shortMode, model: selectedModel, callText: callOpenAIText });
+        const lexicon = normalizeLexicon(words, story.glosses.map((row, index) => ({
+          word: words[index], pos: row.pos, meanings: [row.meaning]
+        })), "core");
+        const baseLexicon = buildBaseLexiconForResponse(lexicon);
+        const contextGlosses = story.glosses.map((row, index) => ({
+          word: words[index], pos: row.pos, marker: "①", contextMeaning: row.meaning
+        }));
+        const missing = findMissingWords(story.article, words);
+        if (missing.length) throw new Error("英文目标词还原失败：" + missing.join(", "));
+        const defaultTitle = defaultTitleByDate(words.length);
+        const articlePack = { title: story.title || defaultTitle, article: story.article };
+        return { lexicon, baseLexicon, contextGlosses,
+          runs: buildArticleRuns(story.article, words, contextGlosses), articlePack, missing,
+          paragraphsEn: splitParagraphs(story.article), paragraphsZh: [], alignment: [], sentencePairs: [], defaultTitle };
       }
 
-      let mixedSemanticRows = [];
-
-      if (missing.length > 0) {
-        if (generationMode !== "mixed") {
-          articlePack.article = appendMissingWordsSentence(articlePack.article, missing, lexicon);
-          diagnostics = recomputeDiagnostics(articlePack.article);
-          ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-          standardLanguageIssue = hasStandardEnglishLanguageIssue(articlePack);
-        } else {
-          for (let repairAttempt = 1; repairAttempt <= 3 && missing.length > 0; repairAttempt += 1) {
-            const missingBeforeRewrite = missing.slice();
-            const rewriteConstraint = [
-              `Whole-passage repair attempt ${repairAttempt}.`,
-              "Rewrite the entire mixed passage from scratch as one coherent scene.",
-              `The previous attempt missed these exact target English tokens: ${missingBeforeRewrite.join(", ")}.`,
-              `Required exact target tokens: ${words.map((w) => `"${w}"`).join(", ")}.`,
-              "Do not append a supplement paragraph. Do not add standalone example sentences.",
-              "Use every target word naturally inside the story.",
-              "All non-target content must be Chinese. Only target words may appear in English.",
-              "Final self-check before output: every required exact target token must be visibly present in the article body."
-            ].join(" ");
-            articlePack = await generateMainArticle(rewriteConstraint);
-            articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-            diagnostics = recomputeDiagnostics(articlePack.article);
-            ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-          }
-        }
-      }
-
-      const contextGlossesBeforeRefine =
-        generationMode === "mixed" ? buildContextGlosses(words, baseLexiconRaw, lexicon, mixedUsagePlan, []) : [];
-      if (generationMode === "mixed" && shouldRunContextRefine(words, lexicon, generationMode, generationQuality, contextGlossesBeforeRefine)) {
-        lexicon = await refineMixedLexiconByContext(words, lexicon, articlePack.article, quickMode, selectedModel);
-        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        diagnostics = recomputeDiagnostics(articlePack.article);
-        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-      }
-
-      if (
-        generationMode === "mixed" &&
-        generationQuality === "advanced" &&
-        missing.length === 0 &&
-        overused.length === 0 &&
-        sparseDiagnostics.betweenWordIssues.length === 0 &&
-        sparseDiagnostics.leadIssue === null &&
-        sparseDiagnostics.tailIssue === null &&
-        !articlePack?.hasDeterministicChunkAppend
-      ) {
-        mixedSemanticRows = await reviewMixedSemantics(words, lexicon, articlePack.article, quickMode, selectedModel);
-        const awkwardRows = mixedSemanticRows.filter((row) => !row?.natural || !row?.meaningOk);
-        if (awkwardRows.length > 0) {
-          articlePack.article = await rewriteAwkwardMixedClauses(
-            articlePack.article,
-            awkwardRows,
-            lexicon,
-            quickMode,
-            selectedModel
-          );
-          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-          diagnostics = recomputeDiagnostics(articlePack.article);
-          ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-        }
-      }
-
-      if (generationMode === "mixed") {
-        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-      }
-      if (generationMode === "mixed") {
-        articlePack.article = stripMixedWordMarkers(articlePack.article);
-      } else {
-        articlePack.article = enforceWordMarkers(articlePack.article, lexicon);
-      }
-      diagnostics = recomputeDiagnostics(articlePack.article);
-      ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-
-      if (generationMode === "mixed" && sparseDiagnostics.leadIssue !== null) {
-        if (Array.isArray(articlePack?.chunks) && articlePack.chunks.length > 0) {
-          articlePack = await regenerateMixedChunks(
-            articlePack,
-            [0],
-            [
-              "Lead gap hard fix.",
-              "The passage must start with a target word in the first sentence.",
-              "Before the first target word, allow at most 8 Chinese characters.",
-              "No Chinese-only intro."
-            ].join(" "),
-            true
-          );
-          articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-          articlePack.article = stripMixedWordMarkers(articlePack.article);
-          diagnostics = recomputeDiagnostics(articlePack.article);
-          ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-        }
-
-      }
-
-      if (generationMode === "mixed") {
-        const restoreContextGlosses = buildContextGlosses(words, baseLexiconRaw, lexicon, mixedUsagePlan, []);
-        const softMissingIssues = findSoftMissingByChineseSubstitution(articlePack.article, restoreContextGlosses);
-        if (softMissingIssues.length > 0) {
-          articlePack.article = restoreEnglishIntoChinesePhrase(articlePack.article, softMissingIssues);
-          articlePack.article = stripMixedWordMarkers(articlePack.article);
-          diagnostics = recomputeDiagnostics(articlePack.article);
-          ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-        }
-      }
-
-      if (generationMode === "mixed" && (missing.length > 0 || unexpectedEnglish.length > 0)) {
-        if (unexpectedEnglish.length > 0) {
-          articlePack.article = removeUnexpectedEnglishTokens(articlePack.article, words);
-        }
-        if (missing.length > 0) {
-          articlePack.article = appendMissingMixedSentence(articlePack.article, missing);
-        }
-        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        articlePack.article = stripMixedWordMarkers(articlePack.article);
-        diagnostics = recomputeDiagnostics(articlePack.article);
-        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-      }
-
-      if (generationMode === "mixed" && missing.length > 0) {
-        throw new Error(
-          `Still missing exact English tokens (Chinese translation does not count): ${missing.join(", ")}`
-        );
-      }
-      if (generationMode === "mixed" && unexpectedEnglish.length > 0) {
-        articlePack.article = removeUnexpectedEnglishTokens(articlePack.article, words);
-        articlePack.article = normalizeMixedArticleStyle(articlePack.article, words, lexicon);
-        articlePack.article = stripMixedWordMarkers(articlePack.article);
-        diagnostics = recomputeDiagnostics(articlePack.article);
-        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-        if (unexpectedEnglish.length > 0) {
-          throw new Error(`Unexpected non-target English tokens remained: ${unexpectedEnglish.join(", ")}`);
-        }
-      }
-      if (generationMode !== "mixed" && hasChineseChars(articlePack.title)) {
-        articlePack.title = defaultTitleByDate(words.length);
-      }
-      if (generationMode !== "mixed" && hasChineseChars(articlePack.article)) {
-        articlePack = await generateMainArticle(
-          [
-            "Final English-only repair.",
-            "Rewrite the entire article in English only.",
-            "The title and article body must not contain any Chinese characters.",
-            `Required target words: ${words.join(", ")}.`,
-            "Do not include Chinese translations, Chinese explanations, glossary sections, or word lists."
-          ].join(" ")
-        );
-        diagnostics = recomputeDiagnostics(articlePack.article);
-        ({ missing, overused, unexpectedEnglish, sparseDiagnostics } = diagnostics);
-        if (hasChineseChars(articlePack.title)) {
-          articlePack.title = defaultTitleByDate(words.length);
-        }
-        if (hasChineseChars(articlePack.article)) {
-          throw new Error("Standard mode generated Chinese text in the English article. Please retry.");
-        }
-      }
-
-      const paragraphsEn = splitParagraphs(articlePack.article);
-      const paragraphsZh = generationMode === "mixed" ? [] : await generateParagraphTranslations(paragraphsEn, lexicon, quickMode, selectedModel);
-      const alignment =
-        generationMode === "mixed" ? [] : await generateAlignment(words, lexicon, paragraphsEn, paragraphsZh, quickMode, selectedModel, generationMode);
-      const baseLexicon = buildBaseLexiconForResponse(baseLexiconRaw);
-      const contextGlosses =
-        generationMode === "mixed" ? buildContextGlosses(words, baseLexiconRaw, lexicon, mixedUsagePlan, alignment) : [];
-      const runs = generationMode === "mixed" ? buildArticleRuns(articlePack.article, words, contextGlosses) : [];
-      const defaultTitle = defaultTitleByDate(words.length);
-
-      return { lexicon, baseLexicon, contextGlosses, runs, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle };
+      const story = await generateBilingualStory({ words, shortMode, model: selectedModel, callText: callOpenAIText });
+      const lexicon = normalizeLexicon(words, story.glosses.map((row, index) => ({ word: words[index], pos: row.pos, meanings: [row.meaning] })), "core");
+      const contextGlosses = story.glosses.map((row, index) => ({ word: words[index], pos: row.pos, marker: "①", contextMeaning: row.meaning }));
+      const missing = findMissingWords(story.article, words);
+      if (missing.length) throw new Error("双语目标词还原失败：" + missing.join(", "));
+      return { lexicon, baseLexicon: buildBaseLexiconForResponse(lexicon), contextGlosses, runs: [],
+        articlePack: { title: story.title, article: story.article }, missing, paragraphsEn: story.paragraphsEn,
+        paragraphsZh: story.paragraphsZh, alignment: story.alignment, sentencePairs: story.sentencePairs, defaultTitle: defaultTitleByDate(words.length) };
     };
 
     const generated = isAdmin
       ? await modelTraceStorage.run(traceStore, generateContent)
       : await generateContent();
 
-    const { lexicon, baseLexicon, contextGlosses, runs, articlePack, missing, paragraphsEn, paragraphsZh, alignment, defaultTitle } = generated;
+    const { lexicon, baseLexicon, contextGlosses, runs, articlePack, missing, paragraphsEn, paragraphsZh, alignment, sentencePairs, defaultTitle } = generated;
 
     const storeAfter = await readAuthStore();
     creditReservation = null;
@@ -4703,6 +3621,7 @@ app.post("/api/generate", async (req, res) => {
       paragraphsEn,
       paragraphsZh,
       alignment,
+      sentencePairs,
       usage,
       ...(isAdmin ? { adminDiagnostics } : {})
     });
@@ -4727,6 +3646,3 @@ bootstrap().catch((error) => {
   console.error("Failed to bootstrap server:", error);
   process.exit(1);
 });
-
-
-

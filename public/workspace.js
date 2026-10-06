@@ -213,11 +213,11 @@
   }
   function saveDraft() {
     if (!draftKey) return;
-    const draft = {words:wordsInput.value,level:levelSelect.value,mode:generationModeSelect.value,quality:generationQualitySelect.value,quick:quickModeInput.checked};
+    const draft = {words:wordsInput.value,mode:generationModeSelect.value,quality:generationQualitySelect.value,short:shortModeInput.checked};
     try { localStorage.setItem(draftKey,JSON.stringify(draft)); } catch { /* The input stays available if storage is full. */ }
   }
   wordsInput.addEventListener('input',()=>{ updateWordCount(); clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft,300); });
-  [levelSelect,generationModeSelect,generationQualitySelect,quickModeInput].forEach(control=>control.addEventListener('change',saveDraft));
+  [generationModeSelect,generationQualitySelect,shortModeInput].forEach(control=>control.addEventListener('change',saveDraft));
   window.addEventListener('pagehide',saveDraft);
   document.addEventListener('texta:ready',()=>{
     draftKey = `texta_draft_${currentUser?.id || 'guest'}`;
@@ -225,10 +225,9 @@
       const draft = JSON.parse(localStorage.getItem(draftKey) || 'null');
       if (draft) {
         wordsInput.value = String(draft.words || '');
-        if (['初级','中级','高级'].includes(draft.level)) levelSelect.value = draft.level;
         if (['mixed','standard'].includes(draft.mode)) generationModeSelect.value = draft.mode;
-        if (['normal','advanced'].includes(draft.quality)) generationQualitySelect.value = draft.quality;
-        quickModeInput.checked = Boolean(draft.quick);
+        generationQualitySelect.value = 'normal';
+        shortModeInput.checked = Boolean(draft.short ?? draft.quick);
       }
     } catch { /* Ignore a malformed draft. */ }
     updateWordCount(); refreshDefinitions(); showView('article');
