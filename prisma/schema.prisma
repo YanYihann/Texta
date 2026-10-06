@@ -133,6 +133,10 @@ model NotebookEntry {
   wordKey      String
   word         String
   pos          String
+  usIpa        String @default("")
+  ukIpa        String @default("")
+  baseMeanings Json @default("[]")
+  detailsReady Boolean @default(false)
   senses       Json
   collocations Json
   synonyms     Json
@@ -158,4 +162,15 @@ model UserVocabPref {
 
   @@unique([userId, wordKey])
   @@index([userId, updatedAt])
+}
+
+// Context-independent learning cards are shared and reused across articles and restarts.
+model VocabularyDetail {
+  wordKey   String @id
+  word      String
+  entry     Json
+  version   Int @default(1)
+  model     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

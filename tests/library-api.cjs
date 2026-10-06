@@ -16,6 +16,10 @@ async function call(method,userId,body){let result,status=200;const res={json:va
  const first='2026-10-01T04:00:00.000Z',later='2026-10-04T04:00:00.000Z';
  const sourceArticle={id:'source',title:'Original reading',article:'An apple a day.',words:['apple'],paragraphsEn:['An apple a day.'],paragraphsZh:['一天一个苹果。'],sentencePairs:[{paragraph:0,en:'An apple a day.',zh:'一天一个苹果。'}],lexicon:[{word:'apple',senses:[{meaning:'苹果'}]}],alignment:[{word:'apple',zh_terms:['苹果'],english_forms:['apple'],occurrences:[{paragraph:0,sentence:0,enStart:3,enEnd:8,zhStart:4,zhEnd:6}]}],generationMode:'standard',createdAt:first,updatedAt:first};
  const snapshot={favorites:[{id:'article',title:'My article',words:['apple'],article:'apple',folderId:'folder',createdAt:first,updatedAt:later}],notebookEntries:[{id:'word_a',key:'apple',word:'apple',senses:[{meaning:'苹果'}],sourceArticle,createdAt:first,updatedAt:later,deletedAt:later}],vocabPrefs:{apple:{word:'apple',mastery:'mastered',createdAt:first,updatedAt:later}},libraryFolders:[{id:'folder',name:'阅读',createdAt:first,updatedAt:later}]};
+ const readyCard={word:'apple',pos:'n.',usIpa:'/ˈæpəl/',ukIpa:'/ˈæpəl/',senses:[{meaning:'苹果',marker:'①'}],baseMeanings:['苹果'],collocations:['an apple a day · 每天一个苹果'],wordFormation:'整体词',synonyms:[],antonyms:[],detailsReady:true};
+ Object.assign(sourceArticle,{lexicon:[readyCard],baseLexicon:[readyCard]});
+ Object.assign(snapshot.favorites[0],{lexicon:[readyCard],baseLexicon:[readyCard]});
+ Object.assign(snapshot.notebookEntries[0],readyCard);
  assert.equal((await call('POST','alice',snapshot)).status,200);
  let result=(await call('GET','alice')).result;
  assert.equal(result.favorites[0].folderId,'folder');assert.equal(result.libraryFolders[0].id,'folder');assert.equal(result.notebookEntries[0].createdAt,first);assert.equal(result.notebookEntries[0].deletedAt,later);assert.equal(result.vocabPrefs.apple.mastery,'mastered');
@@ -28,6 +32,10 @@ async function call(method,userId,body){let result,status=200;const res={json:va
  const restored=(await call('GET','pair-test')).result.favorites[0];
  assert.deepEqual(JSON.parse(JSON.stringify(restored.sentencePairs)),sourceArticle.sentencePairs);
  assert.deepEqual(JSON.parse(JSON.stringify(restored.alignment[0].occurrences)),sourceArticle.alignment[0].occurrences);
+ for(const entry of [result.favorites[0].baseLexicon[0],result.favorites[0].lexicon[0],result.notebookEntries[0],restored.baseLexicon[0]]){
+  assert.equal(entry.detailsReady,true);assert.deepEqual(JSON.parse(JSON.stringify(entry.collocations)),readyCard.collocations);
+  assert.equal(entry.usIpa,readyCard.usIpa);assert.deepEqual(JSON.parse(JSON.stringify(entry.antonyms)),[]);
+ }
  const bob={favorites:[{...snapshot.favorites[0],title:'Bob'}],notebookEntries:[],vocabPrefs:{},libraryFolders:snapshot.libraryFolders};
  await call('POST','bob',bob);assert.equal((await call('GET','alice')).result.favorites[0].title,'My article');assert.equal((await call('GET','bob')).result.favorites[0].title,'Bob');
  const before=JSON.stringify(db);failInsert=true;assert.equal((await call('POST','alice',{...snapshot,favorites:[]})).status,500);assert.equal(JSON.stringify(db),before,'Partial snapshot persisted');failInsert=false;

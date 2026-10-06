@@ -116,8 +116,8 @@ The Next.js version is under development and is not yet the production frontend.
 1. Register or sign in.
 2. Paste vocabulary or phrases separated by commas or new lines, or import a TXT, Markdown, CSV, or JSON list.
 3. Review spellcheck suggestions.
-4. Generate an article and its aligned Chinese translation.
-5. Select a highlighted word to inspect its meanings, collocations, and sentence from the article; expand additional dictionary details when needed.
+4. Generate an article while complete vocabulary cards are prepared in parallel. Existing cards are reused from a persistent database cache; only missing words require model output.
+5. Select a highlighted word to immediately inspect its saved meanings, pronunciation, collocations, and sentence from the article. Clicking does not generate dictionary content. See [vocabulary preparation](docs/vocabulary-details.md).
 6. Save the article or add unfamiliar words to the notebook.
 7. Export the result for offline review.
 

@@ -9,6 +9,7 @@
     "test:context": "node tests/context-translation.cjs",
     "test:mixed": "node --test tests/mixed-generation.cjs",
     "test:bilingual": "node --test tests/bilingual-generation.cjs",
+    "test:vocabulary": "node --test tests/vocabulary-details.cjs",
     "postinstall": "prisma generate",
     "ui:audit": "impeccable detect public --fast",
     "ui:audit:json": "impeccable detect public --fast --json",

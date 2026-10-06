@@ -74,7 +74,7 @@ test('one bounded regeneration includes diagnostics, never appends filler; trans
 
 test('production API uses only direct A for mixed mode, preserves runs and refunds failed generations', async () => {
   const source = fs.readFileSync('server.js','utf8');
-  let handler, modelCalls = 0, reservationCost, refunds = 0, response = answer();
+  let handler, modelCalls = 0, reservationCost, refunds = 0, response = answer(), dictionaryFailed = false;
   const scope = vm.createContext({ console:{error:()=>{}}, OPENAI_API_KEY:'test', OPENAI_MODEL_NORMAL:'deepseek-v3.2',
     modelTraceStorage:new AsyncLocalStorage(), prisma:{},
     app:{post:(path,fn)=>{handler=fn;}},
@@ -83,6 +83,11 @@ test('production API uses only direct A for mixed mode, preserves runs and refun
     reserveCredits:async(_,user,date,cost)=>{reservationCost=cost;return{id:'reservation'};},
     refundCredits:async(_,reservation)=>{if(reservation)refunds++;}, logUsageEvent:async()=>{},
     generateMixedStory, generateBilingualStory, callOpenAIText:async(_,options)=>{modelCalls++;assert.equal(options.model,'deepseek-v3.2');return response;},
+    vocabularyDetails:{getMany:async words=>{
+      if(dictionaryFailed)throw Error('Dictionary preparation failed');
+      return words.map(word=>({word,pos:'n.',usIpa:'/test/',ukIpa:'/test/',senses:[{marker:'①',meaning:'通用词义'}],
+        baseMeanings:['通用词义'],collocations:['common phrase · 常用搭配'],wordFormation:'简短构词说明',synonyms:[],antonyms:[],detailsReady:true}));
+    }},
     generateLexicon:async()=>{throw new Error('Mixed mode must not call lexicon');},
     buildBaseLexiconForResponse:lexicon=>lexicon, defaultTitleByDate:()=> '学习短文',
     normalizeLexicon:(words,rows)=>words.map((word,i)=>({word,pos:rows[i].pos,senses:[{marker:'①',meaning:rows[i].meanings[0]}]})),
@@ -108,6 +113,9 @@ test('production API uses only direct A for mixed mode, preserves runs and refun
   assert.deepEqual(Array.from(valid.result.runs.filter(row=>row.type==='word').map(row=>row.displayMeaning)),['预算','流程']);
   assert.equal(valid.result.runs.map(row=>row.text).join(''),valid.result.article);
   assert.equal(valid.result.contextGlosses.length,2); assert.equal(valid.result.baseLexicon.length,2);
+  assert.ok(valid.result.baseLexicon.every(entry=>entry.detailsReady && entry.usIpa));
+  assert.equal(valid.result.lexicon[0].senses[0].meaning,'预算');
+  assert.equal(valid.result.baseLexicon[0].senses[0].meaning,'通用词义');
   assert.equal(valid.result.paragraphsZh.length,0); assert.equal(valid.result.missing.length,0);
   response='{}'; const failed=await call({words:'budget,process',generationMode:'mixed'});
   assert.equal(failed.status,500); assert.equal(refunds,1); assert.equal(modelCalls,3);
@@ -120,6 +128,9 @@ test('production API uses only direct A for mixed mode, preserves runs and refun
   assert.equal(standard.result.runs.length,0);assert.equal(standard.result.paragraphsZh.length,1);
   response='{}';const invalidStandard=await call({words:'budget,process',generationMode:'standard'});
   assert.equal(invalidStandard.status,500);assert.equal(refunds,2);assert.equal(modelCalls,callsBefore+3);
+  response=answer();dictionaryFailed=true;
+  assert.equal((await call({words:'budget,process',generationMode:'mixed'})).status,500);
+  assert.equal(refunds,3);
 });
 
 test('known missing closing delimiters are repaired without changing meanings; ambiguous malformed tags still fail',()=>{

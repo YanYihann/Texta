@@ -95,9 +95,7 @@ let currentNotebookFocusKey = "";
 let notebookSearchTerm = "";
 let notebookPosFilter = "all";
 const vocabDetailCache = new Map();
-const vocabDetailInFlight = new Map();
 const vocabDetailErrorTipByKey = new Map();
-const DEBUG_DISABLE_VOCAB_DETAIL_CACHE = false;
 const API_BASE = String(window.TEXTA_API_BASE || "").trim().replace(/\/$/, "");
 const FAVORITES_KEY = "texta_favorites_v1";
 const HISTORY_KEY = "texta_history_v1";
@@ -729,6 +727,7 @@ function sanitizeLexiconItemForUi(item) {
     usIpa,
     ukIpa,
     senses: sanitizeSenseRowsForUi(source.senses),
+    baseMeanings: sanitizeTextListForUi(source.baseMeanings, 200, 5),
     collocations: sanitizeTextListForUi(source.collocations, 220, 20),
     synonyms: sanitizeTextListForUi(source.synonyms, 120, 30),
     antonyms: sanitizeTextListForUi(source.antonyms, 120, 30),
@@ -870,6 +869,8 @@ function normalizeNotebookEntry(item) {
     usIpa: resolveIpaFromItem(item, "us"),
     ukIpa: resolveIpaFromItem(item, "uk"),
     senses: sanitizeSenseRowsForUi(item?.senses),
+    baseMeanings: sanitizeTextListForUi(item?.baseMeanings, 200, 5),
+    detailsReady: item?.detailsReady === true,
     collocations: sanitizeTextListForUi(item?.collocations, 220, 20),
     synonyms: sanitizeTextListForUi(item?.synonyms, 120, 30),
     antonyms: sanitizeTextListForUi(item?.antonyms, 120, 30),
@@ -1144,6 +1145,8 @@ function upsertNotebookEntry(item) {
     usIpa: resolveIpaFromItem(item, "us"),
     ukIpa: resolveIpaFromItem(item, "uk"),
     senses: sanitizeSenseRowsForUi(item?.senses),
+    baseMeanings: sanitizeTextListForUi(item?.baseMeanings, 200, 5),
+    detailsReady: item?.detailsReady === true,
     collocations: sanitizeTextListForUi(item?.collocations, 220, 20),
     synonyms: sanitizeTextListForUi(item?.synonyms, 120, 30),
     antonyms: sanitizeTextListForUi(item?.antonyms, 120, 30),
@@ -2400,7 +2403,6 @@ function updateGlossaryFollow(wordKeys) {
 
 function jumpToGlossaryKey(key) {
   if (!key) return;
-  void ensureVocabDetailForKey(key);
   if (readingMode) {
     updateGlossaryFollow([key]);
     document.dispatchEvent(new CustomEvent("texta:focus-definition", {detail:key}));
@@ -2565,6 +2567,7 @@ function needsPronunciationHydration(item) {
 }
 
 function needsVocabHydration(item) {
+  if (item?.detailsReady === true) return false;
   return needsDetailHydration(item) || needsPronunciationHydration(item);
 }
 
@@ -2619,99 +2622,6 @@ function mergeDetailedEntryIntoState(entry) {
   }
 }
 
-async function fetchVocabDetailEntry(word) {
-  const normalizedWord = sanitizeGlossTextForUi(word, 80);
-  const key = keyifyWord(normalizedWord);
-  if (!key) return null;
-  const useCache = !DEBUG_DISABLE_VOCAB_DETAIL_CACHE;
-  if (useCache && vocabDetailCache.has(key)) {
-    return vocabDetailCache.get(key);
-  }
-  if (useCache && vocabDetailInFlight.has(key)) {
-    return vocabDetailInFlight.get(key);
-  }
-
-  const requestPromise = (async () => {
-    console.log("[detail] request word =", normalizedWord);
-    const response = await apiFetch("/api/vocab/detail", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        word: normalizedWord,
-        generationQuality: latestGenerationQuality || "normal"
-      })
-    });
-    const data = await response.json().catch(() => ({}));
-    console.log("[detail] response =", data);
-    if (response.status === 401) {
-      setAuthToken("");
-      currentUser = null;
-      location.href = "./index.html";
-      return null;
-    }
-    if (!response.ok) {
-      throw new Error(data?.error || data?.detail || "Failed to load vocabulary detail.");
-    }
-    if (!data?.entry || typeof data.entry !== "object") {
-      return null;
-    }
-    const sanitized = {
-      ...sanitizeLexiconItemForUi(data.entry),
-      baseMeanings: sanitizeTextListForUi(data.entry?.baseMeanings, 200, 5)
-    };
-    console.log("[detail] merged entry =", sanitized);
-    if (useCache) {
-      vocabDetailCache.set(key, sanitized);
-    }
-    vocabDetailErrorTipByKey.delete(key);
-    return sanitized;
-  })()
-    .catch((error) => {
-      console.warn("Failed to hydrate vocab detail:", error);
-      vocabDetailErrorTipByKey.set(key, "详细词典加载失败");
-      setTimeout(() => {
-        if (vocabDetailErrorTipByKey.get(key) === "详细词典加载失败") {
-          vocabDetailErrorTipByKey.delete(key);
-          refreshVocabularySurfaces();
-        }
-      }, 5000);
-      return null;
-    })
-    .finally(() => {
-      if (useCache) {
-        vocabDetailInFlight.delete(key);
-      }
-    });
-
-  if (useCache) {
-    vocabDetailInFlight.set(key, requestPromise);
-  }
-  return requestPromise;
-}
-
-async function ensureVocabDetailForKey(key) {
-  const normalizedKey = keyifyWord(key || "");
-  if (!normalizedKey) return;
-  const current = findLexiconItemByKey(normalizedKey);
-  if (!current) return;
-  const word = String(current?.word || "").trim();
-  console.log("[detail] clicked word =", word);
-  const shouldHydrate = needsVocabHydration(current);
-  console.log("[detail] needs hydration =", shouldHydrate);
-  if (!shouldHydrate) return;
-  if (!word) return;
-
-  const detail = await fetchVocabDetailEntry(word);
-  if (!detail) {
-    refreshVocabularySurfaces();
-    updateGlossaryFollow([normalizedKey]);
-    return;
-  }
-  mergeDetailedEntryIntoState(detail);
-  refreshVocabularySurfaces();
-  updateGlossaryFollow([normalizedKey]);
-}
-
 function collectPendingNotebookVocabHydrationTargets(entries) {
   const source = Array.isArray(entries) ? entries : [];
   const seen = new Set();
@@ -2742,21 +2652,30 @@ async function prefetchNotebookVocabDetails(entries) {
   const targets = collectPendingNotebookVocabHydrationTargets(entries);
   if (targets.length === 0) return;
   notebookPrefetchInFlight = true;
-  console.log("[notebook-prefetch] start targets =", targets.map((t) => t.word));
+  const articleAtStart = latestArticle;
   try {
-    const settled = await Promise.all(
-      targets.map(async (target) => {
-        notebookHydrationLastAttemptByKey.set(target.key, Date.now());
-        const detail = await fetchVocabDetailEntry(target.word);
-        if (!detail) return { fetched: false, resolved: false };
-        mergeDetailedEntryIntoState(detail);
-        return { fetched: true, resolved: !needsVocabHydration(detail) };
-      })
-    );
-    if (settled.some((row) => row?.fetched)) {
-      refreshVocabularySurfaces();
+    const pending = [];
+    for (const target of targets) {
+      notebookHydrationLastAttemptByKey.set(target.key, Date.now());
+      const cached = vocabDetailCache.get(target.key);
+      if (cached?.detailsReady) mergeDetailedEntryIntoState(cached);
+      else pending.push(target.word);
     }
-    console.log("[notebook-prefetch] done");
+    if (pending.length) {
+      const response = await apiFetch('/api/vocab/details', {method:'POST',retryCount:0,timeoutMs:300000,
+        headers:{'Content-Type':'application/json'},body:JSON.stringify({words:pending.slice(0,120)})});
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data.entries)) throw Error(data.error || '词汇解析准备失败');
+      for (const entry of data.entries) {
+        if (!entry?.detailsReady) continue;
+        const detail = sanitizeLexiconItemForUi(entry);
+        vocabDetailCache.set(keyifyWord(detail.word),detail);
+        if (latestArticle === articleAtStart) mergeDetailedEntryIntoState(detail);
+      }
+    }
+    refreshVocabularySurfaces();
+  } catch(error) {
+    console.warn('Failed to prepare saved vocabulary:',error);
   } finally {
     notebookPrefetchInFlight = false;
   }
@@ -2867,7 +2786,12 @@ function renderLexiconCard(item, showContext = false) {
   const pos = normalizePosTagLabel(item?.pos) || "";
   const usIpa = resolveIpaFromItem(item, "us") || "/-/";
   const ukIpa = resolveIpaFromItem(item, "uk") || "/-/";
-  const senses = Array.isArray(item?.senses) ? item.senses : [];
+  const senses = Array.isArray(item?.senses) ? item.senses.slice() : [];
+  for (const meaning of (Array.isArray(item?.baseMeanings) ? item.baseMeanings : [])) {
+    if (!senses.some(sense => sense.meaning === meaning)) {
+      senses.push({ marker: ["①", "②", "③", "④"][senses.length] || "", meaning });
+    }
+  }
   const collocations = Array.isArray(item?.collocations) ? item.collocations : [];
   const synonyms = Array.isArray(item?.synonyms) ? item.synonyms : [];
   const antonyms = Array.isArray(item?.antonyms) ? item.antonyms : [];
@@ -3058,6 +2982,7 @@ function renderGlossary(lexicon) {
 
 function renderNotebookView() {
   if (!notebookEntriesEl || !notebookCountEl) return;
+  if (currentLibraryMode === 'notebook') void prefetchNotebookVocabDetails(notebookEntries);
   notebookEntriesEl.dataset.view = notebookViewMode;
   document.querySelectorAll("[data-notebook-view]").forEach(button => {
     button.setAttribute("aria-pressed", String(button.dataset.notebookView === notebookViewMode));
@@ -3126,10 +3051,6 @@ function renderNotebookView() {
     frag.appendChild(card);
   });
   notebookEntriesEl.replaceChildren(frag);
-  if (currentLibraryMode === "notebook" && !notebookPrefetchInFlight) {
-    // Vocabulary details load when a learner opens a word, rather than for every notebook row.
-  }
-
   if (currentNotebookFocusKey) {
     window.requestAnimationFrame(() => focusNotebookEntry(currentNotebookFocusKey));
   }
@@ -3343,6 +3264,7 @@ function applyArticleData(data) {
   latestSentencePairs = validateSentencePairs(data.sentencePairs, latestParagraphsEn, latestParagraphsZh);
   latestGenerationMode = normalizeGenerationModeValue(data.generationMode || "mixed");
   latestLexicon = latestContextGlosses.length ? latestContextLexicon : latestBaseLexicon;
+  latestBaseLexicon.filter(entry => entry.detailsReady).forEach(entry => vocabDetailCache.set(keyifyWord(entry.word),entry));
   latestGenerationQuality = normalizeGenerationQualityValue(data.generationQuality || "normal");
   if (generationModeSelect) {
     generationModeSelect.value = latestGenerationMode;
@@ -3392,6 +3314,7 @@ function applyArticleData(data) {
   focusMobileResultAfterGenerate();
   refreshMobileNav();
   document.dispatchEvent(new CustomEvent("texta:article"));
+  void prefetchNotebookVocabDetails(latestLexicon);
 }
 
 function renameFavoriteById(id) {
@@ -3608,7 +3531,6 @@ glossaryEl.addEventListener("click", (event) => {
       const currentEntry = findLexiconItemByKey(itemKey);
       console.log("[detail] clicked word =", String(currentEntry?.word || itemKey || ""));
       console.log("[detail] needs hydration =", needsVocabHydration(currentEntry));
-      void ensureVocabDetailForKey(itemKey);
     }
   }
   const masteryBtn = target.closest(".mastery-btn[data-word-key][data-mastery]");
@@ -3635,7 +3557,6 @@ notebookEntriesEl?.addEventListener("click", (event) => {
   if (toggle) {
     const panel = document.getElementById(toggle.getAttribute("aria-controls"));
     panel.hidden = !panel.hidden; toggle.setAttribute("aria-expanded", String(!panel.hidden));
-    if (!panel.hidden) void ensureVocabDetailForKey(toggle.dataset.notebookToggle);
     return;
   }
   const sourceButton = target.closest("[data-notebook-source]");
@@ -3653,7 +3574,6 @@ notebookEntriesEl?.addEventListener("click", (event) => {
       const currentEntry = findLexiconItemByKey(itemKey);
       console.log("[detail] clicked word =", String(currentEntry?.word || itemKey || ""));
       console.log("[detail] needs hydration =", needsVocabHydration(currentEntry));
-      void ensureVocabDetailForKey(itemKey);
     }
   }
   const masteryBtn = target.closest(".mastery-btn[data-word-key][data-mastery]");

@@ -11,9 +11,11 @@ const {registerBilling, transaction} = require('./billing/service.cjs');
 const {reserveCredits, refundCredits} = require('./billing/credits.cjs');
 const {generateMixedStory} = require('./generation/mixed.cjs');
 const {generateBilingualStory} = require('./generation/bilingual.cjs');
+const {createVocabularyDetails} = require('./generation/vocabulary.cjs');
 
 const app = express();
 const prisma = new PrismaClient();
+const vocabularyDetails = createVocabularyDetails({db:prisma,callText:callOpenAIText});
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL_NORMAL = process.env.OPENAI_MODEL_NORMAL || process.env.OPENAI_MODEL || "deepseek-v3.2";
@@ -752,6 +754,10 @@ function sanitizeNotebookPayload(rawList) {
       wordKey: key,
       word: word || key,
       pos: normalizeText(raw?.pos, 80),
+      usIpa: normalizeText(raw?.usIpa, 160),
+      ukIpa: normalizeText(raw?.ukIpa, 160),
+      baseMeanings: normalizeStringArray(raw?.baseMeanings, 5, 200),
+      detailsReady: raw?.detailsReady === true,
       senses: cloneJsonSafe(Array.isArray(raw?.senses) ? raw.senses.slice(0, 20) : [], []),
       collocations: cloneJsonSafe(Array.isArray(raw?.collocations) ? raw.collocations.slice(0, 20) : [], []),
       synonyms: cloneJsonSafe(Array.isArray(raw?.synonyms) ? raw.synonyms.slice(0, 30) : [], []),
@@ -3033,6 +3039,10 @@ app.get("/api/library", async (req, res) => {
       key: row.wordKey,
       word: row.word,
       pos: row.pos,
+      usIpa: row.usIpa || "",
+      ukIpa: row.ukIpa || "",
+      baseMeanings: Array.isArray(row.baseMeanings) ? row.baseMeanings : [],
+      detailsReady: row.detailsReady === true,
       senses: Array.isArray(row.senses) ? row.senses : [],
       collocations: Array.isArray(row.collocations) ? row.collocations : [],
       synonyms: Array.isArray(row.synonyms) ? row.synonyms : [],
@@ -3428,7 +3438,7 @@ app.post("/api/spellcheck", async (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, service: "texta-api", libraryVersion: 3, commit: process.env.RENDER_GIT_COMMIT || "" });
+  res.json({ ok: true, service: "texta-api", libraryVersion: 3, vocabularyVersion: 1, commit: process.env.RENDER_GIT_COMMIT || "" });
 });
 
 app.post("/api/context/translation", async (req, res) => {
@@ -3476,19 +3486,7 @@ app.post("/api/vocab/detail", async (req, res) => {
     const generationQuality = normalizeGenerationQuality(req.body?.generationQuality || "normal");
     const generationProfile = getGenerationProfile(generationQuality);
     const selectedModel = generationProfile.model;
-    const quickMode = false;
-    console.log("[api/vocab/detail] word =", word);
-    const fullLexicon = await generateLexicon([word], quickMode, selectedModel, "full");
-    console.log("[api/vocab/detail] full lexicon =", fullLexicon);
-    const baseLexicon = buildBaseLexiconForResponse(fullLexicon);
-    let entry = Array.isArray(baseLexicon) && baseLexicon.length > 0 ? baseLexicon[0] : null;
-    if (entry && hasSparseDetailEntry(entry)) {
-      const enriched = await enrichSingleWordDetailEntry(word, entry, selectedModel);
-      if (detailEntryScore(enriched) >= detailEntryScore(entry)) {
-        entry = enriched;
-      }
-    }
-    console.log("[api/vocab/detail] entry =", entry);
+    const [entry] = await vocabularyDetails.getMany([word],selectedModel);
     if (!entry) {
       return res.status(404).json({ error: "Word detail not found." });
     }
@@ -3505,13 +3503,27 @@ app.post("/api/vocab/detail", async (req, res) => {
         collocations: Array.isArray(entry?.collocations) ? entry.collocations : [],
         wordFormation: String(entry?.wordFormation || ""),
         synonyms: Array.isArray(entry?.synonyms) ? entry.synonyms : [],
-        antonyms: Array.isArray(entry?.antonyms) ? entry.antonyms : []
+        antonyms: Array.isArray(entry?.antonyms) ? entry.antonyms : [],
+        detailsReady: true
       }
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to get vocabulary detail.", detail: error.message });
   }
+});
+
+app.post("/api/vocab/details", async (req,res) => {
+  try {
+    if (!await requireAuth(req,res)) return;
+    if (!Array.isArray(req.body?.words) || !req.body.words.length || req.body.words.length > 120 ||
+        req.body.words.some(word=>typeof word !== 'string' || word.length > 80 || !normalizeInputWordToken(word))) {
+      return res.status(400).json({error:'Provide 1–120 valid vocabulary items.'});
+    }
+    const words=req.body.words.map(normalizeInputWordToken);
+    const entries=await vocabularyDetails.getMany(words,OPENAI_MODEL_NORMAL);
+    res.json({ok:true,entries});
+  } catch(error) { res.status(500).json({error:'Failed to prepare vocabulary details.',detail:error.message}); }
 });
 
 app.post("/api/generate", async (req, res) => {
@@ -3559,7 +3571,7 @@ app.post("/api/generate", async (req, res) => {
     const isAdmin = String(authedUser?.role || "").toLowerCase() === "admin";
     const traceStore = { calls: [] };
 
-    const generateContent = async () => {
+    const generateStory = async () => {
       if (generationMode === "mixed") {
         const story = await generateMixedStory({ words, quickMode: shortMode, model: selectedModel, callText: callOpenAIText });
         const lexicon = normalizeLexicon(words, story.glosses.map((row, index) => ({
@@ -3588,6 +3600,12 @@ app.post("/api/generate", async (req, res) => {
         paragraphsZh: story.paragraphsZh, alignment: story.alignment, sentencePairs: story.sentencePairs, defaultTitle: defaultTitleByDate(words.length) };
     };
 
+    const generateContent = async () => {
+      const [story,baseLexicon] = await Promise.all([generateStory(),vocabularyDetails.getMany(words,selectedModel)]);
+      const lexicon=baseLexicon.map((entry,index)=>({...entry,
+        pos:story.contextGlosses[index].pos,senses:[{marker:'①',meaning:story.contextGlosses[index].contextMeaning}]}));
+      return {...story,baseLexicon,lexicon};
+    };
     const generated = isAdmin
       ? await modelTraceStorage.run(traceStore, generateContent)
       : await generateContent();
@@ -3635,6 +3653,8 @@ app.post("/api/generate", async (req, res) => {
 registerBilling(app,{db:prisma,provider:createFastSpring(),requireAuth,publicUser});
 
 async function bootstrap() {
+  // Fail startup if the additive cache table was not created during deployment.
+  await prisma.vocabularyDetail.findFirst({select:{wordKey:true}});
   await prisma.user.updateMany({where:{plan:'vip'},data:{plan:'plus',permanentPlan:'plus',planExpiresAt:null}});
   await ensureAdminSeed();
   app.listen(PORT, () => {

@@ -87,7 +87,8 @@ test('generation validates before debit and refunds when the model fails',async(
     getGenerationProfile:()=>({usageCost:1,model:'fake'}),OPENAI_API_KEY:'fake',looksLikeWordListOnlyInput:()=>true,
     splitWords:raw=>raw?[raw]:[],prisma:{},getShanghaiDateKey:()=> '2026-01-31',
     reserveCredits:async()=>{reserved++;return{cost:1};},refundCredits:async(db,r)=>{if(r)refunded++;},
-    generateLexicon:async()=>{throw Error('Model unavailable');},modelTraceStorage:{run:async(store,fn)=>fn()}});
+    generateMixedStory:async()=>{throw Error('Model unavailable');},
+    vocabularyDetails:{getMany:async()=>[]},modelTraceStorage:{run:async(store,fn)=>fn()}});
   const start=source.indexOf('app.post("/api/generate"');vm.runInContext(source.slice(start,source.indexOf('\nregisterBilling(',start)),context);
   const response={statusCode:200,status(n){this.statusCode=n;return this;},json(){return this;}};
   await handler({body:{words:''}},response);assert.equal(response.statusCode,400);assert.equal(reserved,0);
