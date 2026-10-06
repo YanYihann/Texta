@@ -198,6 +198,10 @@ components:
 
 # Design System: Texta
 
+## Mixed article annotations — 2026-10-06
+
+Each mixed vocabulary span stacks its English highlight above the part of speech and Chinese contextual meaning. The group aligns with the prose baseline, centers its 13px annotation beneath the word, and wraps long content within the reading column. The existing Chinese visibility control hides the entire annotation and restores normal reading line spacing while preserving the Chinese story and clickable English words. Bilingual paragraphs retain their existing translation visibility behavior.
+
 ## Shared control refinement — 2026-10-05
 
 `public/controls.css` is the final shared control layer on all six production pages. It preserves the reading layout, typography and six palettes while updating buttons, native selects, checkbox/switch controls, segmented views, search fields, account/export popovers, notebook cards, authentication forms and asynchronous states. `theme.js` applies the saved theme before paint on account, payment and administration pages as well as the workspace. The payment and administration pages now use the shared styles directly, with their necessary form/chart layouts in `controls.css`; they no longer load the legacy `style.css` that overrode themes and forced nested viewport scrolling.

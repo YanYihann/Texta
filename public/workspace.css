@@ -171,14 +171,17 @@ summary::after { content: ""; width: 6px; height: 6px; border: solid currentColo
 .para-card .para-zh { color: var(--muted); font: 16px/1.65 var(--font-ui); margin: 0; }
 .font-small .para-card .para-en { font-size: 20px; }
 .font-large .para-card .para-en { font-size: 26px; }
-.mixed-paragraph,.mixed-word { line-height: 1.9; }
-.mixed-note { font: 13px/1.5 var(--font-ui); margin: 0 4px; color: var(--annotation); }
+.para-card.mixed-mode .para-en { line-height: 1.9; }
+.mixed-vocab { display: inline-flex; flex-direction: column; align-items: center; vertical-align: baseline; max-width: 100%; margin: 0 1px; }
+.mixed-vocab mark.vocab-en { line-height: 1.25; overflow-wrap: anywhere; }
+.mixed-note { display: block; max-width: 14em; font: 13px/1.35 var(--font-ui); margin: 2px 0 0; color: var(--annotation); text-align: center; overflow-wrap: anywhere; }
 mark.vocab-en, mark.vocab-zh { background: var(--highlight-en); color: var(--vocab-ink); border-radius: 3px; padding: 0 3px; cursor: pointer; transition: background var(--fast); }
 mark.vocab-en { font-weight: 700; }
 :root[data-theme="highlighter"] .para-zh, :root[data-theme="highlighter"] .sense-marker { color: var(--annotation); }
 mark.vocab-en:hover, mark.vocab-en:focus-visible, mark.vocab-zh:hover { background: var(--highlight-zh); text-decoration: underline; }
 :root[data-theme="highlighter"] mark.vocab-zh, :root[data-theme="highlighter"] mark.vocab-zh:hover { background: var(--highlight-zh); color: #202020; font-weight: 700; }
-.hide-zh .para-zh { display: none; }
+.hide-zh .para-zh,.hide-zh .mixed-note { display: none; }
+.hide-zh .para-card.mixed-mode .para-en { line-height: 1.5; }
 .sense-marker { font-size: 10px; color: var(--primary); }
 .glossary-panel { background: var(--soft); padding: 18px 24px 24px; border-radius: 10px; min-width: 0; align-self: start; display:flex; flex-direction:column; height:var(--reading-panel-height,calc(100dvh - 400px)); min-height:320px; }
 .glossary-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
