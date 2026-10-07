@@ -2,9 +2,9 @@ const crypto = require('node:crypto');
 const {verifiedPayment,amountFen}=require('./fastspring.cjs');
 const {PRODUCTS, purchaseError, grant} = require('./plans.cjs');
 
-async function transaction(db, work) {
+async function transaction(db, work, options = {}) {
   for (let attempt=0; attempt<4; attempt++) {
-    try { return await db.$transaction(work,{isolationLevel:'Serializable'}); }
+    try { return await db.$transaction(work,{...options,isolationLevel:'Serializable'}); }
     catch(error) { if(error.code !== 'P2034' || attempt===3) throw error; }
   }
 }
@@ -33,12 +33,14 @@ function createBilling({db, provider, now=()=>new Date()}) {
     const product = PRODUCTS[productId];
     if (!product || !/^[a-zA-Z0-9_-]{16,80}$/.test(requestKey || '')) return {status:400,error:'套餐或请求编号无效。'};
     const selected = await transaction(db,async tx => {
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+      const user = await tx.user.findUnique({where:{id:userId}});
+      if (!user || user.mergedIntoId) return {error:'账号已改变，请重新登录。'};
       const duplicate = await tx.paymentOrder.findUnique({where:{userId_requestKey:{userId,requestKey}}});
       if (duplicate) {
         if (duplicate.product !== productId) return {error:'请求编号已用于其他套餐。'};
         return {order:duplicate};
       }
-      const user = await tx.user.findUnique({where:{id:userId}});
       const error = user ? purchaseError(user,product,now()) : '账户不存在。';
       if (error) return {error};
       const active = await tx.paymentOrder.findFirst({where:{userId,status:{in:['pending','creating','checkout_failed']},expiresAt:{gt:now()}},orderBy:{createdAt:'desc'}});

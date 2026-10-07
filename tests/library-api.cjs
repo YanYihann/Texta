@@ -6,8 +6,9 @@ function models(state){return Object.fromEntries(Object.keys(state).map(name=>[n
  deleteMany:async({where})=>{state[name]=state[name].filter(row=>row.userId!==where.userId)},
  createMany:async({data})=>{if(failInsert&&name==='libraryFolder')throw new Error('simulated insert failure');state[name].push(...data)}
 }]))}
-const prisma={...models(db),$transaction:async work=>{const copy=structuredClone(db);await work(models(copy));for(const name of Object.keys(db))db[name]=copy[name];}};
-const context=vm.createContext({crypto,console:{error:()=>{}},prisma,requireAuth:async req=>({id:req.userId}),app:{get:(path,handler)=>routes.set('GET '+path,handler),post:(path,handler)=>routes.set('POST '+path,handler)}});
+const accountFlags=new Map();
+const prisma={...models(db),$transaction:async work=>{const copy=structuredClone(db);await work({...models(copy),$queryRaw:async()=>[],user:{findUnique:async({where})=>({id:where.id,...accountFlags.get(where.id)})}});for(const name of Object.keys(db))db[name]=copy[name];}};
+const context=vm.createContext({crypto,Prisma:require('@prisma/client').Prisma,console:{error:()=>{}},prisma,requireAuth:async req=>({id:req.userId}),app:{get:(path,handler)=>routes.set('GET '+path,handler),post:(path,handler)=>routes.set('POST '+path,handler)}});
 const names=['cloneJsonSafe','normalizeText','normalizeIso','normalizeStringArray','sanitizeSentencePairs','parseAlignmentPayload','buildAlignmentPayload','sanitizeFavoritesPayload','sanitizeNotebookSource','sanitizeNotebookPayload','sanitizeVocabPrefsPayload','encodeFavoriteId','decodeFavoriteId','normalizeGenerationMode','normalizeGenerationQuality'];
 for(const name of names){const start=source.indexOf('function '+name+'(');assert(start>=0,name);let end=source.indexOf('\nfunction ',start+1);const asyncEnd=source.indexOf('\nasync function ',start+1);if(asyncEnd>=0&&(end<0||asyncEnd<end))end=asyncEnd;vm.runInContext(source.slice(start,end),context)}
 vm.runInContext(source.slice(source.indexOf('app.get("/api/library",'),source.indexOf('app.post("/api/upgrade/request",')),context);
@@ -40,5 +41,12 @@ async function call(method,userId,body){let result,status=200;const res={json:va
  await call('POST','bob',bob);assert.equal((await call('GET','alice')).result.favorites[0].title,'My article');assert.equal((await call('GET','bob')).result.favorites[0].title,'Bob');
  const before=JSON.stringify(db);failInsert=true;assert.equal((await call('POST','alice',{...snapshot,favorites:[]})).status,500);assert.equal(JSON.stringify(db),before,'Partial snapshot persisted');failInsert=false;
  const legacy={...snapshot};delete legacy.libraryFolders;await call('POST','alice',legacy);assert.equal((await call('GET','alice')).result.libraryFolders.length,1,'Legacy client erased folder records');
+ accountFlags.set('alice',{libraryMergeProtected:true});
+ db.notebookEntry.find(row=>row.userId==='alice').sourceArticle=null;
+ await call('POST','alice',{favorites:[],notebookEntries:[],vocabPrefs:{},libraryFolders:[]});
+ assert.equal((await call('GET','alice')).result.favorites.length,1,'Stale snapshot erased merged collections');
+ assert.equal(db.notebookEntry.find(row=>row.userId==='alice').sourceArticle,require('@prisma/client').Prisma.JsonNull,'Stored JSON null was not converted for Prisma writes');
+ accountFlags.set('alice',{mergedIntoId:'bob'});const protectedBefore=JSON.stringify(db);
+ assert.equal((await call('POST','alice',snapshot)).status,500);assert.equal(JSON.stringify(db),protectedBefore,'Retired account still accepted writes');
  console.log('PASS: API roundtrip, first date/deletions/mastery/folders, user isolation, atomic rollback, legacy folder preservation');
 })().catch(error=>{console.error(error);process.exitCode=1});
