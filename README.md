@@ -35,6 +35,7 @@ The current production frontend lives in `public/` and is deployed through GitHu
 | Quality control | Spellcheck before generation and highlighted word-to-meaning mapping |
 | Workspace | Chinese by default, persistent English switch, input drafts, and mobile reading tabs |
 | Accounts | Registration, login, sessions, and profile lookup |
+| Mini program login | Bind an existing email account once, then use WeChat login with the same data and plan |
 | Plans | Daily quotas, free/VIP/admin tiers, and VIP approval workflow |
 | Export | PDF and Word export from the frontend |
 | Operations | Admin usage overview and account-plan management |
@@ -54,6 +55,8 @@ flowchart LR
 ```
 
 ## Quick start
+
+WeChat mini program login requires server-only `WECHAT_APP_ID` and `WECHAT_APP_SECRET` configuration and the additive identity table. See [WeChat login setup and validation](docs/wechat-login.md).
 
 ### Prerequisites
 

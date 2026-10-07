@@ -26,3 +26,7 @@ services:
         value: https://texta.yanyihan.top,http://texta.yanyihan.top,https://yanyihann.github.io,http://localhost:3000,http://127.0.0.1:3000
       - key: DATABASE_URL
         sync: false
+      - key: WECHAT_APP_ID
+        value: wxc1af567af0505b1e
+      - key: WECHAT_APP_SECRET
+        sync: false

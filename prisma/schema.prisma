@@ -22,6 +22,20 @@ model User {
   permanentPlan String @default("free")
   planExpiresAt DateTime?
   createdAt    String
+  wechatIdentities WechatIdentity[]
+}
+
+// A binding adds a login method to an existing account; it never replaces the account or its data.
+model WechatIdentity {
+  id        String @id @default(cuid())
+  appId     String
+  openId    String
+  userId    String
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, openId])
+  @@unique([appId, userId])
 }
 
 model PaymentOrder {

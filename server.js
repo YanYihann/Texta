@@ -12,6 +12,7 @@ const {reserveCredits, refundCredits} = require('./billing/credits.cjs');
 const {generateMixedStory} = require('./generation/mixed.cjs');
 const {generateBilingualStory} = require('./generation/bilingual.cjs');
 const {createVocabularyDetails} = require('./generation/vocabulary.cjs');
+const {createWechatProvider, registerWechatAuth} = require('./auth/wechat.cjs');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -2896,6 +2897,8 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
   return output;
 }
 
+
+registerWechatAuth(app, {db:prisma, provider:createWechatProvider(), getUserFromToken, publicUser, sessionTtlMs:AUTH_TOKEN_TTL_MS});
 
 app.post("/api/auth/register", async (req, res) => {
   try {
