@@ -14,9 +14,9 @@ datasource db {
 
 model User {
   id           String @id
-  email        String @unique
+  email        String? @unique
   name         String
-  passwordHash String
+  passwordHash String?
   role         String @default("user")
   plan         String @default("free")
   permanentPlan String @default("free")
@@ -25,7 +25,7 @@ model User {
   wechatIdentities WechatIdentity[]
 }
 
-// A binding adds a login method to an existing account; it never replaces the account or its data.
+// One WeChat identity owns one account; an email login can be added later to that same user ID.
 model WechatIdentity {
   id        String @id @default(cuid())
   appId     String

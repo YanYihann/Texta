@@ -387,7 +387,7 @@ function publicUser(user) {
   if (!user) return null;
   return {
     id: user.id,
-    email: user.email,
+    email: user.email || "",
     name: user.name,
     role: user.role || "user",
     plan: effectivePlan(user),
@@ -2898,7 +2898,7 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
 }
 
 
-registerWechatAuth(app, {db:prisma, provider:createWechatProvider(), getUserFromToken, publicUser, sessionTtlMs:AUTH_TOKEN_TTL_MS});
+registerWechatAuth(app, {db:prisma, provider:createWechatProvider(), getUserFromToken, publicUser, hashPassword, sessionTtlMs:AUTH_TOKEN_TTL_MS});
 
 app.post("/api/auth/register", async (req, res) => {
   try {

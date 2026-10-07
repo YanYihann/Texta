@@ -34,7 +34,7 @@ function createWechatProvider(env = process.env, request = fetch) {
   return { enabled, appId, exchange };
 }
 
-function registerWechatAuth(app, { db, provider, getUserFromToken, publicUser, sessionTtlMs }) {
+function registerWechatAuth(app, { db, provider, getUserFromToken, publicUser, hashPassword, sessionTtlMs }) {
   function failure(res, error) {
     // Never expose provider messages, request URLs, codes, openids, or credentials in errors/logs.
     const known = Number.isInteger(error.status) && error.status >= 400 && error.status < 600;
@@ -53,15 +53,56 @@ function registerWechatAuth(app, { db, provider, getUserFromToken, publicUser, s
     res.set('Cache-Control', 'no-store');
     try {
       const identity = await provider.exchange(req.body?.code);
-      const binding = await db.wechatIdentity.findUnique({ where: { appId_openId: identity } });
-      if (!binding) return res.json({ ok: true, bindingRequired: true });
+      let binding = await db.wechatIdentity.findUnique({ where: { appId_openId: identity } });
+      let created = false;
+      if (!binding) {
+        try {
+          binding = await db.$transaction(async tx => {
+            const user = await tx.user.create({ data: {
+              id: 'u_' + crypto.randomBytes(16).toString('hex'), email: null, passwordHash: null,
+              name: '微信用户', role: 'user', plan: 'free', permanentPlan: 'free', createdAt: new Date().toISOString()
+            } });
+            return tx.wechatIdentity.create({ data: { ...identity, userId: user.id } });
+          });
+          created = true;
+        } catch (error) {
+          // Concurrent first logins roll back the losing account, then use the single winner.
+          if (error.code !== 'P2002') throw error;
+          binding = await db.wechatIdentity.findUnique({ where: { appId_openId: identity } });
+          if (!binding) throw error;
+        }
+      }
       const user = await db.user.findUnique({ where: { id: binding.userId } });
       if (!user) throw problem(409, '绑定的账号已不可用，请使用邮箱登录并联系开发者。');
       const token = 'tk_' + crypto.randomBytes(24).toString('hex');
       const expiresAt = Date.now() + sessionTtlMs;
       await db.session.create({ data: { token, userId: user.id, expiresAt: BigInt(expiresAt), createdAt: BigInt(Date.now()) } });
-      res.json({ ok: true, token, user: publicUser(user), expiresAt });
+      res.json({ ok: true, token, user: publicUser(user), expiresAt, created });
     } catch (error) { failure(res, error); }
+  });
+  app.post('/api/auth/wechat/email', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    try {
+      const user = await getUserFromToken(req);
+      if (!user) throw problem(401, 'Unauthorized.');
+      const identity = await db.wechatIdentity.findUnique({ where: { appId_userId: { appId: provider.appId, userId: user.id } } });
+      if (!identity) throw problem(403, '请先使用微信登录，再绑定邮箱。');
+      const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+      const password = typeof req.body?.password === 'string' ? req.body.password : '';
+      if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw problem(400, '请输入有效的邮箱地址。');
+      if (password.length < 6 || password.length > 200) throw problem(400, '密码需要 6 至 200 位。');
+      // This adds credentials in place. It cannot change another account, grant an admin role,
+      // overwrite a previously bound email, or silently merge different users' data/plans.
+      const updated = await db.$transaction(async tx => {
+        const result = await tx.user.updateMany({ where: { id: user.id, email: null }, data: { email, passwordHash: hashPassword(password).hash } });
+        if (result.count !== 1) throw problem(409, '账号已绑定邮箱，请刷新账号页面。');
+        return tx.user.findUnique({ where: { id: user.id } });
+      });
+      res.json({ ok: true, user: publicUser(updated) });
+    } catch (error) {
+      if (error.code === 'P2002') error = problem(409, '这个邮箱已有 Texta 账号。请使用其他邮箱；已有账号可通过邮箱登录入口使用，不会自动覆盖或合并资料。');
+      failure(res, error);
+    }
   });
   app.post('/api/auth/wechat/bind', async (req, res) => {
     res.set('Cache-Control', 'no-store');
