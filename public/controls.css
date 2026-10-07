@@ -94,6 +94,20 @@ body .account-popover > button, body .user-row > button { width: 100%; justify-c
 body .export-popover > button { justify-content: flex-start; border-color: transparent; }
 body .account-popover a { padding-block: 6px; }
 body .usage-card { margin-top: 16px; }
+body .wechat-connection { padding-block: 16px; margin-block: 16px; border-block: 1px solid var(--line); }
+body .connection-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 600; }
+body .connection-state { color: var(--muted); font-size: 13px; font-weight: 500; }
+body .connection-state[data-state="bound"] { color: var(--primary); font-weight: 600; }
+body .connection-state[data-state="error"] { color: var(--warning); }
+body .connection-hint, body .connection-help ol { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+body .connection-actions { display: flex; margin-top: 4px; }
+body .connection-actions button { min-height: 44px; padding-inline: 0; color: var(--primary); }
+body .connection-help summary { min-height: 44px; padding: 6px 0; border: 0; color: var(--primary); background: transparent; justify-content: space-between; font-size: 13px; }
+body .connection-help ol { padding-left: 20px; }
+body .connection-help li + li { margin-top: 8px; }
+@media (max-width: 900px) {
+  body .account-popover:has(.wechat-connection) { max-height: calc(100dvh - 210px); }
+}
 body .theme-toggle-btn { min-height: 44px; }
 body :is(.fav-delete,.notebook-delete,#deleteFolderBtn,[data-action="reject"]) { color: var(--warning); }
 body :is(.fav-delete,.notebook-delete,#deleteFolderBtn,[data-action="reject"]):hover:not(:disabled) { background: color-mix(in srgb,var(--warning) 9%,var(--panel)); border-color: var(--warning); }

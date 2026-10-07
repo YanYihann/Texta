@@ -26,6 +26,10 @@ const favoritesListEl = document.getElementById("favoritesList");
 const userBadgeEl = document.getElementById("userBadge");
 const logoutBtnEl = document.getElementById("logoutBtn");
 const usageTextEl = document.getElementById("usageText");
+const wechatConnectionStateEl = document.getElementById("wechatConnectionState");
+const wechatConnectionHintEl = document.getElementById("wechatConnectionHint");
+const wechatConnectionHelpEl = document.getElementById("wechatConnectionHelp");
+const refreshWechatConnectionBtn = document.getElementById("refreshWechatConnectionBtn");
 const adminReviewLinkEl = document.getElementById("adminReviewLink");
 const adminUsageLinkEl = document.getElementById("adminUsageLink");
 const brandEl = document.querySelector(".brand");
@@ -494,6 +498,49 @@ function renderUsage(usage, user = currentUser) {
   }
 }
 
+let wechatConnectionRequest = null;
+function renderWechatConnection(state, hint) {
+  if (!wechatConnectionStateEl) return;
+  const labels = { loading: '正在查询…', bound: '已绑定', unbound: '未绑定', unavailable: '暂不可用', error: '查询未完成' };
+  wechatConnectionStateEl.textContent = labels[state];
+  wechatConnectionStateEl.dataset.state = state;
+  wechatConnectionHintEl.textContent = hint;
+  wechatConnectionHelpEl.classList.toggle('hidden', state !== 'unbound');
+  if (state !== 'unbound') wechatConnectionHelpEl.open = false;
+  refreshWechatConnectionBtn.disabled = state === 'loading';
+  refreshWechatConnectionBtn.setAttribute('aria-busy', String(state === 'loading'));
+}
+
+async function refreshWechatConnection() {
+  if (!wechatConnectionStateEl || !authToken || !currentUser?.id) return;
+  const token = authToken, userId = currentUser.id;
+  const sameAccount = () => authToken === token && currentUser?.id === userId && localStorage.getItem('texta_auth_token') === token;
+  if (!sameAccount()) { renderWechatConnection('error', '账号已改变，请刷新网页后查看绑定状态。'); return; }
+  if (wechatConnectionRequest?.token === token) return;
+  const request = { token }; wechatConnectionRequest = request;
+  renderWechatConnection('loading', '正在读取当前账号的绑定状态。');
+  try {
+    const response = await apiFetch('/api/auth/wechat/connection', { timeoutMs: 25000, retryCount: 0, cache: 'no-store' });
+    if (!sameAccount()) return;
+    if (response.status === 401) { renderWechatConnection('error', '登录已过期，请重新登录后查看绑定状态。'); return; }
+    if (!response.ok) throw new Error('Unavailable');
+    const data = await response.json();
+    if (!sameAccount()) return;
+    if (data.ok !== true || typeof data.bound !== 'boolean' || typeof data.loginAvailable !== 'boolean') throw new Error('Incomplete binding status');
+    if (data.bound) renderWechatConnection('bound', data.loginAvailable
+      ? '小程序可用微信登录此账号，资料和套餐共用。' : '绑定关系已保留，微信快捷登录暂不可用，请稍后再试。');
+    else if (data.loginAvailable) renderWechatConnection('unbound', '在小程序关联此邮箱账号，即可使用微信快捷登录。');
+    else renderWechatConnection('unavailable', '微信快捷登录暂不可用，请稍后查询或继续使用邮箱登录。');
+  } catch (_) {
+    if (sameAccount()) renderWechatConnection('error', '暂时无法查询，请检查网络后刷新状态。');
+  } finally {
+    if (wechatConnectionRequest === request) {
+      wechatConnectionRequest = null;
+      if (!sameAccount()) renderWechatConnection('error', '账号已改变，请刷新网页后查看绑定状态。');
+    }
+  }
+}
+
 async function refreshUsage() {
   if (!authToken) return;
   try {
@@ -529,6 +576,7 @@ async function loadMe() {
     const roleText = isAdmin ? "管理员" : ({vip:'Plus 用户',plus:'Plus 用户',pro:'Pro 用户'})[currentUser?.plan] || "普通用户";
     userBadgeEl.textContent = `${currentUser?.name || currentUser?.email || "用户"} · ${roleText}`;
     logoutBtnEl.classList.remove("hidden");
+    void refreshWechatConnection();
     await refreshUsage();
     return Boolean(currentUser);
   } catch {
@@ -3788,6 +3836,11 @@ confirmExportBtn.addEventListener("click", async () => {
     return;
   }
   await exportPdfFromPreview();
+});
+
+refreshWechatConnectionBtn?.addEventListener('click', refreshWechatConnection);
+document.querySelector('.account-menu')?.addEventListener('toggle', event => {
+  if (event.target.open) void refreshWechatConnection();
 });
 
 logoutBtnEl.addEventListener("click", async () => {

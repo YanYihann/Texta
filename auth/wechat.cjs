@@ -43,6 +43,17 @@ function registerWechatAuth(app, { db, provider, getUserFromToken, publicUser, h
     const known = Number.isInteger(error.status) && error.status >= 400 && error.status < 600;
     res.status(known ? error.status : 503).json({ error: known ? error.message : '微信登录暂时不可用，请稍后重试。' });
   }
+  // Account settings need an authenticated, truthful binding read even when login is paused.
+  app.get('/api/auth/wechat/connection', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    try {
+      const user = await getUserFromToken(req);
+      if (!user) return res.status(401).json({ error: 'Unauthorized.' });
+      if (!/^wx[a-f0-9]{16}$/i.test(provider.appId || '')) return res.status(503).json({ error: '微信绑定状态暂时无法查询。' });
+      const identity = await db.wechatIdentity.findUnique({ where: { appId_userId: { appId: provider.appId, userId: user.id } } });
+      res.json({ ok: true, bound: Boolean(identity), loginAvailable: provider.enabled });
+    } catch (_) { res.status(503).json({ error: '微信绑定状态暂时无法查询。' }); }
+  });
   app.get('/api/auth/wechat/status', async (req, res) => {
     res.set('Cache-Control', 'no-store');
     try {

@@ -98,6 +98,24 @@ async function harness() {
   return { call, db, provider, users, bindings, sessions, counts: () => ({ exchanges, writes }), close: () => new Promise(resolve => server.close(resolve)) };
 }
 
+test('account connection requires ownership, preserves saved binding when login is paused and never returns provider identifiers', async () => {
+  const h = await harness();
+  try {
+    assert.equal((await h.call('connection')).status, 401);
+    assert.equal((await h.call('connection', 'invalid')).status, 401);
+    await h.call('bind', 'alice', { code: 'wx-alice' });
+    const linked = await h.call('connection', 'alice');
+    assert.deepEqual(linked.data, { ok: true, bound: true, loginAvailable: true }); assert.equal(linked.cache, 'no-store');
+    assert.equal(JSON.stringify(linked.data).includes('wx-alice'), false);
+    assert.equal((await h.call('connection', 'bob')).data.bound, false);
+    h.provider.enabled = false;
+    assert.deepEqual((await h.call('connection', 'alice')).data, { ok: true, bound: true, loginAvailable: false });
+    h.db.wechatIdentity.findUnique = async () => { throw Error('private DB information'); };
+    const failed = await h.call('connection', 'alice'); assert.equal(failed.status, 503); assert.equal(failed.data.bound, undefined);
+    assert.equal(failed.data.error.includes('private'), false);
+  } finally { await h.close(); }
+});
+
 test('first login creates one passwordless free account; repeated login ignores supplied account identifiers', async () => {
   const h = await harness();
   try {
