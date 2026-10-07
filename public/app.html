@@ -4,9 +4,9 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f7f4"><title>Texta · 词汇学习</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./workspace.css?v=20261006-mixed-notes1"><link rel="stylesheet" href="./controls.css?v=20261005-controls1"><script src="./theme.js?v=20261005-controls1"></script>
+  <link rel="stylesheet" href="./workspace.css?v=20261006-mixed-notes1"><link rel="stylesheet" href="./controls.css?v=20261007-wechat1"><script src="./theme.js?v=20261005-controls1"></script>
   <link rel="stylesheet" href="./vocabulary.css?v=20261006-bilingual1">
-  <script src="./i18n.js?v=20261006-bilingual1" defer></script>
+  <script src="./i18n.js?v=20261007-wechat1" defer></script>
 <link rel="stylesheet" href="./legal.css?v=20261005-legal1"></head>
 <body class="workspace-page">
   <a class="skip-link" href="#wordDraft">跳到词汇输入</a>
@@ -28,6 +28,12 @@
           <div class="brand hidden"><span>Texta</span></div>
           <div class="user-row"><span id="userBadge" class="user-badge">连接账户中…</span><button id="logoutBtn" class="hidden" type="button">退出登录</button></div>
           <div id="usageCard" class="usage-card"><div id="usageText">今日剩余积分：—</div><a id="adminReviewLink" class="hidden" href="./admin.html">历史充值审核</a><a id="adminUsageLink" class="hidden" href="./admin-usage.html">用户使用查看</a></div>
+          <section class="wechat-connection" aria-labelledby="wechatConnectionTitle">
+            <div class="connection-heading"><span id="wechatConnectionTitle">微信登录</span><span id="wechatConnectionState" class="connection-state" role="status" aria-live="polite">正在查询…</span></div>
+            <p id="wechatConnectionHint" class="connection-hint">正在读取当前账号的绑定状态。</p>
+            <div class="connection-actions"><button id="refreshWechatConnectionBtn" class="text-btn" type="button">刷新状态</button></div>
+            <details id="wechatConnectionHelp" class="connection-help hidden"><summary>如何绑定微信</summary><ol><li>在微信打开“Texta串词记”小程序，使用微信快捷登录。</li><li>进入“我的 → 账号设置 → 关联已有账号”。</li><li>输入本账号邮箱和原密码，验证并合并后，回到这里刷新状态。</li></ol></details>
+          </section>
           <button id="openGuideBtn" type="button">使用说明</button>
           <p class="theme-heading">主题样式</p><div id="themeTools"></div>
         </div>
@@ -154,4 +160,4 @@
       </div>
     </section>
 
-<script src="./site-config.js?v=20261004-clean11"></script><script src="./app.js?v=20261006-vocab-ready1"></script><script src="./word-assist.js?v=20261005-plans1"></script><script src="./vocabulary.js?v=20261006-bilingual1"></script><script src="./library.js?v=20261004-clean11"></script><script src="./workspace.js?v=20261006-bilingual1"></script></body></html>
+<script src="./site-config.js?v=20261004-clean11"></script><script src="./app.js?v=20261007-wechat1"></script><script src="./word-assist.js?v=20261005-plans1"></script><script src="./vocabulary.js?v=20261006-bilingual1"></script><script src="./library.js?v=20261004-clean11"></script><script src="./workspace.js?v=20261006-bilingual1"></script></body></html>

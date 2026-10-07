@@ -148,6 +148,18 @@
   dictionary['在本文中'] = 'In this article';
   dictionary['词义'] = 'Meanings'; dictionary['常见搭配'] = 'Collocations'; dictionary['词汇扩展'] = 'More word details'; dictionary['例句译文'] = 'Sentence translation';
   Object.assign(dictionary, {
+    '微信登录':'WeChat sign-in','正在查询…':'Checking…','已绑定':'Linked','未绑定':'Not linked','暂不可用':'Unavailable','查询未完成':'Check incomplete',
+    '刷新状态':'Refresh status','如何绑定微信':'How to link WeChat','正在读取当前账号的绑定状态。':'Checking this account’s WeChat connection.',
+    '小程序可用微信登录此账号，资料和套餐共用。':'Use WeChat to sign in to this account in the mini program. Your library and plan are shared.',
+    '绑定关系已保留，微信快捷登录暂不可用，请稍后再试。':'Your connection is saved. WeChat sign-in is temporarily unavailable; try again later.',
+    '在小程序关联此邮箱账号，即可使用微信快捷登录。':'Link this email account in the mini program to enable WeChat sign-in.',
+    '微信快捷登录暂不可用，请稍后查询或继续使用邮箱登录。':'WeChat sign-in is unavailable. Check later or continue using email sign-in.',
+    '暂时无法查询，请检查网络后刷新状态。':'Could not check the connection. Check your network and refresh the status.',
+    '登录已过期，请重新登录后查看绑定状态。':'Your session expired. Sign in again to check the connection.',
+    '账号已改变，请刷新网页后查看绑定状态。':'The account changed. Refresh this page to check the connection.',
+    '在微信打开“Texta串词记”小程序，使用微信快捷登录。':'Open the “Texta串词记” mini program in WeChat and use WeChat sign-in.',
+    '进入“我的 → 账号设置 → 关联已有账号”。':'Go to Me → Account settings → Link an existing account.',
+    '输入本账号邮箱和原密码，验证并合并后，回到这里刷新状态。':'Enter this account’s email and original password. After verification and merging, return here and refresh the status.',
     '日历视图':'Calendar view','上一年':'Previous year','下一年':'Next year','今年':'This year','正在翻译例句…':'Translating sentence…','例句翻译暂时不可用。':'Sentence translation is unavailable.','重试翻译':'Retry translation',
     'Texta 主页':'Texta home','PDF 导出失败，请重试。':'PDF export failed. Try again.',
     '返回主页面':'Back to study','升级 VIP':'Upgrade to VIP','支付 10 元可升级 VIP（每日 50 次）':'Pay ¥10 for VIP with 50 daily credits.',
