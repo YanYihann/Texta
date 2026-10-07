@@ -46,6 +46,7 @@ async function harness() {
   ]);
   const bindings = [], sessions = []; let exchanges = 0, writes = 0;
   const db = {
+    $queryRaw: async () => [],
     user: {
       findUnique: async ({ where }) => where.id ? users.get(where.id) || null : [...users.values()].find(u => u.email === where.email) || null,
       create: async ({ data }) => { if (users.has(data.id)) throw Object.assign(Error('unique'), { code: 'P2002' }); users.set(data.id, { ...data }); return users.get(data.id); },

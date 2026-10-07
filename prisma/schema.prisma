@@ -22,6 +22,8 @@ model User {
   permanentPlan String @default("free")
   planExpiresAt DateTime?
   createdAt    String
+  mergedIntoId String?
+  libraryMergeProtected Boolean @default(false)
   wechatIdentities WechatIdentity[]
 }
 

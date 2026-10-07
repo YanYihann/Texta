@@ -1,4 +1,6 @@
 const crypto = require('node:crypto');
+const { mergeWechatAccount } = require('./merge.cjs');
+const { transaction } = require('../billing/service.cjs');
 
 function problem(status, message) { return Object.assign(new Error(message), { status }); }
 
@@ -34,7 +36,8 @@ function createWechatProvider(env = process.env, request = fetch) {
   return { enabled, appId, exchange };
 }
 
-function registerWechatAuth(app, { db, provider, getUserFromToken, publicUser, hashPassword, sessionTtlMs }) {
+function registerWechatAuth(app, { db, provider, getUserFromToken, publicUser, hashPassword, verifyPassword, sessionTtlMs }) {
+  const failures = new Map();
   function failure(res, error) {
     // Never expose provider messages, request URLs, codes, openids, or credentials in errors/logs.
     const known = Number.isInteger(error.status) && error.status >= 400 && error.status < 600;
@@ -72,12 +75,18 @@ function registerWechatAuth(app, { db, provider, getUserFromToken, publicUser, h
           if (!binding) throw error;
         }
       }
-      const user = await db.user.findUnique({ where: { id: binding.userId } });
-      if (!user) throw problem(409, '绑定的账号已不可用，请使用邮箱登录并联系开发者。');
-      const token = 'tk_' + crypto.randomBytes(24).toString('hex');
-      const expiresAt = Date.now() + sessionTtlMs;
-      await db.session.create({ data: { token, userId: user.id, expiresAt: BigInt(expiresAt), createdAt: BigInt(Date.now()) } });
-      res.json({ ok: true, token, user: publicUser(user), expiresAt, created });
+      const result = await transaction(db, async tx => {
+        const currentBinding = await tx.wechatIdentity.findUnique({ where: { appId_openId: identity } });
+        if (!currentBinding) throw problem(409, '微信身份已改变，请重新登录。');
+        await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${currentBinding.userId} FOR UPDATE`;
+        const user = await tx.user.findUnique({ where: { id: currentBinding.userId } });
+        if (!user || user.mergedIntoId) throw problem(409, '绑定的账号已改变，请重新点击微信登录。');
+        const token = 'tk_' + crypto.randomBytes(24).toString('hex');
+        const expiresAt = Date.now() + sessionTtlMs;
+        await tx.session.create({ data: { token, userId: user.id, expiresAt: BigInt(expiresAt), createdAt: BigInt(Date.now()) } });
+        return { token, user: publicUser(user), expiresAt };
+      });
+      res.json({ ok: true, ...result, created });
     } catch (error) { failure(res, error); }
   });
   app.post('/api/auth/wechat/email', async (req, res) => {
@@ -91,16 +100,34 @@ function registerWechatAuth(app, { db, provider, getUserFromToken, publicUser, h
       const password = typeof req.body?.password === 'string' ? req.body.password : '';
       if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw problem(400, '请输入有效的邮箱地址。');
       if (password.length < 6 || password.length > 200) throw problem(400, '密码需要 6 至 200 位。');
-      // This adds credentials in place. It cannot change another account, grant an admin role,
-      // overwrite a previously bound email, or silently merge different users' data/plans.
-      const updated = await db.$transaction(async tx => {
+      // New credentials are added in place. An explicit merge proves the existing password
+      // before transferring a passwordless WeChat identity and its learning records.
+      const result = await transaction(db, async tx => {
+        const source = await tx.user.findUnique({ where: { id: user.id } });
+        if (!source || source.email || source.mergedIntoId) throw problem(409, '账号状态已改变，请刷新账号页面。');
+        const existing = await tx.user.findUnique({ where: { email } });
+        if (existing) {
+          if (req.body.mergeExisting !== true) throw problem(409, '这个邮箱已有账号，请选择“关联已有账号”并输入原密码。');
+          const recent = failures.get(user.id);
+          if (recent && recent.until > Date.now() && recent.count >= 5) throw problem(429, '密码验证过于频繁，请 15 分钟后重试。');
+          if (!verifyPassword(password, existing.passwordHash)) {
+            if (failures.size > 5000) for (const [id, value] of failures) if (value.until <= Date.now()) failures.delete(id);
+            failures.set(user.id, { count: recent && recent.until > Date.now() ? recent.count + 1 : 1, until: recent && recent.until > Date.now() ? recent.until : Date.now() + 900000 });
+            throw problem(400, '邮箱或原账号密码不正确，未进行合并。');
+          }
+          // The locked transaction rereads both accounts and their identities before moving data.
+          const merged = await mergeWechatAccount(tx, source, existing, provider.appId, sessionTtlMs);
+          failures.delete(user.id); return { ...merged, merged: true };
+        }
+        if (req.body.mergeExisting === true) throw problem(400, '邮箱或原账号密码不正确，未进行合并。');
         const result = await tx.user.updateMany({ where: { id: user.id, email: null }, data: { email, passwordHash: hashPassword(password).hash } });
         if (result.count !== 1) throw problem(409, '账号已绑定邮箱，请刷新账号页面。');
-        return tx.user.findUnique({ where: { id: user.id } });
-      });
-      res.json({ ok: true, user: publicUser(updated) });
+        return { user: await tx.user.findUnique({ where: { id: user.id } }), merged: false };
+      }, { timeout: 60000, maxWait: 10000 });
+      res.json({ ok: true, user: publicUser(result.user), merged: result.merged,
+        ...(result.merged ? { token: result.token, expiresAt: result.expiresAt, mergedFrom: result.mergedFrom } : {}) });
     } catch (error) {
-      if (error.code === 'P2002') error = problem(409, '这个邮箱已有 Texta 账号。请使用其他邮箱；已有账号可通过邮箱登录入口使用，不会自动覆盖或合并资料。');
+      if (error.code === 'P2002') error = problem(409, '账号关联状态发生冲突，请刷新后重试。');
       failure(res, error);
     }
   });

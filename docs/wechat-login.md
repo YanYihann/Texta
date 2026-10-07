@@ -1,26 +1,30 @@
-# WeChat mini program login
+# WeChat mini program login and email association
 
-The default mini program flow is WeChat quick login. The server verifies wx.login, creates a free account for a new app-scoped identity, and issues a normal Texta session immediately. Email and password are optional; users can add them later in account settings to sign in on the web using the same user ID, data, plan and quota. Email ownership is not verified by an OTP service; this matches the existing email registration flow.
+WeChat quick login creates a free account for a new app-scoped identity. Email is optional. Account settings offer a new email/password on the same user ID or an explicit association with an existing email account using its original password. No email OTP service is configured; setting a new email follows existing registration rules, while merging an existing account proves possession of its password.
 
-## API and identity storage
+## API
 
-- GET /api/auth/wechat/status reports configured capability and the signed-in account's binding without returning OpenID.
-- POST /api/auth/wechat/login accepts only a fresh code. Existing identities use their current user; a new identity creates User and WechatIdentity in one transaction. A duplicate first-login race rolls back the losing user and loads the winner. Sessions use the existing bearer format and TTL. No client-supplied user ID, OpenID, role or plan is trusted.
-- POST /api/auth/wechat/email requires an authenticated account with a WeChat identity. It adds a valid unused email and a salted password hash only when that account has no email. The conditional update and unique email constraint prevent overwrite and concurrent claims. Roles, plan and user ID stay unchanged, including when the address matches an admin email configuration.
-- POST /api/auth/wechat/bind remains available to add an unclaimed WeChat identity to a signed-in existing email account. It never reassigns an identity that already belongs to another account.
+- GET /api/auth/wechat/status reports configured capability and binding without returning OpenID.
+- POST /api/auth/wechat/login accepts only a fresh code. User and WechatIdentity creation is atomic and unique constraints handle concurrent first logins. Session creation locks the current user in a serializable transaction so merging cannot issue a session for a retired account. No client-supplied user ID, OpenID, role or plan is trusted.
+- POST /api/auth/wechat/email requires the current authenticated WeChat-only account. An unused email adds a salted password hash in place. With mergeExisting: true, an existing email requires its current password; five failed password attempts per source account trigger a 15-minute limit on this server instance. Old clients without the flag receive a conflict rather than silently merging.
+- POST /api/auth/wechat/bind adds an unclaimed WeChat identity to an authenticated email account and never overwrites another binding.
 
-User.email and User.passwordHash are nullable for WeChat-only users; no fake email or password is created. The public profile renders missing email as an empty string. The schema keeps unique identity and email constraints. There is no silent account merge, email replacement, automatic phone/avatar/nickname collection, or unlink flow. An email belonging to another account returns a conflict and leaves both accounts intact.
+## Merge behavior
 
-AppSecret stays on the server. WeChat session_key and UnionID are not stored or returned. Codes are used immediately and not stored locally. Raw upstream errors, request URLs and credentials are not logged or returned.
+An ordinary free WeChat-only account with no payment orders may be merged into the verified email account. Paid source accounts, any source payment history, a conflicting target WeChat binding, changed account state, or an oversized merged library return a conflict without changing either account. The target's role, password, plan, permanent plan and expiry remain unchanged. This is an explicit user action, not automatic discovery or merging based only on email text.
 
-## Deployment
+The serializable transaction locks both users in stable order, rereads ownership, transfers all source WeChat identities, folders, favorites, notebook entries, vocabulary preferences, usage logs and legacy requests, and adds daily usage. Client IDs for favorites/folders are retained under the target owner prefix; colliding records use the newer timestamp, and deletion tombstones survive. Notebook words and mastery are deduplicated by word key, use the newest state and retain the first introduction date. Caps are 200 favorites/folders, 2,000 notebook entries and 5,000 vocabulary preferences; overflow rolls back instead of truncating.
 
-Keep the existing Render WECHAT_APP_ID and WECHAT_APP_SECRET. Deploy this revision using the existing build (npm install, prisma generate, prisma db push --skip-generate). This makes the two optional fields nullable without removing current email accounts or their data. Do not run local schema push against production as a test.
+The source User is retired with mergedIntoId rather than deleted. All source sessions are revoked and one new target session is issued only to the password-verified request; existing target sessions remain valid. Credit reservation and payment checkout stop on retired users, and in-flight generation logs/refunds follow migrated usage. Merged target accounts protect stored library rows from omission by older client snapshots; explicit newer tombstones handle deletion. JSON nulls are converted to Prisma's write sentinel when preserving stored records.
 
-Upload mini program 1.1.1 and update privacy disclosures: first WeChat login creates an account from the app-scoped identifier; email and password are provided only when the user elects to enable web login. Existing 1.1.0 clients accept the returned normal session as well. Test a real phone, then submit/release in the console. Only the server calls WeChat APIs; the mini program keeps the existing Texta request domain.
+The mini program synchronizes the source before requesting the merge, checks account-switch races, migrates local collections/history, and switches to the returned target session. The old isolated local cache is retained as a backup. Failed pre-sync does not send credentials. No server-generated reading history exists beyond saved favorites, and this does not move history from another device's local storage.
 
-## Verification
+AppSecret stays on the server. WeChat session_key and UnionID are not stored or returned. Codes are used immediately and not stored locally. Raw upstream errors, request URLs and credentials are not logged or returned. No phone, avatar or WeChat nickname is collected.
 
-npm run test:wechat covers provider failures, identifier spoofing, first creation and repeated login, atomic rollback, concurrent first logins, optional email credentials, conflicts and ownership. HTTP tests use an in-memory database double and do not prove real PostgreSQL concurrency. Prisma validation/client generation and existing library/billing tests cover their respective scopes.
+## Deployment and validation
 
-Mini program tests cover default direct login, optional email settings, data/session preservation, conflicts, duplicate taps, consent and account-switch races. scripts/wechat-first-smoke.cjs exercises the actual simulator with wx.login/API fixtures and restores original state. Real WeChat credential checking and phone account binding remain separate checks.
+Keep the existing Render WECHAT_APP_ID and WECHAT_APP_SECRET. The build runs npm install, prisma generate and prisma db push --skip-generate, adding nullable mergedIntoId and default-false libraryMergeProtected without deleting account/library records. Mini program 1.1.2 supersedes 1.1.1; update privacy disclosures about explicit verified account association before submission/release. Existing clients keep their login functionality but need the new UI for association.
+
+npm run test:wechat covers credential validation, source authorization, data/plan/usage preservation, old-session revocation, identity/paid-source conflicts, rollback, serialization retries and late refunds using in-memory transaction doubles. npm run test:library covers older-snapshot preservation, JSON null serialization and retired-source write rejection. Mini tests cover local migration, failed pre-sync, forged responses and account-switch races. Existing billing tests remain applicable.
+
+tests/account-merge-database.cjs provisions only a randomly named texta_merge_test_* schema and removes it after PostgreSQL concurrency/rollback tests. It never pushes the public schema. This run could not connect to PostgreSQL from the local host and is not claimed as passed; model doubles cannot prove PostgreSQL locking. Simulator fixtures and real WeChat repeat login provide separate runtime/credential checks; merging a real user email requires that user's original password and remains a phone acceptance check.

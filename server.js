@@ -3,7 +3,7 @@ const path = require("path");
 const dotenv = require("dotenv");
 const crypto = require("crypto");
 const { AsyncLocalStorage } = require("async_hooks");
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient, Prisma } = require("@prisma/client");
 dotenv.config();
 const {effectivePlan, dailyLimit, normalizePlan, grant, PRODUCTS} = require('./billing/plans.cjs');
 const {createFastSpring} = require('./billing/fastspring.cjs');
@@ -335,7 +335,7 @@ async function readAuthStore() {
     prisma.vipRequest.findMany({ orderBy: { createdAt: "desc" } })
   ]);
 
-  const users = usersRows.map((u) => ({
+  const users = usersRows.filter(u => !u.mergedIntoId).map((u) => ({
     id: u.id,
     email: u.email,
     name: u.name,
@@ -483,12 +483,16 @@ function getUsageSnapshot(store, user, dateKey = getShanghaiDateKey()) {
 
 async function logUsageEvent(user, usedAt = new Date(), count = 1) {
   if (!user?.id) return;
+  return transaction(prisma, async tx => {
+  await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${user.id} FOR UPDATE`;
+  const current = await tx.user.findUnique({ where: { id: user.id } });
+  const userId = current?.mergedIntoId || user.id;
   const total = Math.max(1, Math.floor(Number(count) || 1));
   if (total === 1) {
     const bucket = getShanghaiHourBucket(usedAt);
-    await prisma.usageLog.create({
+    await tx.usageLog.create({
       data: {
-        userId: String(user.id),
+        userId: String(userId),
         usedAt: usedAt.toISOString(),
         dateKey: bucket.dateKey,
         hourKey: bucket.hourKey,
@@ -502,14 +506,15 @@ async function logUsageEvent(user, usedAt = new Date(), count = 1) {
     const ts = new Date(usedAt.getTime() + idx);
     const bucket = getShanghaiHourBucket(ts);
     return {
-      userId: String(user.id),
+      userId: String(userId),
       usedAt: ts.toISOString(),
       dateKey: bucket.dateKey,
       hourKey: bucket.hourKey,
       periodLabel: bucket.periodLabel
     };
   });
-  await prisma.usageLog.createMany({ data: rows });
+  await tx.usageLog.createMany({ data: rows });
+  });
 }
 
 function compareUsageUsers(a, b) {
@@ -535,7 +540,8 @@ async function getUserFromToken(req) {
   if (!token) return null;
   const session = await prisma.session.findUnique({ where: { token } });
   if (!session || Number(session.expiresAt) <= Date.now()) return null;
-  return prisma.user.findUnique({ where: { id: session.userId } });
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  return user && !user.mergedIntoId ? user : null;
 }
 
 async function ensureAdminSeed() {
@@ -2898,7 +2904,7 @@ function normalizeAlignment(words, lexicon, raw, paragraphsEn, paragraphsZh) {
 }
 
 
-registerWechatAuth(app, {db:prisma, provider:createWechatProvider(), getUserFromToken, publicUser, hashPassword, sessionTtlMs:AUTH_TOKEN_TTL_MS});
+registerWechatAuth(app, {db:prisma, provider:createWechatProvider(), getUserFromToken, publicUser, hashPassword, verifyPassword, sessionTtlMs:AUTH_TOKEN_TTL_MS});
 
 app.post("/api/auth/register", async (req, res) => {
   try {
@@ -2947,7 +2953,7 @@ app.post("/api/auth/login", async (req, res) => {
 
     const store = await readAuthStore();
     const user = store.users.find((u) => String(u.email || "").toLowerCase() === email);
-    if (!user || !verifyPassword(password, user.passwordHash)) {
+    if (!user || user.mergedIntoId || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
@@ -3107,7 +3113,24 @@ app.post("/api/library/sync", async (req, res) => {
     }
     // Keep a snapshot atomic: a failed insert must not erase the previous library.
     await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${user.id} FOR UPDATE`;
+      const current = await tx.user.findUnique({ where: { id: user.id } });
+      if (!current || current.mergedIntoId) throw new Error('账号已合并，请重新登录后同步。');
       for (const [model, rows] of [["favoriteArticle", favoriteRows], ["notebookEntry", notebookRows], ["userVocabPref", vocabRows], ...(hasFolders ? [["libraryFolder", [...folderMap.values()]]] : [])]) {
+        if (current.libraryMergeProtected) {
+          const field = ["notebookEntry", "userVocabPref"].includes(model) ? "wordKey" : "id";
+          const stored = await tx[model].findMany({ where: { userId: user.id } });
+          const merged = new Map(stored.map(row => [row[field], row]));
+          for (const row of rows) {
+            const old = merged.get(row[field]);
+            if (!old || row.updatedAt > old.updatedAt) merged.set(row[field], old ? { ...old, ...row, id: old.id } : row);
+          }
+          rows.splice(0, rows.length, ...merged.values());
+          // Prisma reads JSON null as JS null, but writes need its explicit sentinel.
+          const jsonFields = model === 'favoriteArticle' ? ['words', 'lexicon', 'paragraphsEn', 'paragraphsZh', 'alignment', 'missing']
+            : model === 'notebookEntry' ? ['baseMeanings', 'senses', 'collocations', 'synonyms', 'antonyms', 'sourceArticle'] : [];
+          for (const row of rows) for (const field of jsonFields) if (row[field] === null) row[field] = Prisma.JsonNull;
+        }
         await tx[model].deleteMany({ where: { userId: user.id } });
         if (rows.length) await tx[model].createMany({ data: rows });
       }
