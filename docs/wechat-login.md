@@ -1,28 +1,26 @@
 # WeChat mini program login
 
-The mini program can add WeChat login to an existing Texta email account. First-time users sign in or register with email, inspect the target account, and explicitly confirm binding their current WeChat. Subsequent WeChat logins issue a normal Texta session for the same user ID. Plans, usage and learning records keep their existing ownership.
+The default mini program flow is WeChat quick login. The server verifies wx.login, creates a free account for a new app-scoped identity, and issues a normal Texta session immediately. Email and password are optional; users can add them later in account settings to sign in on the web using the same user ID, data, plan and quota. Email ownership is not verified by an OTP service; this matches the existing email registration flow.
 
 ## API and identity storage
 
-- `GET /api/auth/wechat/status`: reports whether credentials are configured and whether the authenticated Texta account has a binding. It returns no OpenID. Missing credentials or a failed capability lookup leave email login available.
-- `POST /api/auth/wechat/login`, body `{ "code": "wx.login result" }`: the server exchanges the fresh code with WeChat. An unbound identity returns `{ "ok": true, "bindingRequired": true }` without creating a user or session. A bound identity receives the existing account's public profile and an ordinary Texta bearer session.
-- `POST /api/auth/wechat/bind`, authenticated Texta bearer token and a newly obtained code: binds the verified WeChat identity to the authenticated account. The server ignores client-supplied user IDs, OpenIDs and AppIDs. Existing bindings cannot be reassigned by this route.
+- GET /api/auth/wechat/status reports configured capability and the signed-in account's binding without returning OpenID.
+- POST /api/auth/wechat/login accepts only a fresh code. Existing identities use their current user; a new identity creates User and WechatIdentity in one transaction. A duplicate first-login race rolls back the losing user and loads the winner. Sessions use the existing bearer format and TTL. No client-supplied user ID, OpenID, role or plan is trusted.
+- POST /api/auth/wechat/email requires an authenticated account with a WeChat identity. It adds a valid unused email and a salted password hash only when that account has no email. The conditional update and unique email constraint prevent overwrite and concurrent claims. Roles, plan and user ID stay unchanged, including when the address matches an admin email configuration.
+- POST /api/auth/wechat/bind remains available to add an unclaimed WeChat identity to a signed-in existing email account. It never reassigns an identity that already belongs to another account.
 
-`WechatIdentity` has unique constraints on `(appId, openId)` and `(appId, userId)`, with a cascading relation to User for account deletion. Concurrent duplicate claims are rejected or treated as idempotent when they belong to the same account. There is no merge, new-account, automatic nickname, phone-number or unlink flow.
+User.email and User.passwordHash are nullable for WeChat-only users; no fake email or password is created. The public profile renders missing email as an empty string. The schema keeps unique identity and email constraints. There is no silent account merge, email replacement, automatic phone/avatar/nickname collection, or unlink flow. An email belonging to another account returns a conflict and leaves both accounts intact.
 
-AppSecret stays on the API server. WeChat's session_key and UnionID are not stored or returned to the client. Login codes are short-lived, used only for their immediate exchange, and never stored in client storage. Raw provider errors and request URLs are not logged or returned.
+AppSecret stays on the server. WeChat session_key and UnionID are not stored or returned. Codes are used immediately and not stored locally. Raw upstream errors, request URLs and credentials are not logged or returned.
 
 ## Deployment
 
-1. In the Render backend service's Environment page, add `WECHAT_APP_ID=wxc1af567af0505b1e` and `WECHAT_APP_SECRET=<this mini program's AppSecret>`. Save only if the new backend build is not yet ready. Never commit the secret or put it into miniprogram/config.js.
-2. Deploy this backend revision. The repository's Render build runs `npm install && npx prisma generate && npx prisma db push --skip-generate`; this adds the identity table and its indexes/foreign key. No existing account fields are replaced. Do not run local schema changes against a production database as a test.
-3. Check `/api/auth/wechat/status` and test a real wx.login code. `enabled: true` reports configuration presence; it alone does not prove that the secret is correct.
-4. Upload mini program 1.1.0, update its privacy disclosures to include the app-scoped WeChat identifier and account association, test the first binding on a real device, then submit/release through the mini program console.
+Keep the existing Render WECHAT_APP_ID and WECHAT_APP_SECRET. Deploy this revision using the existing build (npm install, prisma generate, prisma db push --skip-generate). This makes the two optional fields nullable without removing current email accounts or their data. Do not run local schema push against production as a test.
 
-The mini program talks only to the existing Texta API domain. Only the API server calls WeChat's HTTPS login endpoint; the client does not need WeChat API domains or secrets in its request-domain list.
+Upload mini program 1.1.1 and update privacy disclosures: first WeChat login creates an account from the app-scoped identifier; email and password are provided only when the user elects to enable web login. Existing 1.1.0 clients accept the returned normal session as well. Test a real phone, then submit/release in the console. Only the server calls WeChat APIs; the mini program keeps the existing Texta request domain.
 
 ## Verification
 
-`npm run test:wechat` tests provider error handling and actual HTTP routes using an in-memory database double, including ownership, client identifier spoofing, duplicate/concurrent binding, deleted accounts and secret redaction. It does not claim to test real PostgreSQL concurrency or actual WeChat credentials. Prisma validation and client generation verify the model syntax. Existing library/billing tests verify that account-owned data and plans remain intact at their tested scope.
+npm run test:wechat covers provider failures, identifier spoofing, first creation and repeated login, atomic rollback, concurrent first logins, optional email credentials, conflicts and ownership. HTTP tests use an in-memory database double and do not prove real PostgreSQL concurrency. Prisma validation/client generation and existing library/billing tests cover their respective scopes.
 
-The mini program's `tests/wechat.test.cjs` tests consent, first-time email binding, session storage, duplicate taps, native login failure, disabled capability and account-switch races. `scripts/wechat-smoke.cjs` checks the real simulator with mocked wx.login and API responses, restoring original state afterwards; it is separate from real credential and phone testing.
+Mini program tests cover default direct login, optional email settings, data/session preservation, conflicts, duplicate taps, consent and account-switch races. scripts/wechat-first-smoke.cjs exercises the actual simulator with wx.login/API fixtures and restores original state. Real WeChat credential checking and phone account binding remain separate checks.

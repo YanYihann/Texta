@@ -46,7 +46,16 @@ async function harness() {
   ]);
   const bindings = [], sessions = []; let exchanges = 0, writes = 0;
   const db = {
-    user: { findUnique: async ({ where }) => users.get(where.id) || null },
+    user: {
+      findUnique: async ({ where }) => where.id ? users.get(where.id) || null : [...users.values()].find(u => u.email === where.email) || null,
+      create: async ({ data }) => { if (users.has(data.id)) throw Object.assign(Error('unique'), { code: 'P2002' }); users.set(data.id, { ...data }); return users.get(data.id); },
+      updateMany: async ({ where, data }) => {
+        const user = users.get(where.id);
+        if (!user || user.email !== where.email) return { count: 0 };
+        if ([...users.values()].some(u => u.id !== where.id && u.email === data.email)) throw Object.assign(Error('unique'), { code: 'P2002' });
+        Object.assign(user, data); return { count: 1 };
+      }
+    },
     session: { create: async ({ data }) => { sessions.push(data); return data; } },
     wechatIdentity: {
       findUnique: async ({ where }) => {
@@ -60,12 +69,21 @@ async function harness() {
       }
     }
   };
+  let queue = Promise.resolve();
+  db.$transaction = work => {
+    const task = queue.then(async () => {
+      const oldUsers = [...users].map(([id, user]) => [id, { ...user }]), oldBindings = bindings.map(row => ({ ...row }));
+      try { return await work(db); }
+      catch (error) { users.clear(); oldUsers.forEach(([id, user]) => users.set(id, user)); bindings.splice(0, bindings.length, ...oldBindings); throw error; }
+    });
+    queue = task.catch(() => {}); return task;
+  };
   const provider = { enabled: true, appId: env.WECHAT_APP_ID, exchange: async code => {
     exchanges++;
     if (!code || code === 'expired') throw Object.assign(Error('登录凭证失效'), { status: 400 });
     return { appId: env.WECHAT_APP_ID, openId: code };
   } };
-  registerWechatAuth(app, { db, provider, sessionTtlMs: 60000,
+  registerWechatAuth(app, { db, provider, sessionTtlMs: 60000, hashPassword: raw => ({ hash: 'hashed:' + raw }),
     getUserFromToken: async req => users.get(String(req.headers.authorization || '').replace(/^Bearer /, '')) || null,
     publicUser: user => ({ id: user.id, email: user.email, name: user.name, plan: user.plan }) });
   const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
@@ -79,19 +97,21 @@ async function harness() {
   return { call, db, provider, users, bindings, sessions, counts: () => ({ exchanges, writes }), close: () => new Promise(resolve => server.close(resolve)) };
 }
 
-test('unbound login cannot create accounts, sessions or use client-supplied identifiers', async () => {
+test('first login creates one passwordless free account; repeated login ignores supplied account identifiers', async () => {
   const h = await harness();
   try {
     const result = await h.call('login', null, { code: 'wx-alice', openid: 'wx-victim', userId: 'alice', appId: 'different-app' });
-    assert.deepEqual(result.data, { ok: true, bindingRequired: true });
-    assert.equal(result.cache, 'no-store'); assert.equal(h.sessions.length, 0); assert.equal(h.bindings.length, 0); assert.equal(h.users.size, 2);
-    await h.call('bind', 'alice', { code: 'wx-alice' });
+    assert.equal(result.data.ok, true); assert.equal(result.data.created, true);
+    const id = result.data.user.id;
+    assert.notEqual(id, 'alice'); assert.equal(result.data.user.email, null); assert.equal(result.data.user.plan, 'free');
+    assert.equal(h.users.get(id).passwordHash, null); assert.equal(h.users.get(id).role, 'user');
+    assert.equal(result.cache, 'no-store'); assert.equal(h.sessions.length, 1); assert.equal(h.bindings.length, 1); assert.equal(h.users.size, 3);
     const logged = await h.call('login', null, { code: 'wx-alice', userId: 'bob' });
-    assert.equal(logged.data.user.id, 'alice'); assert.equal(logged.data.user.plan, 'pro');
+    assert.equal(logged.data.user.id, id); assert.equal(logged.data.created, false); assert.equal(h.users.size, 3);
     assert.match(logged.data.token, /^tk_[0-9a-f]{48}$/); assert.ok(logged.data.expiresAt > Date.now());
-    assert.equal(h.sessions[0].userId, 'alice'); assert.equal(typeof h.sessions[0].expiresAt, 'bigint');
+    assert.equal(h.sessions[0].userId, id); assert.equal(typeof h.sessions[0].expiresAt, 'bigint');
     assert.equal(JSON.stringify(logged.data).includes('openid'), false); assert.equal(JSON.stringify(logged.data).includes('private-hash'), false);
-    assert.deepEqual(h.bindings[0], { appId: env.WECHAT_APP_ID, openId: 'wx-alice', userId: 'alice' });
+    assert.deepEqual(h.bindings[0], { appId: env.WECHAT_APP_ID, openId: 'wx-alice', userId: id });
   } finally { await h.close(); }
 });
 
@@ -134,5 +154,50 @@ test('deleted accounts, disabled configuration and database failures do not issu
     h.db.wechatIdentity.findUnique = async () => { throw Error('private DB connection and openid'); };
     const result = await h.call('login', null, { code: 'wx-bob' });
     assert.equal(result.status, 503); assert.equal(result.data.error.includes('private'), false); assert.equal(h.sessions.length, 0);
+  } finally { await h.close(); }
+});
+
+test('concurrent first logins create only one account and roll back incomplete creation', async () => {
+  const h = await harness();
+  try {
+    const results = await Promise.all([h.call('login', null, { code: 'wx-new' }), h.call('login', null, { code: 'wx-new' })]);
+    assert.ok(results.every(r => r.status === 200)); assert.equal(results[0].data.user.id, results[1].data.user.id);
+    assert.equal(h.users.size, 3); assert.equal(h.bindings.length, 1);
+    h.db.wechatIdentity.create = async () => { throw Error('private database failure'); };
+    assert.equal((await h.call('login', null, { code: 'wx-failed' })).status, 503);
+    assert.equal(h.users.size, 3); assert.equal(h.bindings.length, 1);
+  } finally { await h.close(); }
+});
+
+test('optional email credentials preserve the WeChat user ID, plan, sessions and future login', async () => {
+  const h = await harness();
+  try {
+    const first = await h.call('login', null, { code: 'wx-email' }), id = first.data.user.id;
+    h.users.get(id).plan = 'pro';
+    const originalSession = h.sessions[0];
+    const bound = await h.call('email', id, { email: ' Learner@Example.com ', password: 'secure-password', userId: 'alice', role: 'admin' });
+    assert.equal(bound.status, 200); assert.equal(bound.data.user.id, id); assert.equal(bound.data.user.email, 'learner@example.com');
+    assert.equal(bound.data.user.plan, 'pro'); assert.equal(h.users.get(id).role, 'user');
+    assert.equal(h.users.get(id).passwordHash, 'hashed:secure-password'); assert.equal(h.sessions[0], originalSession);
+    assert.equal((await h.call('login', null, { code: 'wx-email' })).data.user.id, id);
+    assert.equal((await h.call('email', id, { email: 'other@example.com', password: 'another-password' })).status, 409);
+    assert.equal(h.users.get(id).email, 'learner@example.com');
+  } finally { await h.close(); }
+});
+
+test('email binding rejects unauthenticated, non-WeChat, invalid, taken and concurrent claims', async () => {
+  const h = await harness();
+  try {
+    assert.equal((await h.call('email', null, { email: 'new@example.com', password: 'password' })).status, 401);
+    assert.equal((await h.call('email', 'bob', { email: 'new@example.com', password: 'password' })).status, 403);
+    const id = (await h.call('login', null, { code: 'wx-one' })).data.user.id;
+    for (const body of [{ email: 'invalid', password: 'password' }, { email: 'new@example.com', password: 'short' }])
+      assert.equal((await h.call('email', id, body)).status, 400);
+    assert.equal((await h.call('email', id, { email: 'alice@example.invalid', password: 'password' })).status, 409);
+    assert.equal(h.users.get(id).email, null); assert.equal(h.users.get('alice').plan, 'pro');
+    const id2 = (await h.call('login', null, { code: 'wx-two' })).data.user.id;
+    const results = await Promise.all([id, id2].map(user => h.call('email', user, { email: 'same@example.com', password: 'password' })));
+    assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
+    assert.equal([...h.users.values()].filter(u => u.email === 'same@example.com').length, 1);
   } finally { await h.close(); }
 });
