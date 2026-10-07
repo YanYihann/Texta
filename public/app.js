@@ -3838,7 +3838,11 @@ confirmExportBtn.addEventListener("click", async () => {
   await exportPdfFromPreview();
 });
 
-refreshWechatConnectionBtn?.addEventListener('click', refreshWechatConnection);
+refreshWechatConnectionBtn?.addEventListener('click', () => {
+  // Keep focus inside the menu before disabling the active refresh button.
+  document.querySelector('.account-menu > summary')?.focus();
+  void refreshWechatConnection();
+});
 document.querySelector('.account-menu')?.addEventListener('toggle', event => {
   if (event.target.open) void refreshWechatConnection();
 });
