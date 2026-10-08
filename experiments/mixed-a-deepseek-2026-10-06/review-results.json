@@ -1,0 +1,404 @@
+[
+  {
+    "id": "mixed-12",
+    "seconds": 2.648,
+    "result": {
+      "issues": [],
+      "title": "旅行省钱小记",
+      "article": "旅行前我盯着budget发愁，决定先relax，别被expenses吓住。我查了订票process和standard，调整attitude，找到省钱的motivation。我从sterility实验室的plume和bristle样本中derive灵感，又观察cricket的廉价饲养方式，最终省下expenses。",
+      "glosses": [
+        {
+          "id": 1,
+          "pos": "n.",
+          "meaning": "预算"
+        },
+        {
+          "id": 2,
+          "pos": "v.",
+          "meaning": "放松"
+        },
+        {
+          "id": 3,
+          "pos": "n.",
+          "meaning": "流程"
+        },
+        {
+          "id": 4,
+          "pos": "n.",
+          "meaning": "标准"
+        },
+        {
+          "id": 5,
+          "pos": "n.",
+          "meaning": "态度"
+        },
+        {
+          "id": 6,
+          "pos": "n.",
+          "meaning": "动力"
+        },
+        {
+          "id": 7,
+          "pos": "v.",
+          "meaning": "获得"
+        },
+        {
+          "id": 8,
+          "pos": "n.",
+          "meaning": "无菌状态"
+        },
+        {
+          "id": 9,
+          "pos": "n.",
+          "meaning": "羽毛"
+        },
+        {
+          "id": 10,
+          "pos": "n.",
+          "meaning": "刚毛"
+        },
+        {
+          "id": 11,
+          "pos": "n.",
+          "meaning": "蟋蟀"
+        },
+        {
+          "id": 12,
+          "pos": "n.",
+          "meaning": "开支"
+        }
+      ],
+      "chineseChars": 54,
+      "boundaryNormalizations": 0,
+      "formatNormalizations": 0
+    },
+    "diagnostics": {
+      "totalRequests": 1,
+      "successfulRequests": 1,
+      "failedRequests": 0,
+      "totalDurationMs": 2647,
+      "totalInputTokens": 558,
+      "totalOutputTokens": 378,
+      "totalTokens": 936,
+      "byStep": [
+        {
+          "step": "experimental_content_edit",
+          "requests": 1,
+          "successes": 1,
+          "durationMs": 2647
+        }
+      ],
+      "calls": [
+        {
+          "step": "experimental_content_edit",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 3000,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2647,
+          "usage": {
+            "inputTokens": 558,
+            "outputTokens": 378,
+            "totalTokens": 936
+          }
+        }
+      ]
+    },
+    "text": "{\"vocabulary\":[{\"word\":\"budget\",\"pos\":\"n.\",\"meaning\":\"预算\"},{\"word\":\"relax\",\"pos\":\"v.\",\"meaning\":\"放松\"},{\"word\":\"process\",\"pos\":\"n.\",\"meaning\":\"流程\"},{\"word\":\"standard\",\"pos\":\"n.\",\"meaning\":\"标准\"},{\"word\":\"attitude\",\"pos\":\"n.\",\"meaning\":\"态度\"},{\"word\":\"motivation\",\"pos\":\"n.\",\"meaning\":\"动力\"},{\"word\":\"derive\",\"pos\":\"v.\",\"meaning\":\"获得\"},{\"word\":\"sterility\",\"pos\":\"n.\",\"meaning\":\"无菌状态\"},{\"word\":\"plume\",\"pos\":\"n.\",\"meaning\":\"羽毛\"},{\"word\":\"bristle\",\"pos\":\"n.\",\"meaning\":\"刚毛\"},{\"word\":\"cricket\",\"pos\":\"n.\",\"meaning\":\"蟋蟀\"},{\"word\":\"expenses\",\"pos\":\"n.\",\"meaning\":\"开支\"}],\"title\":\"旅行省钱小记\",\"article\":\"旅行前我盯着⟦budget|n.|预算⟧发愁，决定先⟦relax|v.|放松⟧，别被⟦expenses|n.|开支⟧吓住。我查了订票⟦process|n.|流程⟧和⟦standard|n.|标准⟧，调整⟦attitude|n.|态度⟧，找到省钱的⟦motivation|n.|动力⟧。我从⟦sterility|n.|无菌状态⟧实验室的⟦plume|n.|羽毛⟧和⟦bristle|n.|刚毛⟧样本中⟦derive|v.|获得⟧灵感，又观察⟦cricket|n.|蟋蟀⟧的廉价饲养方式，最终省下⟦expenses|n.|开支⟧。\"}",
+    "prompt": "编辑下面的中文词汇故事，使它变成一个明确、顺畅、可信的短事件。不要输出分析或计划。\n先将每个标记读作其中的中文词义，检查语法和因果；消除错误搭配和无关片段。所有人物行动必须围绕同一具体目标。\n保持全部输入英文词、词性、义项和标记格式，不能通过删除难词改善文章。每个词都应是问题、操作对象、行动、证据或结果的一部分，不是顺路看到的东西。\n必要时重新选择一个能容纳全部词的具体场景。不要用泛泛的工作、心情、做完任务来串词。具体写清问题和解决动作，保持简短。\n只输出JSON：{\"vocabulary\":原vocabulary数组,\"title\":\"中文标题\",\"article\":\"修正后的含标记中文短文\"}。\n{\"storyPlan\":\"目标：控制旅行开支。问题：预算紧，心情差。行动：放松态度，查标准流程，找动力。结果：从蟋蟀羽毛得灵感，省下钱。\",\"vocabulary\":[{\"word\":\"budget\",\"pos\":\"n.\",\"meaning\":\"预算\"},{\"word\":\"relax\",\"pos\":\"v.\",\"meaning\":\"放松\"},{\"word\":\"process\",\"pos\":\"n.\",\"meaning\":\"流程\"},{\"word\":\"standard\",\"pos\":\"n.\",\"meaning\":\"标准\"},{\"word\":\"attitude\",\"pos\":\"n.\",\"meaning\":\"态度\"},{\"word\":\"motivation\",\"pos\":\"n.\",\"meaning\":\"动力\"},{\"word\":\"derive\",\"pos\":\"v.\",\"meaning\":\"获得\"},{\"word\":\"sterility\",\"pos\":\"n.\",\"meaning\":\"无菌状态\"},{\"word\":\"plume\",\"pos\":\"n.\",\"meaning\":\"羽毛\"},{\"word\":\"bristle\",\"pos\":\"n.\",\"meaning\":\"刚毛\"},{\"word\":\"cricket\",\"pos\":\"n.\",\"meaning\":\"蟋蟀\"},{\"word\":\"expenses\",\"pos\":\"n.\",\"meaning\":\"开支\"}],\"title\":\"旅行省钱小记\",\"article\":\"我盯着⟦budget|n.|预算⟧发愁，决定先⟦relax|v.|放松⟧。我查了报销⟦process|n.|流程⟧和⟦standard|n.|标准⟧，调整⟦attitude|n.|态度⟧，找到⟦motivation|n.|动力⟧。我从⟦sterility|n.|无菌状态⟧的实验室⟦derive|v.|获得⟦plume|n.|羽毛⟧和⟦bristle|n.|刚毛⟧，又观察⟦cricket|n.|蟋蟀⟧，省下⟦expenses|n.|开支⟧。\"}"
+  },
+  {
+    "id": "long-24",
+    "seconds": 3.42,
+    "result": {
+      "issues": [],
+      "title": "极地气象站",
+      "article": "为了在arctic高原建气象站，队长先查granite地基和terrain。budget紧，expenses涨，meteorology数据必须达到standard。天气deteriorate，hail砸下，队员shiver。他们reject普通材料，改用thermal板。等待thaw的process中，他们relax期限。积极的attitude和motivation帮他们derive支持。gulf来的湿气使humid空气cover设备，arid内陆和tropics数据也contribute参考。最终站建成。",
+      "glosses": [
+        {
+          "id": 1,
+          "pos": "n.",
+          "meaning": "花岗岩"
+        },
+        {
+          "id": 2,
+          "pos": "n.",
+          "meaning": "地形"
+        },
+        {
+          "id": 3,
+          "pos": "adj.",
+          "meaning": "北极的"
+        },
+        {
+          "id": 4,
+          "pos": "v.",
+          "meaning": "恶化"
+        },
+        {
+          "id": 5,
+          "pos": "n.",
+          "meaning": "海湾"
+        },
+        {
+          "id": 6,
+          "pos": "n.",
+          "meaning": "气象学"
+        },
+        {
+          "id": 7,
+          "pos": "adj.",
+          "meaning": "保温的"
+        },
+        {
+          "id": 8,
+          "pos": "n.",
+          "meaning": "热带"
+        },
+        {
+          "id": 9,
+          "pos": "adj.",
+          "meaning": "干旱的"
+        },
+        {
+          "id": 10,
+          "pos": "adj.",
+          "meaning": "潮湿的"
+        },
+        {
+          "id": 11,
+          "pos": "n.",
+          "meaning": "冰雹"
+        },
+        {
+          "id": 12,
+          "pos": "v.",
+          "meaning": "解冻"
+        },
+        {
+          "id": 13,
+          "pos": "v.",
+          "meaning": "发抖"
+        },
+        {
+          "id": 14,
+          "pos": "n.",
+          "meaning": "预算"
+        },
+        {
+          "id": 15,
+          "pos": "v.",
+          "meaning": "放宽"
+        },
+        {
+          "id": 16,
+          "pos": "n.",
+          "meaning": "过程"
+        },
+        {
+          "id": 17,
+          "pos": "n.",
+          "meaning": "标准"
+        },
+        {
+          "id": 18,
+          "pos": "n.",
+          "meaning": "态度"
+        },
+        {
+          "id": 19,
+          "pos": "n.",
+          "meaning": "积极性"
+        },
+        {
+          "id": 20,
+          "pos": "v.",
+          "meaning": "覆盖"
+        },
+        {
+          "id": 21,
+          "pos": "v.",
+          "meaning": "拒绝"
+        },
+        {
+          "id": 22,
+          "pos": "v.",
+          "meaning": "获得"
+        },
+        {
+          "id": 23,
+          "pos": "v.",
+          "meaning": "贡献"
+        },
+        {
+          "id": 24,
+          "pos": "n.",
+          "meaning": "开支"
+        }
+      ],
+      "chineseChars": 78,
+      "boundaryNormalizations": 0,
+      "formatNormalizations": 0
+    },
+    "diagnostics": {
+      "totalRequests": 1,
+      "successfulRequests": 1,
+      "failedRequests": 0,
+      "totalDurationMs": 3419,
+      "totalInputTokens": 907,
+      "totalOutputTokens": 692,
+      "totalTokens": 1599,
+      "byStep": [
+        {
+          "step": "experimental_content_edit",
+          "requests": 1,
+          "successes": 1,
+          "durationMs": 3419
+        }
+      ],
+      "calls": [
+        {
+          "step": "experimental_content_edit",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 3000,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 3419,
+          "usage": {
+            "inputTokens": 907,
+            "outputTokens": 692,
+            "totalTokens": 1599
+          }
+        }
+      ]
+    },
+    "text": "{\"vocabulary\":[{\"word\":\"granite\",\"pos\":\"n.\",\"meaning\":\"花岗岩\"},{\"word\":\"terrain\",\"pos\":\"n.\",\"meaning\":\"地形\"},{\"word\":\"arctic\",\"pos\":\"adj.\",\"meaning\":\"北极的\"},{\"word\":\"deteriorate\",\"pos\":\"v.\",\"meaning\":\"恶化\"},{\"word\":\"gulf\",\"pos\":\"n.\",\"meaning\":\"海湾\"},{\"word\":\"meteorology\",\"pos\":\"n.\",\"meaning\":\"气象学\"},{\"word\":\"thermal\",\"pos\":\"adj.\",\"meaning\":\"保温的\"},{\"word\":\"tropics\",\"pos\":\"n.\",\"meaning\":\"热带\"},{\"word\":\"arid\",\"pos\":\"adj.\",\"meaning\":\"干旱的\"},{\"word\":\"humid\",\"pos\":\"adj.\",\"meaning\":\"潮湿的\"},{\"word\":\"hail\",\"pos\":\"n.\",\"meaning\":\"冰雹\"},{\"word\":\"thaw\",\"pos\":\"v.\",\"meaning\":\"解冻\"},{\"word\":\"shiver\",\"pos\":\"v.\",\"meaning\":\"发抖\"},{\"word\":\"budget\",\"pos\":\"n.\",\"meaning\":\"预算\"},{\"word\":\"relax\",\"pos\":\"v.\",\"meaning\":\"放宽\"},{\"word\":\"process\",\"pos\":\"n.\",\"meaning\":\"过程\"},{\"word\":\"standard\",\"pos\":\"n.\",\"meaning\":\"标准\"},{\"word\":\"attitude\",\"pos\":\"n.\",\"meaning\":\"态度\"},{\"word\":\"motivation\",\"pos\":\"n.\",\"meaning\":\"积极性\"},{\"word\":\"cover\",\"pos\":\"v.\",\"meaning\":\"覆盖\"},{\"word\":\"reject\",\"pos\":\"v.\",\"meaning\":\"拒绝\"},{\"word\":\"derive\",\"pos\":\"v.\",\"meaning\":\"获得\"},{\"word\":\"contribute\",\"pos\":\"v.\",\"meaning\":\"贡献\"},{\"word\":\"expenses\",\"pos\":\"n.\",\"meaning\":\"开支\"}],\"title\":\"极地气象站\",\"article\":\"为了在⟦arctic|adj.|北极的⟧高原建气象站，队长先查⟦granite|n.|花岗岩⟧地基和⟦terrain|n.|地形⟧。⟦budget|n.|预算⟧紧，⟦expenses|n.|开支⟧涨，⟦meteorology|n.|气象学⟧数据必须达到⟦standard|n.|标准⟧。天气⟦deteriorate|v.|恶化⟧，⟦hail|n.|冰雹⟧砸下，队员⟦shiver|v.|发抖⟧。他们⟦reject|v.|拒绝⟧普通材料，改用⟦thermal|adj.|保温的⟧板。等待⟦thaw|v.|解冻⟧的⟦process|n.|过程⟧中，他们⟦relax|v.|放宽⟧期限。积极的⟦attitude|n.|态度⟧和⟦motivation|n.|积极性⟧帮他们⟦derive|v.|获得⟧支持。⟦gulf|n.|海湾⟧来的湿气使⟦humid|adj.|潮湿的⟧空气⟦cover|v.|覆盖⟧设备，⟦arid|adj.|干旱的⟧内陆和⟦tropics|n.|热带⟧数据也⟦contribute|v.|贡献⟧参考。最终站建成。\"}",
+    "prompt": "编辑下面的中文词汇故事，使它变成一个明确、顺畅、可信的短事件。不要输出分析或计划。\n先将每个标记读作其中的中文词义，检查语法和因果；消除错误搭配和无关片段。所有人物行动必须围绕同一具体目标。\n保持全部输入英文词、词性、义项和标记格式，不能通过删除难词改善文章。每个词都应是问题、操作对象、行动、证据或结果的一部分，不是顺路看到的东西。\n必要时重新选择一个能容纳全部词的具体场景。不要用泛泛的工作、心情、做完任务来串词。具体写清问题和解决动作，保持简短。\n只输出JSON：{\"vocabulary\":原vocabulary数组,\"title\":\"中文标题\",\"article\":\"修正后的含标记中文短文\"}。\n{\"storyPlan\":\"目标：在极地高原建气象站。问题：预算紧、地形差、天气恶化。行动：选耐寒材料、控开支、等解冻。结果：数据达标，站建成。\",\"vocabulary\":[{\"word\":\"granite\",\"pos\":\"n.\",\"meaning\":\"花岗岩\"},{\"word\":\"terrain\",\"pos\":\"n.\",\"meaning\":\"地形\"},{\"word\":\"arctic\",\"pos\":\"adj.\",\"meaning\":\"北极的\"},{\"word\":\"deteriorate\",\"pos\":\"v.\",\"meaning\":\"恶化\"},{\"word\":\"gulf\",\"pos\":\"n.\",\"meaning\":\"海湾\"},{\"word\":\"meteorology\",\"pos\":\"n.\",\"meaning\":\"气象学\"},{\"word\":\"thermal\",\"pos\":\"adj.\",\"meaning\":\"保温的\"},{\"word\":\"tropics\",\"pos\":\"n.\",\"meaning\":\"热带\"},{\"word\":\"arid\",\"pos\":\"adj.\",\"meaning\":\"干旱的\"},{\"word\":\"humid\",\"pos\":\"adj.\",\"meaning\":\"潮湿的\"},{\"word\":\"hail\",\"pos\":\"n.\",\"meaning\":\"冰雹\"},{\"word\":\"thaw\",\"pos\":\"v.\",\"meaning\":\"解冻\"},{\"word\":\"shiver\",\"pos\":\"v.\",\"meaning\":\"发抖\"},{\"word\":\"budget\",\"pos\":\"n.\",\"meaning\":\"预算\"},{\"word\":\"relax\",\"pos\":\"v.\",\"meaning\":\"放宽\"},{\"word\":\"process\",\"pos\":\"n.\",\"meaning\":\"过程\"},{\"word\":\"standard\",\"pos\":\"n.\",\"meaning\":\"标准\"},{\"word\":\"attitude\",\"pos\":\"n.\",\"meaning\":\"态度\"},{\"word\":\"motivation\",\"pos\":\"n.\",\"meaning\":\"积极性\"},{\"word\":\"cover\",\"pos\":\"v.\",\"meaning\":\"覆盖\"},{\"word\":\"reject\",\"pos\":\"v.\",\"meaning\":\"拒绝\"},{\"word\":\"derive\",\"pos\":\"v.\",\"meaning\":\"获得\"},{\"word\":\"contribute\",\"pos\":\"v.\",\"meaning\":\"贡献\"},{\"word\":\"expenses\",\"pos\":\"n.\",\"meaning\":\"开支\"}],\"title\":\"极地气象站\",\"article\":\"为了在⟦arctic|adj.|北极的⟧高原建站，队长先看⟦granite|n.|花岗岩⟧地基和⟦terrain|n.|地形⟧。⟦budget|n.|预算⟧很紧，⟦expenses|n.|开支⟧却涨。⟦meteorology|n.|气象学⟧要求数据达⟦standard|n.|标准⟧。可天气⟦deteriorate|v.|恶化⟧，⟦hail|n.|冰雹⟧砸下，队员⟦shiver|v.|发抖⟧。他们⟦reject|v.|拒绝⟧普通材料，选⟦thermal|adj.|保温的⟧板。等⟦thaw|v.|解冻⟧的⟦process|n.|过程⟧中，他们⟦relax|v.|放宽⟧期限。⟦attitude|n.|态度⟧和⟦motivation|n.|积极性⟧帮他们⟦derive|v.|获得⟧支持。从⟦gulf|n.|海湾⟧来的湿气让⟦humid|adj.|潮湿的⟧空气⟦cover|v.|覆盖⟧设备，但⟦arid|adj.|干旱的⟧内陆和⟦tropics|n.|热带⟧数据也⟦contribute|v.|贡献⟧参考。最终站建成。\"}"
+  },
+  {
+    "id": "new-random-15",
+    "seconds": 2.077,
+    "result": {
+      "issues": [],
+      "title": "修冷库保采收",
+      "article": "果农发现冷库门fragile，采收前必须修好。他先与银行negotiate，用orchard的invoice作evidence。银行起初reluctant，只给temporary额度。他borrow到一笔sufficient钱，请人restore冷库门。门beneath的轨道也换好。随后transport恢复，harvest按时入库。若拖延，consequence是水果腐烂；他记下precise温度，避免再坏。",
+      "glosses": [
+        {
+          "id": 1,
+          "pos": "adj.",
+          "meaning": "易损坏的"
+        },
+        {
+          "id": 2,
+          "pos": "v.",
+          "meaning": "谈判"
+        },
+        {
+          "id": 3,
+          "pos": "n.",
+          "meaning": "果园"
+        },
+        {
+          "id": 4,
+          "pos": "n.",
+          "meaning": "发票"
+        },
+        {
+          "id": 5,
+          "pos": "prep.",
+          "meaning": "在……下面"
+        },
+        {
+          "id": 6,
+          "pos": "adj.",
+          "meaning": "不情愿的"
+        },
+        {
+          "id": 7,
+          "pos": "v.",
+          "meaning": "修复"
+        },
+        {
+          "id": 8,
+          "pos": "n.",
+          "meaning": "收获"
+        },
+        {
+          "id": 9,
+          "pos": "n.",
+          "meaning": "后果"
+        },
+        {
+          "id": 10,
+          "pos": "v.",
+          "meaning": "借入"
+        },
+        {
+          "id": 11,
+          "pos": "adj.",
+          "meaning": "精确的"
+        },
+        {
+          "id": 12,
+          "pos": "adj.",
+          "meaning": "足够的"
+        },
+        {
+          "id": 13,
+          "pos": "n.",
+          "meaning": "运输"
+        },
+        {
+          "id": 14,
+          "pos": "n.",
+          "meaning": "证据"
+        },
+        {
+          "id": 15,
+          "pos": "adj.",
+          "meaning": "临时的"
+        }
+      ],
+      "chineseChars": 72,
+      "boundaryNormalizations": 2,
+      "formatNormalizations": 0
+    },
+    "diagnostics": {
+      "totalRequests": 1,
+      "successfulRequests": 1,
+      "failedRequests": 0,
+      "totalDurationMs": 2076,
+      "totalInputTokens": 678,
+      "totalOutputTokens": 484,
+      "totalTokens": 1162,
+      "byStep": [
+        {
+          "step": "experimental_content_edit",
+          "requests": 1,
+          "successes": 1,
+          "durationMs": 2076
+        }
+      ],
+      "calls": [
+        {
+          "step": "experimental_content_edit",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 3000,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2076,
+          "usage": {
+            "inputTokens": 678,
+            "outputTokens": 484,
+            "totalTokens": 1162
+          }
+        }
+      ]
+    },
+    "text": "{\"vocabulary\":[{\"word\":\"fragile\",\"pos\":\"adj.\",\"meaning\":\"易损坏的\"},{\"word\":\"negotiate\",\"pos\":\"v.\",\"meaning\":\"谈判\"},{\"word\":\"orchard\",\"pos\":\"n.\",\"meaning\":\"果园\"},{\"word\":\"invoice\",\"pos\":\"n.\",\"meaning\":\"发票\"},{\"word\":\"beneath\",\"pos\":\"prep.\",\"meaning\":\"在……下面\"},{\"word\":\"reluctant\",\"pos\":\"adj.\",\"meaning\":\"不情愿的\"},{\"word\":\"restore\",\"pos\":\"v.\",\"meaning\":\"修复\"},{\"word\":\"harvest\",\"pos\":\"n.\",\"meaning\":\"收获\"},{\"word\":\"consequence\",\"pos\":\"n.\",\"meaning\":\"后果\"},{\"word\":\"borrow\",\"pos\":\"v.\",\"meaning\":\"借入\"},{\"word\":\"precise\",\"pos\":\"adj.\",\"meaning\":\"精确的\"},{\"word\":\"sufficient\",\"pos\":\"adj.\",\"meaning\":\"足够的\"},{\"word\":\"transport\",\"pos\":\"n.\",\"meaning\":\"运输\"},{\"word\":\"evidence\",\"pos\":\"n.\",\"meaning\":\"证据\"},{\"word\":\"temporary\",\"pos\":\"adj.\",\"meaning\":\"临时的\"}],\"title\":\"修冷库保采收\",\"article\":\"果农发现冷库门⟦fragile|adj.|易损坏的⟧，采收前必须修好。他先与银行⟦negotiate|v.|谈判⟧，用果园⟦orchard|n.|果园⟧的发票⟦invoice|n.|发票⟧作⟦evidence|n.|证据⟧。银行起初⟦reluctant|adj.|不情愿的⟧，只给⟦temporary|adj.|临时的⟧额度。他⟦borrow|v.|借入⟧到一笔⟦sufficient|adj.|足够的⟧钱，请人⟦restore|v.|修复⟧冷库门。门⟦beneath|prep.|在……下面⟧的轨道也换好。随后⟦transport|n.|运输⟧恢复，⟦harvest|n.|收获⟧按时入库。若拖延，⟦consequence|n.|后果⟧是水果腐烂；他记下⟦precise|adj.|精确的⟧温度，避免再坏。\"}",
+    "prompt": "编辑下面的中文词汇故事，使它变成一个明确、顺畅、可信的短事件。不要输出分析或计划。\n先将每个标记读作其中的中文词义，检查语法和因果；消除错误搭配和无关片段。所有人物行动必须围绕同一具体目标。\n保持全部输入英文词、词性、义项和标记格式，不能通过删除难词改善文章。每个词都应是问题、操作对象、行动、证据或结果的一部分，不是顺路看到的东西。\n必要时重新选择一个能容纳全部词的具体场景。不要用泛泛的工作、心情、做完任务来串词。具体写清问题和解决动作，保持简短。\n只输出JSON：{\"vocabulary\":原vocabulary数组,\"title\":\"中文标题\",\"article\":\"修正后的含标记中文短文\"}。\n{\"storyPlan\":\"果农要修冷库却缺钱，用发票借款谈判，获临时资金后恢复运输，完成采收。\",\"vocabulary\":[{\"word\":\"fragile\",\"pos\":\"adj.\",\"meaning\":\"易损坏的\"},{\"word\":\"negotiate\",\"pos\":\"v.\",\"meaning\":\"谈判\"},{\"word\":\"orchard\",\"pos\":\"n.\",\"meaning\":\"果园\"},{\"word\":\"invoice\",\"pos\":\"n.\",\"meaning\":\"发票\"},{\"word\":\"beneath\",\"pos\":\"prep.\",\"meaning\":\"在……下面\"},{\"word\":\"reluctant\",\"pos\":\"adj.\",\"meaning\":\"不情愿的\"},{\"word\":\"restore\",\"pos\":\"v.\",\"meaning\":\"修复\"},{\"word\":\"harvest\",\"pos\":\"n.\",\"meaning\":\"收获\"},{\"word\":\"consequence\",\"pos\":\"n.\",\"meaning\":\"后果\"},{\"word\":\"borrow\",\"pos\":\"v.\",\"meaning\":\"借入\"},{\"word\":\"precise\",\"pos\":\"adj.\",\"meaning\":\"精确的\"},{\"word\":\"sufficient\",\"pos\":\"adj.\",\"meaning\":\"足够的\"},{\"word\":\"transport\",\"pos\":\"n.\",\"meaning\":\"运输\"},{\"word\":\"evidence\",\"pos\":\"n.\",\"meaning\":\"证据\"},{\"word\":\"temporary\",\"pos\":\"adj.\",\"meaning\":\"临时的\"}],\"title\":\"修冷库保采收\",\"article\":\"果农发现冷库门⟦fragile|adj.|易损坏的⟧，采收前必须修好。他先与银行⟦negotiate|v.|谈判⟧，用果园⟦orchard|n.|果园⟧的发票⟦invoice|n.|发票⟧作⟦evidence|n.|证据⟧。银行起初⟦reluctant|adj.|不情愿的⟧，只给⟦temporary|adj.|临时的⟧额度。他⟦borrow|v.|借入⟧到一笔⟦sufficient|adj.|足够的⟧钱，请人⟦restore|v.|修复⟧冷库门。门⟦beneath|prep.|在……下面⟧的轨道也换好。随后⟦transport|n.|运输⟧恢复，⟦harvest|n.|收获⟧按时入库。若拖延，⟦consequence|n.|后果⟧是水果腐烂；他记下⟦precise|adj.|精确的⟧温度，避免再坏。\"}"
+  }
+]

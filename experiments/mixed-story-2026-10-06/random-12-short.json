@@ -1,0 +1,110 @@
+{
+  "id": "random-12-short",
+  "words": [
+    "budget",
+    "relax",
+    "process",
+    "standard",
+    "attitude",
+    "motivation",
+    "derive",
+    "sterility",
+    "plume",
+    "bristle",
+    "cricket",
+    "expenses"
+  ],
+  "shortMode": true,
+  "limits": {
+    "minChinese": 144,
+    "maxChinese": 220,
+    "hardMin": 100,
+    "paragraphs": "1–2",
+    "maxTokens": 1640
+  },
+  "call": {
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "seconds": 76.047,
+    "exitCode": 0,
+    "usage": {
+      "input_tokens": 19007,
+      "cached_input_tokens": 12544,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1921,
+      "reasoning_output_tokens": 1462
+    },
+    "tools": [],
+    "text": "{\"vocabulary\":[{\"word\":\"budget\",\"pos\":\"n.\",\"meaning\":\"预算\"},{\"word\":\"relax\",\"pos\":\"v.\",\"meaning\":\"放松\"},{\"word\":\"process\",\"pos\":\"v.\",\"meaning\":\"处理\"},{\"word\":\"standard\",\"pos\":\"n.\",\"meaning\":\"标准\"},{\"word\":\"attitude\",\"pos\":\"n.\",\"meaning\":\"态度\"},{\"word\":\"motivation\",\"pos\":\"n.\",\"meaning\":\"动力\"},{\"word\":\"derive\",\"pos\":\"v.\",\"meaning\":\"获得\"},{\"word\":\"sterility\",\"pos\":\"n.\",\"meaning\":\"无菌状态\"},{\"word\":\"plume\",\"pos\":\"n.\",\"meaning\":\"羽毛\"},{\"word\":\"bristle\",\"pos\":\"n.\",\"meaning\":\"硬毛\"},{\"word\":\"cricket\",\"pos\":\"n.\",\"meaning\":\"蟋蟀\"},{\"word\":\"expenses\",\"pos\":\"n.\",\"meaning\":\"费用\"}],\"title\":\"旧盒的新用途\",\"article\":\"小明想减少学校采样活动的⟦expenses|n.|费用⟧，决定在有限的⟦budget|n.|预算⟧内备齐采样包。收来的旧盒里竟藏着一只⟦cricket|n.|蟋蟀⟧，还粘着一根⟦plume|n.|羽毛⟧。清洗时，刷子的⟦bristle|n.|硬毛⟧又掉进盒里，他担心旧盒无法达到⟦sterility|n.|无菌状态⟧的⟦standard|n.|标准⟧。\\n\\n老师严谨的⟦attitude|n.|态度⟧让他重新考虑方案，但节省经费的愿望仍是他的⟦motivation|n.|动力⟧。从老师的建议中⟦derive|v.|获得⟧灵感后，他先⟦process|v.|处理⟧旧盒，把它们当外包装，再添置密封的无菌内袋。采样包通过验收，花费也未超预算，小明才⟦relax|v.|放松⟧下来。\"}"
+  },
+  "parsed": {
+    "issues": [],
+    "title": "旧盒的新用途",
+    "article": "小明想减少学校采样活动的expenses，决定在有限的budget内备齐采样包。收来的旧盒里竟藏着一只cricket，还粘着一根plume。清洗时，刷子的bristle又掉进盒里，他担心旧盒无法达到sterility的standard。\n\n老师严谨的attitude让他重新考虑方案，但节省经费的愿望仍是他的motivation。从老师的建议中derive灵感后，他先process旧盒，把它们当外包装，再添置密封的无菌内袋。采样包通过验收，花费也未超预算，小明才relax下来。",
+    "glosses": [
+      {
+        "id": 1,
+        "pos": "n.",
+        "meaning": "预算"
+      },
+      {
+        "id": 2,
+        "pos": "v.",
+        "meaning": "放松"
+      },
+      {
+        "id": 3,
+        "pos": "v.",
+        "meaning": "处理"
+      },
+      {
+        "id": 4,
+        "pos": "n.",
+        "meaning": "标准"
+      },
+      {
+        "id": 5,
+        "pos": "n.",
+        "meaning": "态度"
+      },
+      {
+        "id": 6,
+        "pos": "n.",
+        "meaning": "动力"
+      },
+      {
+        "id": 7,
+        "pos": "v.",
+        "meaning": "获得"
+      },
+      {
+        "id": 8,
+        "pos": "n.",
+        "meaning": "无菌状态"
+      },
+      {
+        "id": 9,
+        "pos": "n.",
+        "meaning": "羽毛"
+      },
+      {
+        "id": 10,
+        "pos": "n.",
+        "meaning": "硬毛"
+      },
+      {
+        "id": 11,
+        "pos": "n.",
+        "meaning": "蟋蟀"
+      },
+      {
+        "id": 12,
+        "pos": "n.",
+        "meaning": "费用"
+      }
+    ],
+    "chineseChars": 162,
+    "boundaryNormalizations": 0,
+    "formatNormalizations": 0
+  }
+}

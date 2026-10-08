@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-04T10:10:17.000Z",
+  "generatedAt": "2026-10-06T04:44:16.966Z",
   "title": "Design System: Texta",
   "extensions": {
     "themes": {
@@ -577,6 +577,11 @@
         "name": "reduced-motion",
         "value": "animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important",
         "purpose": "Applies when prefers-reduced-motion is reduce."
+      },
+      {
+        "name": "completion-appear",
+        "value": "220ms var(--ease-out)",
+        "purpose": "Fade in a suggested word suffix after the typing pause; reduced motion shows it immediately."
       }
     ],
     "breakpoints": [
@@ -591,6 +596,22 @@
       {
         "name": "mobile",
         "value": "860px"
+      },
+      {
+        "name": "composer-mobile",
+        "value": "640px"
+      },
+      {
+        "name": "account-actions-mobile",
+        "value": "520px"
+      },
+      {
+        "name": "header-wrap-max",
+        "value": "1000px"
+      },
+      {
+        "name": "header-compact-max",
+        "value": "1280px"
       }
     ],
     "themeLabels": {
@@ -663,9 +684,18 @@
             "weekRowsPerMonth": 6,
             "columns": 4,
             "columnBreakpoints": [
-              { "maxWidth": "1100px", "columns": 3 },
-              { "maxWidth": "820px", "columns": 2 },
-              { "maxWidth": "600px", "columns": 1 }
+              {
+                "maxWidth": "1100px",
+                "columns": 3
+              },
+              {
+                "maxWidth": "820px",
+                "columns": 2
+              },
+              {
+                "maxWidth": "600px",
+                "columns": 1
+              }
             ],
             "monthGap": "28px 24px",
             "dayHeight": "32px",
@@ -690,6 +720,60 @@
         "sizeBehavior": "Standard uses month navigation and 本月; thumbnail shows twelve months with year navigation and 今年. Size selection uses aria-pressed and persists as standard or mini under texta_calendar_size. Selecting an addition date opens its filtered list with return and clear-date controls, and stores the selected month so standard shows that month.",
         "animationTargets": "Standard calendar-grid and thumbnail calendar-year-grid use the shared grid transition; miniature inner grids do not animate separately. Reduced motion disables both grid targets and date markers."
       }
+    },
+    "vocabularyComposer": {
+      "sources": [
+        "public/vocabulary.css",
+        "public/vocabulary.js"
+      ],
+      "description": "The vocabulary composer follows the approved unified-panel mockup: a warm panel with a 20px outer radius, sage vocabulary tags in Texta Serif, import/clear actions in the heading, and a separated bottom settings bar. Tags support editing, removal, phrase-preserving paste, case-insensitive deduplication and spelling feedback. A pending word remains part of the saved draft and generation request. Long lists scroll within two rows or expand. Level and output mode remain visible; quality and quick mode live in More settings with an always-visible credit summary. Mobile places level/settings above the segmented mode and generation action. All six palettes use the existing semantic tokens. Implementation: `public/vocabulary.css` and `public/vocabulary.js`.",
+      "typing": "Vocabulary typing uses bold text with an aligned paint layer over the native textarea. A matching suffix fades in after a short pause; Tab accepts it only at the end of the input, Escape dismisses it and Shift+Tab retains normal navigation. Reduced motion shows the suffix without animation. Local dictionary lookups mark high-confidence errors on the affected letters, with a red wavy underline, in both the draft and committed tags. No separate spelling message is rendered below the editor. Valid words, incomplete prefixes, proper names and uncertain matches are left unmarked. The source word list and MIT attribution are vendored under `public/vendor/english-words.*`; no external spelling requests are made by the composer.",
+      "desktop": {
+        "outerRadius": "20px",
+        "entryPadding": "24px 32px 28px",
+        "settingsPadding": "20px 32px",
+        "tagMaxHeight": "116px",
+        "expandedTagMaxHeight": "360px",
+        "draftFont": "700 20px/1.6 var(--font-reading)"
+      },
+      "mobile": {
+        "maxWidth": "640px",
+        "outerRadius": "16px",
+        "entryPadding": "18px",
+        "settingsPadding": "16px 18px"
+      }
+    },
+    "accountNavigation": {
+      "sources": [
+        "public/app.html",
+        "public/index.html",
+        "public/workspace.css",
+        "public/i18n.js"
+      ],
+      "description": "The login card contains only authentication controls; the product introduction and plan links are removed. Registration disclosures and public policy pages remain accessible from the authentication and pricing pages. The account popover contains identity, usage, administration where authorized, help and theme settings, without the policy/contact links or duplicated plan entry. A single `Plus / Pro 套餐` navigation link is styled as a 44px button immediately beside Account and remains available to all signed-in roles. It uses the incumbent panel, line, primary, soft and radius tokens, with visible keyboard focus. Narrow phones keep the two account actions together on their own row; intermediate widths move study navigation to a second row. English uses `Plus / Pro plans`. Purchasing remains paused at the backend.",
+      "plans": {
+        "zh": "Plus / Pro 套餐",
+        "en": "Plus / Pro plans",
+        "href": "./pay.html",
+        "minHeight": "44px",
+        "padding": "8px 14px",
+        "adjacentTo": "Account",
+        "purchasing": "paused"
+      },
+      "responsive": [
+        {
+          "range": "861px–1280px",
+          "behavior": "Compact header gaps and tab padding."
+        },
+        {
+          "range": "861px–1000px",
+          "behavior": "Study navigation wraps onto a second row."
+        },
+        {
+          "range": "520px and below",
+          "behavior": "Plans and Account remain together on a full-width row; the language toggle stays next to the wordmark."
+        }
+      ]
     }
   },
   "components": [
@@ -720,10 +804,9 @@
     {
       "name": "Vocabulary Input",
       "kind": "input",
-      "refersTo": "input",
-      "description": "English words or phrases in a resizable reading-font field.",
-      "html": "<label class=\"ds-input-label\" for=\"ds-words\">输入词汇</label><textarea class=\"ds-words\" id=\"ds-words\" placeholder=\"输入英文单词或短语，用逗号或换行分隔\">resilient, adapt, perspective</textarea>",
-      "css": ".ds-input-label{display:block;margin-bottom:12px;font:650 21px/1.4 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);color:var(--text,#222724);}.ds-words{width:100%;min-height:148px;padding:10px 14px;resize:vertical;font:20px/1.6 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);color:var(--text,#222724);background:var(--field,#fcfdfb);border:1px solid var(--line,#d8ded7);border-radius:var(--radius,8px);caret-color:var(--primary,#386548);transition:border-color var(--fast,160ms),background var(--fast,160ms);}.ds-words::placeholder{color:var(--muted,#606963);opacity:1;}.ds-words:focus{border-color:var(--primary,#386548);}.ds-words:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-words{animation:none;transition-duration:.01ms;}}"
+      "description": "Bold native textarea within the unified vocabulary composer. Production supplies an aligned spelling and completion paint layer.",
+      "html": "<label class=\"ds-input-label\" for=\"ds-word-draft\">输入词汇</label><textarea class=\"ds-word-draft\" id=\"ds-word-draft\" rows=\"2\" placeholder=\"输入英文单词或短语\">resilient, adapt, perspective</textarea>",
+      "css": ".ds-input-label{display:block;margin-bottom:24px;font:650 21px/1.4 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);color:var(--text,#222724)}.ds-word-draft{width:100%;min-height:52px;max-height:140px;padding:10px 3px;resize:none;border:0;border-radius:4px;background:transparent;color:var(--text,#222724);font:700 20px/1.6 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);caret-color:var(--primary,#386548)}.ds-word-draft::placeholder{font:16px/2 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);color:var(--muted,#606963)}.ds-word-draft:focus-visible{outline:1px solid var(--primary,#386548);outline-offset:3px}"
     },
     {
       "name": "Learning Navigation",
@@ -736,10 +819,9 @@
     {
       "name": "Vocabulary Chip",
       "kind": "chip",
-      "refersTo": "chip",
-      "description": "Source-backed input annotation; the current workspace chip wrapper is hidden.",
-      "html": "<span class=\"ds-chip\">resilient</span>",
-      "css": ".ds-chip{display:inline-block;font:13px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);padding:2px 8px;border-radius:5px;background:var(--soft,#e8f0e7);color:var(--primary,#386548);}"
+      "description": "Editable, removable vocabulary tags in the unified composer; uncertain spellings remain unmarked.",
+      "html": "<span class=\"ds-vocab-chip\"><button class=\"ds-chip-edit\" type=\"button\" aria-label=\"编辑 resilient\">resilient</button><button class=\"ds-chip-remove\" type=\"button\" aria-label=\"移除 resilient\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></span>",
+      "css": ".ds-vocab-chip{display:inline-flex;max-width:100%;padding:0;border:1px solid var(--line,#d8ded7);border-radius:10px;background:var(--soft,#e8f0e7);color:var(--primary,#386548)}.ds-vocab-chip button{border:0;background:transparent;color:inherit;min-height:48px;cursor:pointer}.ds-chip-edit{min-width:0;padding:6px 4px 6px 16px;font:600 23px/1.4 var(--font-display,\"Texta Serif\",Georgia,\"Songti SC\",\"SimSun\",serif);overflow-wrap:anywhere;text-align:left}.ds-chip-remove{flex:0 0 40px;padding:8px}.ds-chip-remove svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}.ds-vocab-chip button:hover{background:color-mix(in srgb,var(--primary,#386548) 9%,transparent)}.ds-vocab-chip button:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px}.ds-vocab-chip button:active{transform:translateY(1px)}@media(max-width:640px){.ds-chip-edit{font-size:20px;padding-left:12px}}"
     },
     {
       "name": "Definition Panel",
@@ -764,6 +846,20 @@
       "description": "Inline vocabulary control linked to the selected definition.",
       "html": "<p class=\"ds-reading\">We can build a <mark class=\"ds-vocab\" role=\"button\" tabindex=\"0\" aria-label=\"词汇解析: resilient\">resilient</mark> community.</p>",
       "css": ".ds-reading{font:22px/1.5 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);color:var(--text,#222724);margin:0;}.ds-vocab{background:var(--highlight-en,#dae8d4);color:var(--vocab-ink,var(--primary,#386548));font-weight:700;border-radius:3px;padding:0 3px;cursor:pointer;transition:background var(--fast,160ms);}.ds-vocab:hover,.ds-vocab:focus-visible{background:var(--highlight-zh,#e3ebdc);text-decoration:underline;}.ds-vocab:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-vocab{animation:none;transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Plans Navigation Button",
+      "kind": "nav",
+      "description": "One semantic plans link immediately beside Account for every signed-in role. Purchasing remains paused.",
+      "html": "<a class=\"ds-plans\" href=\"https://texta.yanyihan.top/pay.html\">Plus / Pro 套餐</a>",
+      "css": ".ds-plans{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 14px;border:1px solid var(--line,#d8ded7);border-radius:var(--radius,8px);color:var(--primary,#386548);background:var(--panel,#fcfcfa);font:600 15px/1.6 var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);text-decoration:none;white-space:nowrap;transition:background-color var(--fast,160ms),border-color var(--fast,160ms),color var(--fast,160ms)}.ds-plans:hover{background:var(--soft,#e8f0e7);border-color:var(--primary,#386548)}.ds-plans:active{background:var(--soft,#e8f0e7)}.ds-plans:focus-visible{outline:2px solid var(--primary,#386548);outline-offset:4px}@media(max-width:520px){.ds-plans{padding-inline:12px}}@media(prefers-reduced-motion:reduce){.ds-plans{transition-duration:.01ms}}"
+    },
+    {
+      "name": "Vocabulary Spelling and Completion",
+      "kind": "custom",
+      "description": "Visual samples of the production paint layer: muted fading suffix, bold input and letter-level warning. This index preview does not perform dictionary lookup or Tab completion.",
+      "html": "<div class=\"ds-draft-sample\" aria-label=\"补全样式示例\">resil<span class=\"ds-ghost\">ient <kbd>Tab</kbd></span></div><div class=\"ds-draft-sample\" aria-label=\"拼写标注样式示例\">resili<span class=\"ds-spelling\">a</span>nt</div>",
+      "css": ".ds-draft-sample{padding:10px 3px;color:var(--text,#222724);font:700 20px/1.6 var(--font-reading,Georgia,\"Times New Roman\",\"Songti SC\",\"SimSun\",serif);white-space:pre-wrap}.ds-ghost{color:var(--muted,#606963);animation:ds-completion-appear 220ms var(--ease-out,cubic-bezier(.22,1,.36,1)) both}.ds-ghost kbd{display:inline-block;margin-left:10px;padding:0 5px;border:1px solid var(--line,#d8ded7);border-radius:4px;font:500 11px/19px var(--font-ui,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);vertical-align:2px}.ds-spelling{color:var(--warning,#9b3f29);text-decoration:underline wavy;text-underline-offset:4px;text-decoration-thickness:1px}@keyframes ds-completion-appear{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){.ds-ghost{animation:none;opacity:1}}"
     }
   ],
   "narrative": {
@@ -790,51 +886,9 @@
         "name": "The Reading Plane Rule",
         "body": "Keep article paragraphs on the page plane. Use tonal containers for study support and ambient elevation for floating controls.",
         "section": "elevation"
-      },
-      {
-        "name": "The Export Document Rule",
-        "body": "Use the shared EXPORT_DOCUMENT_STYLES print layout for preview, PDF and Word. Article PDFs are a continuous single page; notebook exports contain only vocabulary, part of speech and Chinese meanings from the current filtered list. Keep mobile export menus within the reading toolbar bounds and route opened history articles to reading.",
-        "section": "typography"
-      },
-      {
-        "name": "The Independent Reading Rule",
-        "body": "Article and definition content scroll independently with hidden scrollbars and keyboard access. Keep toolbars visible, contain scroll at pane boundaries, preserve positions across mobile reading tabs and reset positions when a new article opens. PDF capture uses a separate fixed-width document so screen scrolling and mobile viewport offsets cannot crop its content.",
-        "section": "layout"
-      },
-      {
-        "name": "The Reading Space Rule",
-        "body": "After successful generation or opening an article, hide vocabulary input and generation settings to give article and definition panes the available viewport. Edit vocabulary opens a separate editor retaining words and settings; Back to article resumes the existing article and its reading position. A failed generation keeps the editor available. Mobile Input and Article navigation follows the same states.",
-        "section": "layout"
-      },
-      {
-        "name": "The Focus Reading Rule",
-        "body": "Collapse the article toolbar as content scrolls down and restore it at the top. Focus mode hides navigation and toolbars, announces ESC exit, and supplies a touch exit control. Highlighted words open a closable definition overlay without changing article position; background hydration never reopens it. Notebook content spans the entire study grid; bold list rows are the default; cards and a first-addition calendar with centered standard month and thumbnail annual views remain selectable. Unfamiliar/mastered categories preserve complete entries. Library pages hide the mobile reading navigation.",
-        "section": "layout"
-      },
-      {
-        "name": "The Persistent Export Controls Rule",
-        "body": "Keep export preview Close and Confirm Export in a visible header and footer while only the middle document scrolls. Hide routine success and article-open microcopy while retaining errors and active generation progress.",
-        "section": "layout"
-      },
-      {
-        "name": "The Library Organization Rule",
-        "section": "layout",
-        "body": "Notebook and favorites default to A–Z and offer first-added newest/oldest sorting and search. Notebook has unfamiliar/mastered categories and list/cards/calendar views. A separate chevron on the mastery row controls hidden details; only mastered entries offer deletion. Source actions open saved article snapshots and focus the word, with favorites/history fallback for older entries. Calendar offers a persistent standard month/thumbnail annual choice; the annual overview shows twelve aligned six-week months, month and year counts, responsive four/three/two/one columns and year navigation. Addition dates use fluorescent circles and open a date-filtered list; selecting a date retains its month for standard view. Reduced motion disables standard month, annual grid and marker animations. Favorites folders support create, rename, move and delete while retaining articles."
       }
     ],
-    "dos": [
-      "**Do** preserve warm neutral, ink and sage as the default; optional palettes retain the same semantic roles and readable state cues.",
-      "**Do** use the display, reading and interface font roles for their documented purposes.",
-      "**Do** preserve generous reading space and collapse the study grid for narrow screens.",
-      "**Do** pair selected vocabulary, mastery and navigation colors with readable text and accessible state.",
-      "**Do** use direct functional copy in the current interface language and retain learning-content language.",
-      "**Do** retain visible keyboard focus and respect reduced-motion preferences."
-    ],
-    "donts": [
-      "**Don't** add slogans, decorative microcopy or diagonal arrows.",
-      "**Don't** crowd the chosen study composition with a navigation sidebar or extra ornamental panels.",
-      "**Don't** turn prose paragraphs into a repeated field of raised cards.",
-      "**Don't** claim invented study statistics, testimonials, sentence translations or visual-fidelity approval."
-    ]
+    "dos": [],
+    "donts": []
   }
 }

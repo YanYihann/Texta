@@ -1,0 +1,19 @@
+{
+  "generations": [
+    {
+      "method": "POST",
+      "path": "/generate",
+      "body": {
+        "words": "sustainable, resilient, adapt, perspective, thrive, balance",
+        "level": "中级",
+        "quickMode": false,
+        "generationMode": "mixed",
+        "generationQuality": "normal"
+      }
+    }
+  ],
+  "detailCalls": 1,
+  "translationCalls": 0,
+  "librarySyncs": 2,
+  "savedFavorites": 1
+}

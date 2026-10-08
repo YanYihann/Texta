@@ -1,0 +1,35 @@
+name: Build Windows Desktop
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci --prefix desktop
+      - run: npm run test:desktop
+      - run: npm run desktop:build
+      - name: Checksum
+        shell: pwsh
+        run: |
+          Get-ChildItem output/desktop/*.exe | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Set-Content -LiteralPath ($_.FullName + '.sha256') -Encoding ascii
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Texta-Windows-x64
+          path: |
+            output/desktop/*.exe
+            output/desktop/*.sha256
+          if-no-files-found: error

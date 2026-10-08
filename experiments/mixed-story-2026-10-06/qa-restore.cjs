@@ -1,0 +1,28 @@
+const {spawnSync}=require('node:child_process');
+const cli='C:/Users/19633/AppData/Local/npm-cache/_npx/31e32ef8478fbf80/node_modules/@playwright/cli/playwright-cli.js';
+const code=async page=>{
+  const before=await(await page.request.get('http://127.0.0.1:3013/__qa')).json();
+  await page.getByRole('button',{name:'收藏夹',exact:true}).click();
+  await page.getByRole('button',{name:'社区花园的转变',exact:true}).click();
+  await page.getByRole('button',{name:'词汇解析: adapt',exact:true}).click();
+  if(!await page.locator('#glossary .glossary-item.active .speak-ipa').filter({hasText:'/test/'}).count())throw Error('Favorite lost saved IPA');
+  await page.getByRole('button',{name:'生词本',exact:true}).click();
+  const notebook=page.locator('#notebookEntries .glossary-item');
+  if(await notebook.count()!==6)throw Error('Notebook lost words');
+  await page.getByRole('button',{name:'balance 的词汇详情',exact:true}).click();
+  if(!await page.locator('#notebookEntries .glossary-item[data-word-key="balance"]').getByText('/test/',{exact:true}).count())throw Error('Notebook lost saved IPA');
+  await page.getByRole('button',{name:'文章生成',exact:true}).click();
+  await page.getByRole('button',{name:'清空',exact:true}).click();
+  await page.getByRole('textbox',{name:'输入词汇'}).fill('sustainable, resilient, adapt, perspective, thrive, balance');
+  await page.getByRole('button',{name:'双语文章',exact:true}).click();
+  await page.getByRole('button',{name:'生成文章',exact:true}).click();
+  await page.getByRole('heading',{name:'A Garden for Everyone',exact:true}).waitFor();
+  await page.locator('mark.vocab-en[data-word-key="adapt"]').first().click();
+  const after=await(await page.request.get('http://127.0.0.1:3013/__qa')).json();
+  if(after.dictionaryBatches!==before.dictionaryBatches)throw Error('Saved/shared cards regenerated');
+  const newRequests=after.requests.slice(before.requests.length);
+  if(newRequests.some(r=>r.path.includes('/vocab/')||r.path.includes('/context/translation')))throw Error('Restore or bilingual click generated details');
+  return {restoredFavorite:true,restoredNotebookWords:6,sharedDictionaryBatches:after.dictionaryBatches,newGenerationWords:newRequests.find(r=>r.path==='/generate')?.body.words,noDetailRequests:true};
+};
+const result=spawnSync(process.execPath,[cli,'--session=vocab-ready','run-code',code.toString()],{encoding:'utf8'});
+process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');process.exitCode=result.status||0;

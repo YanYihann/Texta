@@ -1,0 +1,104 @@
+{
+  "id": "anatomy-11",
+  "words": [
+    "stature",
+    "flesh",
+    "skull",
+    "eyelash",
+    "gorge",
+    "palm",
+    "abdomen",
+    "rib",
+    "liver",
+    "womb",
+    "kidney"
+  ],
+  "shortMode": false,
+  "limits": {
+    "minChinese": 200,
+    "maxChinese": 305,
+    "hardMin": 140,
+    "paragraphs": "2–3",
+    "maxTokens": 1735
+  },
+  "call": {
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "seconds": 91.611,
+    "exitCode": 0,
+    "usage": {
+      "input_tokens": 19070,
+      "cached_input_tokens": 12544,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2090,
+      "reasoning_output_tokens": 1552
+    },
+    "tools": [],
+    "text": "{\"vocabulary\":[{\"word\":\"stature\",\"pos\":\"n.\",\"meaning\":\"身高\"},{\"word\":\"flesh\",\"pos\":\"n.\",\"meaning\":\"肉\"},{\"word\":\"skull\",\"pos\":\"n.\",\"meaning\":\"颅骨\"},{\"word\":\"eyelash\",\"pos\":\"n.\",\"meaning\":\"睫毛\"},{\"word\":\"gorge\",\"pos\":\"n.\",\"meaning\":\"峡谷\"},{\"word\":\"palm\",\"pos\":\"n.\",\"meaning\":\"手掌\"},{\"word\":\"abdomen\",\"pos\":\"n.\",\"meaning\":\"腹部\"},{\"word\":\"rib\",\"pos\":\"n.\",\"meaning\":\"肋骨\"},{\"word\":\"liver\",\"pos\":\"n.\",\"meaning\":\"肝脏\"},{\"word\":\"womb\",\"pos\":\"n.\",\"meaning\":\"子宫\"},{\"word\":\"kidney\",\"pos\":\"n.\",\"meaning\":\"肾脏\"}],\"title\":\"暴雨前的救援\",\"article\":\"怀孕的姐姐进山散步，直到傍晚也没回来。眼看暴雨将至，小明便沿旧路去找她。在⟦gorge|n.|峡谷⟧边听见呼救后，他发现姐姐跌在坡下，便借着⟦stature|n.|身高⟧优势抓住高处的树枝，沿缓坡下去。\\n\\n她的⟦eyelash|n.|睫毛⟧上沾着泥，⟦palm|n.|手掌⟧擦破了，伤口露出⟦flesh|n.|肉⟧。她护着⟦abdomen|n.|腹部⟧，说⟦rib|n.|肋骨⟧附近疼得厉害。小明担心她⟦womb|n.|子宫⟧里的孩子也受了伤，没有贸然背她，而是报警，把外套盖在她身上，陪她等救援。\\n\\n送到医院后，医生先排查头部伤势，确认⟦skull|n.|颅骨⟧没有骨折；又因她持续腹痛，检查了⟦liver|n.|肝脏⟧和⟦kidney|n.|肾脏⟧，未发现损伤。孩子也平安。小明这才给家里报信。姐姐虽需留院观察，却赶在暴雨前获救，不必在山里熬夜了。\"}"
+  },
+  "parsed": {
+    "issues": [],
+    "title": "暴雨前的救援",
+    "article": "怀孕的姐姐进山散步，直到傍晚也没回来。眼看暴雨将至，小明便沿旧路去找她。在gorge边听见呼救后，他发现姐姐跌在坡下，便借着stature优势抓住高处的树枝，沿缓坡下去。\n\n她的eyelash上沾着泥，palm擦破了，伤口露出flesh。她护着abdomen，说rib附近疼得厉害。小明担心她womb里的孩子也受了伤，没有贸然背她，而是报警，把外套盖在她身上，陪她等救援。\n\n送到医院后，医生先排查头部伤势，确认skull没有骨折；又因她持续腹痛，检查了liver和kidney，未发现损伤。孩子也平安。小明这才给家里报信。姐姐虽需留院观察，却赶在暴雨前获救，不必在山里熬夜了。",
+    "glosses": [
+      {
+        "id": 1,
+        "pos": "n.",
+        "meaning": "身高"
+      },
+      {
+        "id": 2,
+        "pos": "n.",
+        "meaning": "肉"
+      },
+      {
+        "id": 3,
+        "pos": "n.",
+        "meaning": "颅骨"
+      },
+      {
+        "id": 4,
+        "pos": "n.",
+        "meaning": "睫毛"
+      },
+      {
+        "id": 5,
+        "pos": "n.",
+        "meaning": "峡谷"
+      },
+      {
+        "id": 6,
+        "pos": "n.",
+        "meaning": "手掌"
+      },
+      {
+        "id": 7,
+        "pos": "n.",
+        "meaning": "腹部"
+      },
+      {
+        "id": 8,
+        "pos": "n.",
+        "meaning": "肋骨"
+      },
+      {
+        "id": 9,
+        "pos": "n.",
+        "meaning": "肝脏"
+      },
+      {
+        "id": 10,
+        "pos": "n.",
+        "meaning": "子宫"
+      },
+      {
+        "id": 11,
+        "pos": "n.",
+        "meaning": "肾脏"
+      }
+    ],
+    "chineseChars": 219,
+    "boundaryNormalizations": 0,
+    "formatNormalizations": 0
+  }
+}

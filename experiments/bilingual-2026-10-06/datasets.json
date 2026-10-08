@@ -1,0 +1,117 @@
+[
+  {
+    "id": "theme-6",
+    "words": [
+      "sustainable",
+      "resilient",
+      "adapt",
+      "perspective",
+      "thrive",
+      "balance"
+    ]
+  },
+  {
+    "id": "random-12",
+    "words": [
+      "budget",
+      "relax",
+      "process",
+      "standard",
+      "attitude",
+      "motivation",
+      "derive",
+      "sterility",
+      "plume",
+      "bristle",
+      "cricket",
+      "expenses"
+    ]
+  },
+  {
+    "id": "random-12-short",
+    "shortMode": true,
+    "words": [
+      "budget",
+      "relax",
+      "process",
+      "standard",
+      "attitude",
+      "motivation",
+      "derive",
+      "sterility",
+      "plume",
+      "bristle",
+      "cricket",
+      "expenses"
+    ]
+  },
+  {
+    "id": "weather-24",
+    "words": [
+      "granite",
+      "terrain",
+      "arctic",
+      "deteriorate",
+      "gulf",
+      "meteorology",
+      "thermal",
+      "tropics",
+      "arid",
+      "humid",
+      "hail",
+      "thaw",
+      "shiver",
+      "budget",
+      "relax",
+      "process",
+      "standard",
+      "attitude",
+      "motivation",
+      "cover",
+      "reject",
+      "derive",
+      "contribute",
+      "expenses"
+    ]
+  },
+  {
+    "id": "phrases-6",
+    "words": [
+      "take care of",
+      "don't",
+      "well-being",
+      "Mother",
+      "care",
+      "look forward to"
+    ]
+  },
+  {
+    "id": "single-short",
+    "shortMode": true,
+    "words": [
+      "cover"
+    ]
+  },
+  {
+    "id": "overlap-6",
+    "words": [
+      "art",
+      "article",
+      "in",
+      "in spite of",
+      "record",
+      "recording"
+    ]
+  },
+  {
+    "id": "theme-6-repeat",
+    "words": [
+      "sustainable",
+      "resilient",
+      "adapt",
+      "perspective",
+      "thrive",
+      "balance"
+    ]
+  }
+]

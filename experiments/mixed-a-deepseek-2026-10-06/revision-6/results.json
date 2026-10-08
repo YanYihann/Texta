@@ -1,0 +1,1734 @@
+{
+  "model": "deepseek-v3.2",
+  "date": "2026-10-06",
+  "results": [
+    {
+      "id": "theme-6",
+      "words": [
+        "sustainable",
+        "resilient",
+        "adapt",
+        "perspective",
+        "thrive",
+        "balance"
+      ],
+      "quickMode": false,
+      "seconds": 4.314,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 1030
+        },
+        {
+          "step": "mixed_direct_retry",
+          "maxTokens": 1030
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1030,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2043,
+          "usage": {
+            "inputTokens": 640,
+            "outputTokens": 166,
+            "totalTokens": 806
+          }
+        },
+        {
+          "step": "mixed_direct_retry",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1030,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2266,
+          "usage": {
+            "inputTokens": 675,
+            "outputTokens": 160,
+            "totalTokens": 835
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 2,
+        "successfulRequests": 2,
+        "failedRequests": 0,
+        "totalDurationMs": 4309,
+        "totalInputTokens": 1315,
+        "totalOutputTokens": 326,
+        "totalTokens": 1641,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 2043
+          },
+          {
+            "step": "mixed_direct_retry",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 2266
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1030,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 2043,
+            "usage": {
+              "inputTokens": 640,
+              "outputTokens": 166,
+              "totalTokens": 806
+            }
+          },
+          {
+            "step": "mixed_direct_retry",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1030,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 2266,
+            "usage": {
+              "inputTokens": 675,
+              "outputTokens": 160,
+              "totalTokens": 835
+            }
+          }
+        ]
+      },
+      "result": {
+        "issues": [],
+        "title": "社区花园的转变",
+        "article": "sustainable种植计划失败后，李阿姨发现土壤仍resilient。她决定adapt新情况，从不同perspective看问题。她调整水肥thrive，让蔬菜重新balance。",
+        "glosses": [
+          {
+            "id": 1,
+            "pos": "adj.",
+            "meaning": "可持续的"
+          },
+          {
+            "id": 2,
+            "pos": "adj.",
+            "meaning": "有韧性的"
+          },
+          {
+            "id": 3,
+            "pos": "v.",
+            "meaning": "适应"
+          },
+          {
+            "id": 4,
+            "pos": "n.",
+            "meaning": "角度"
+          },
+          {
+            "id": 5,
+            "pos": "n.",
+            "meaning": "平衡"
+          },
+          {
+            "id": 6,
+            "pos": "v.",
+            "meaning": "茁壮成长"
+          }
+        ],
+        "chineseChars": 37,
+        "boundaryNormalizations": 0
+      },
+      "missing": []
+    },
+    {
+      "id": "mixed-12",
+      "words": [
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "derive",
+        "sterility",
+        "plume",
+        "bristle",
+        "cricket",
+        "expenses"
+      ],
+      "quickMode": false,
+      "seconds": 5.019,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 1660
+        },
+        {
+          "step": "mixed_direct_retry",
+          "maxTokens": 1660
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1660,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2232,
+          "usage": {
+            "inputTokens": 699,
+            "outputTokens": 175,
+            "totalTokens": 874
+          }
+        },
+        {
+          "step": "mixed_direct_retry",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1660,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2784,
+          "usage": {
+            "inputTokens": 729,
+            "outputTokens": 293,
+            "totalTokens": 1022
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 2,
+        "successfulRequests": 2,
+        "failedRequests": 0,
+        "totalDurationMs": 5016,
+        "totalInputTokens": 1428,
+        "totalOutputTokens": 468,
+        "totalTokens": 1896,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 2232
+          },
+          {
+            "step": "mixed_direct_retry",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 2784
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1660,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 2232,
+            "usage": {
+              "inputTokens": 699,
+              "outputTokens": 175,
+              "totalTokens": 874
+            }
+          },
+          {
+            "step": "mixed_direct_retry",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1660,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 2784,
+            "usage": {
+              "inputTokens": 729,
+              "outputTokens": 293,
+              "totalTokens": 1022
+            }
+          }
+        ]
+      },
+      "missing": [
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "derive",
+        "sterility",
+        "plume",
+        "bristle",
+        "cricket",
+        "expenses"
+      ],
+      "error": "中英混合短文未通过检查，请重试：每句话均须包含目标词，删掉纯中文铺垫或结尾。"
+    },
+    {
+      "id": "long-24",
+      "words": [
+        "granite",
+        "terrain",
+        "arctic",
+        "deteriorate",
+        "gulf",
+        "meteorology",
+        "thermal",
+        "tropics",
+        "arid",
+        "humid",
+        "hail",
+        "thaw",
+        "shiver",
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "cover",
+        "reject",
+        "derive",
+        "contribute",
+        "expenses"
+      ],
+      "quickMode": false,
+      "seconds": 3.46,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 2920
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 2920,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 3459,
+          "usage": {
+            "inputTokens": 819,
+            "outputTokens": 573,
+            "totalTokens": 1392
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 1,
+        "successfulRequests": 1,
+        "failedRequests": 0,
+        "totalDurationMs": 3459,
+        "totalInputTokens": 819,
+        "totalOutputTokens": 573,
+        "totalTokens": 1392,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 3459
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 2920,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 3459,
+            "usage": {
+              "inputTokens": 819,
+              "outputTokens": 573,
+              "totalTokens": 1392
+            }
+          }
+        ]
+      },
+      "result": {
+        "issues": [],
+        "title": "山路考察记",
+        "article": "考察队踏上granite山坡，这片terrain比地图更陡。接近arctic的寒风让设备电池迅速deteriorate，他们只好退回gulf边扎营。meteorology队员用thermal毯包住仪器，又担心tropics来的样本受潮。arid区样本怕干裂，humid区样本怕发霉，两者不能同放。夜里突降hail，帐篷结霜；天亮气温回升，冰雪开始thaw，队员仍冻得shiver。队长核算budget，决定relax原定路线。他重新process数据，按安全standard筛选。队员attitude转变，motivation提高，用防水布cover样本箱。他们reject冒险前进，从记录中derive结论：天气与地形共同contribute这次撤退，节省了后续expenses。",
+        "glosses": [
+          {
+            "id": 1,
+            "pos": "n.",
+            "meaning": "花岗岩"
+          },
+          {
+            "id": 2,
+            "pos": "n.",
+            "meaning": "地形"
+          },
+          {
+            "id": 3,
+            "pos": "adj.",
+            "meaning": "北极"
+          },
+          {
+            "id": 4,
+            "pos": "v.",
+            "meaning": "恶化"
+          },
+          {
+            "id": 5,
+            "pos": "n.",
+            "meaning": "海湾"
+          },
+          {
+            "id": 6,
+            "pos": "n.",
+            "meaning": "气象学"
+          },
+          {
+            "id": 7,
+            "pos": "adj.",
+            "meaning": "保温"
+          },
+          {
+            "id": 8,
+            "pos": "n.",
+            "meaning": "热带"
+          },
+          {
+            "id": 9,
+            "pos": "adj.",
+            "meaning": "干旱"
+          },
+          {
+            "id": 10,
+            "pos": "adj.",
+            "meaning": "潮湿"
+          },
+          {
+            "id": 11,
+            "pos": "n.",
+            "meaning": "冰雹"
+          },
+          {
+            "id": 12,
+            "pos": "v.",
+            "meaning": "融化"
+          },
+          {
+            "id": 13,
+            "pos": "v.",
+            "meaning": "发抖"
+          },
+          {
+            "id": 14,
+            "pos": "n.",
+            "meaning": "预算"
+          },
+          {
+            "id": 15,
+            "pos": "v.",
+            "meaning": "放松"
+          },
+          {
+            "id": 16,
+            "pos": "v.",
+            "meaning": "处理"
+          },
+          {
+            "id": 17,
+            "pos": "n.",
+            "meaning": "标准"
+          },
+          {
+            "id": 18,
+            "pos": "n.",
+            "meaning": "态度"
+          },
+          {
+            "id": 19,
+            "pos": "n.",
+            "meaning": "积极性"
+          },
+          {
+            "id": 20,
+            "pos": "v.",
+            "meaning": "覆盖"
+          },
+          {
+            "id": 21,
+            "pos": "v.",
+            "meaning": "拒绝"
+          },
+          {
+            "id": 22,
+            "pos": "v.",
+            "meaning": "得出"
+          },
+          {
+            "id": 23,
+            "pos": "v.",
+            "meaning": "促成"
+          },
+          {
+            "id": 24,
+            "pos": "n.",
+            "meaning": "开支"
+          }
+        ],
+        "chineseChars": 154,
+        "boundaryNormalizations": 0
+      },
+      "missing": []
+    },
+    {
+      "id": "mixed-12-repeat",
+      "words": [
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "derive",
+        "sterility",
+        "plume",
+        "bristle",
+        "cricket",
+        "expenses"
+      ],
+      "quickMode": false,
+      "seconds": 4.585,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 1660
+        },
+        {
+          "step": "mixed_direct_retry",
+          "maxTokens": 1660
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1660,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2505,
+          "usage": {
+            "inputTokens": 699,
+            "outputTokens": 190,
+            "totalTokens": 889
+          }
+        },
+        {
+          "step": "mixed_direct_retry",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1660,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2078,
+          "usage": {
+            "inputTokens": 729,
+            "outputTokens": 173,
+            "totalTokens": 902
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 2,
+        "successfulRequests": 2,
+        "failedRequests": 0,
+        "totalDurationMs": 4583,
+        "totalInputTokens": 1428,
+        "totalOutputTokens": 363,
+        "totalTokens": 1791,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 2505
+          },
+          {
+            "step": "mixed_direct_retry",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 2078
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1660,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 2505,
+            "usage": {
+              "inputTokens": 699,
+              "outputTokens": 190,
+              "totalTokens": 889
+            }
+          },
+          {
+            "step": "mixed_direct_retry",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1660,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 2078,
+            "usage": {
+              "inputTokens": 729,
+              "outputTokens": 173,
+              "totalTokens": 902
+            }
+          }
+        ]
+      },
+      "missing": [
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "derive",
+        "sterility",
+        "plume",
+        "bristle",
+        "cricket",
+        "expenses"
+      ],
+      "error": "中英混合短文未通过检查，请重试：必须包含article字符串和完整glosses数组。"
+    },
+    {
+      "id": "long-25",
+      "words": [
+        "granite",
+        "terrain",
+        "arctic",
+        "deteriorate",
+        "gulf",
+        "meteorology",
+        "thermal",
+        "tropics",
+        "arid",
+        "humid",
+        "hail",
+        "thaw",
+        "shiver",
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "cover",
+        "reject",
+        "derive",
+        "contribute",
+        "expenses",
+        "vacation"
+      ],
+      "quickMode": false,
+      "seconds": 6.861,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 3025
+        },
+        {
+          "step": "mixed_direct_retry",
+          "maxTokens": 3025
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 3025,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 3400,
+          "usage": {
+            "inputTokens": 829,
+            "outputTokens": 564,
+            "totalTokens": 1393
+          }
+        },
+        {
+          "step": "mixed_direct_retry",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 3025,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 3459,
+          "usage": {
+            "inputTokens": 864,
+            "outputTokens": 568,
+            "totalTokens": 1432
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 2,
+        "successfulRequests": 2,
+        "failedRequests": 0,
+        "totalDurationMs": 6859,
+        "totalInputTokens": 1693,
+        "totalOutputTokens": 1132,
+        "totalTokens": 2825,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 3400
+          },
+          {
+            "step": "mixed_direct_retry",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 3459
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 3025,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 3400,
+            "usage": {
+              "inputTokens": 829,
+              "outputTokens": 564,
+              "totalTokens": 1393
+            }
+          },
+          {
+            "step": "mixed_direct_retry",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 3025,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 3459,
+            "usage": {
+              "inputTokens": 864,
+              "outputTokens": 568,
+              "totalTokens": 1432
+            }
+          }
+        ]
+      },
+      "result": {
+        "issues": [],
+        "title": "极地考察站的取暖预算",
+        "article": "granite墙挡不住arctic寒风，站内温度持续deteriorate。队长查看terrain图后，发现站点位于gulf旁，meteorology数据显示寒流将至。他检查thermal管道，发现hail堵住了通风口。队员在tropics长大，从未经历thaw前的严寒，冻得直shiver。队长cover住裂缝，reject了等待救援的提议。他derive灵感，contribute出备用发电机。维修process符合standard，队员attitude积极，motivation十足。他们relax了紧绷的神经，budget虽紧，但expenses可控。这次vacation任务在arid与humid交替中完成。",
+        "glosses": [
+          {
+            "id": 1,
+            "pos": "n.",
+            "meaning": "花岗岩"
+          },
+          {
+            "id": 2,
+            "pos": "n.",
+            "meaning": "地形"
+          },
+          {
+            "id": 3,
+            "pos": "adj.",
+            "meaning": "北极的"
+          },
+          {
+            "id": 4,
+            "pos": "v.",
+            "meaning": "恶化"
+          },
+          {
+            "id": 5,
+            "pos": "n.",
+            "meaning": "海湾"
+          },
+          {
+            "id": 6,
+            "pos": "n.",
+            "meaning": "气象学"
+          },
+          {
+            "id": 7,
+            "pos": "adj.",
+            "meaning": "保温的"
+          },
+          {
+            "id": 8,
+            "pos": "n.",
+            "meaning": "热带"
+          },
+          {
+            "id": 9,
+            "pos": "adj.",
+            "meaning": "干旱"
+          },
+          {
+            "id": 10,
+            "pos": "adj.",
+            "meaning": "潮湿"
+          },
+          {
+            "id": 11,
+            "pos": "n.",
+            "meaning": "冰雹"
+          },
+          {
+            "id": 12,
+            "pos": "v.",
+            "meaning": "解冻"
+          },
+          {
+            "id": 13,
+            "pos": "v.",
+            "meaning": "发抖"
+          },
+          {
+            "id": 14,
+            "pos": "n.",
+            "meaning": "预算"
+          },
+          {
+            "id": 15,
+            "pos": "v.",
+            "meaning": "放松"
+          },
+          {
+            "id": 16,
+            "pos": "n.",
+            "meaning": "过程"
+          },
+          {
+            "id": 17,
+            "pos": "n.",
+            "meaning": "标准"
+          },
+          {
+            "id": 18,
+            "pos": "n.",
+            "meaning": "态度"
+          },
+          {
+            "id": 19,
+            "pos": "n.",
+            "meaning": "动力"
+          },
+          {
+            "id": 20,
+            "pos": "v.",
+            "meaning": "覆盖"
+          },
+          {
+            "id": 21,
+            "pos": "v.",
+            "meaning": "拒绝"
+          },
+          {
+            "id": 22,
+            "pos": "v.",
+            "meaning": "获得"
+          },
+          {
+            "id": 23,
+            "pos": "v.",
+            "meaning": "贡献"
+          },
+          {
+            "id": 24,
+            "pos": "n.",
+            "meaning": "开支"
+          },
+          {
+            "id": 25,
+            "pos": "n.",
+            "meaning": "假期"
+          }
+        ],
+        "chineseChars": 118,
+        "boundaryNormalizations": 0
+      },
+      "missing": []
+    },
+    {
+      "id": "phrases",
+      "words": [
+        "take care of",
+        "care",
+        "don't",
+        "well-being",
+        "Mother",
+        "motherhood"
+      ],
+      "quickMode": false,
+      "seconds": 1.435,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 1030
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1030,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 1411,
+          "usage": {
+            "inputTokens": 640,
+            "outputTokens": 162,
+            "totalTokens": 802
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 1,
+        "successfulRequests": 1,
+        "failedRequests": 0,
+        "totalDurationMs": 1411,
+        "totalInputTokens": 640,
+        "totalOutputTokens": 162,
+        "totalTokens": 802,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 1411
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1030,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 1411,
+            "usage": {
+              "inputTokens": 640,
+              "outputTokens": 162,
+              "totalTokens": 802
+            }
+          }
+        ]
+      },
+      "result": {
+        "issues": [],
+        "title": "母亲的照顾",
+        "article": "Mother每天take care of全家，十分care。don't忽视她的well-being，因为motherhood让她常忘记休息。",
+        "glosses": [
+          {
+            "id": 1,
+            "pos": "v.",
+            "meaning": "照顾"
+          },
+          {
+            "id": 2,
+            "pos": "n.",
+            "meaning": "用心"
+          },
+          {
+            "id": 3,
+            "pos": "adv.",
+            "meaning": "不要"
+          },
+          {
+            "id": 4,
+            "pos": "n.",
+            "meaning": "健康"
+          },
+          {
+            "id": 5,
+            "pos": "n.",
+            "meaning": "母亲"
+          },
+          {
+            "id": 6,
+            "pos": "n.",
+            "meaning": "母职"
+          }
+        ],
+        "chineseChars": 19,
+        "boundaryNormalizations": 0
+      },
+      "missing": []
+    },
+    {
+      "id": "single",
+      "words": [
+        "derive"
+      ],
+      "quickMode": true,
+      "seconds": 1.459,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 900
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 900,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 1458,
+          "usage": {
+            "inputTokens": 590,
+            "outputTokens": 46,
+            "totalTokens": 636
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 1,
+        "successfulRequests": 1,
+        "failedRequests": 0,
+        "totalDurationMs": 1458,
+        "totalInputTokens": 590,
+        "totalOutputTokens": 46,
+        "totalTokens": 636,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 1458
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 900,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 1458,
+            "usage": {
+              "inputTokens": 590,
+              "outputTokens": 46,
+              "totalTokens": 636
+            }
+          }
+        ]
+      },
+      "result": {
+        "issues": [],
+        "title": "从失败中获得的经验",
+        "article": "他从这次derive了教训，决定换一种方法。",
+        "glosses": [
+          {
+            "id": 1,
+            "pos": "v.",
+            "meaning": "获得"
+          }
+        ],
+        "chineseChars": 14,
+        "boundaryNormalizations": 0
+      },
+      "missing": []
+    },
+    {
+      "id": "new-school-12",
+      "words": [
+        "deadline",
+        "assignment",
+        "feedback",
+        "improve",
+        "confident",
+        "hesitate",
+        "submit",
+        "revise",
+        "schedule",
+        "focus",
+        "clarify",
+        "progress"
+      ],
+      "quickMode": false,
+      "seconds": 2.063,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 1660
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1660,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2062,
+          "usage": {
+            "inputTokens": 696,
+            "outputTokens": 287,
+            "totalTokens": 983
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 1,
+        "successfulRequests": 1,
+        "failedRequests": 0,
+        "totalDurationMs": 2062,
+        "totalInputTokens": 696,
+        "totalOutputTokens": 287,
+        "totalTokens": 983,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 2062
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1660,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 2062,
+            "usage": {
+              "inputTokens": 696,
+              "outputTokens": 287,
+              "totalTokens": 983
+            }
+          }
+        ]
+      },
+      "result": {
+        "issues": [],
+        "title": "按时完成作业",
+        "article": "deadline临近，林悦的assignment还没写完。她hesitate要不要问老师，但决定先focus精力改稿。她revise了引言，并请同学clarify要求。同学给了feedback，她据此improve论证。她按schedule每天写一段，progress顺利。最后她submit了作业，对结果很confident。",
+        "glosses": [
+          {
+            "id": 1,
+            "pos": "n.",
+            "meaning": "截止日期"
+          },
+          {
+            "id": 2,
+            "pos": "n.",
+            "meaning": "作业"
+          },
+          {
+            "id": 3,
+            "pos": "n.",
+            "meaning": "反馈"
+          },
+          {
+            "id": 4,
+            "pos": "v.",
+            "meaning": "改进"
+          },
+          {
+            "id": 5,
+            "pos": "adj.",
+            "meaning": "自信"
+          },
+          {
+            "id": 6,
+            "pos": "v.",
+            "meaning": "犹豫"
+          },
+          {
+            "id": 7,
+            "pos": "v.",
+            "meaning": "提交"
+          },
+          {
+            "id": 8,
+            "pos": "v.",
+            "meaning": "修改"
+          },
+          {
+            "id": 9,
+            "pos": "n.",
+            "meaning": "日程安排"
+          },
+          {
+            "id": 10,
+            "pos": "v.",
+            "meaning": "集中"
+          },
+          {
+            "id": 11,
+            "pos": "v.",
+            "meaning": "澄清"
+          },
+          {
+            "id": 12,
+            "pos": "n.",
+            "meaning": "进展"
+          }
+        ],
+        "chineseChars": 62,
+        "boundaryNormalizations": 0
+      },
+      "missing": []
+    },
+    {
+      "id": "new-random-15",
+      "words": [
+        "fragile",
+        "negotiate",
+        "orchard",
+        "invoice",
+        "beneath",
+        "reluctant",
+        "restore",
+        "harvest",
+        "consequence",
+        "borrow",
+        "precise",
+        "sufficient",
+        "transport",
+        "evidence",
+        "temporary"
+      ],
+      "quickMode": false,
+      "seconds": 2.509,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 1975
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1975,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 2507,
+          "usage": {
+            "inputTokens": 732,
+            "outputTokens": 453,
+            "totalTokens": 1185
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 1,
+        "successfulRequests": 1,
+        "failedRequests": 0,
+        "totalDurationMs": 2507,
+        "totalInputTokens": 732,
+        "totalOutputTokens": 453,
+        "totalTokens": 1185,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 2507
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1975,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 2507,
+            "usage": {
+              "inputTokens": 732,
+              "outputTokens": 453,
+              "totalTokens": 1185
+            }
+          }
+        ]
+      },
+      "result": {
+        "issues": [],
+        "title": "果园里的账单",
+        "article": "fragile果筐在orchard里破了，苹果滚到beneath的泥地上。老陈reluctant捡起果子，因为sufficient好果已经不多。他必须negotiate一笔temporary运输费，否则harvest会烂在路边。司机递来invoice，要求precise重量数据。老陈只好borrow邻居的秤，并拍下evidence。他叫来transport车，把果子送往市场。这场consequence让他明白，restore信誉比省钱重要。",
+        "glosses": [
+          {
+            "id": 1,
+            "pos": "adj.",
+            "meaning": "易碎的"
+          },
+          {
+            "id": 2,
+            "pos": "v.",
+            "meaning": "协商"
+          },
+          {
+            "id": 3,
+            "pos": "n.",
+            "meaning": "果园"
+          },
+          {
+            "id": 4,
+            "pos": "n.",
+            "meaning": "发票"
+          },
+          {
+            "id": 5,
+            "pos": "prep.",
+            "meaning": "在……下面"
+          },
+          {
+            "id": 6,
+            "pos": "adv.",
+            "meaning": "不情愿地"
+          },
+          {
+            "id": 7,
+            "pos": "v.",
+            "meaning": "恢复"
+          },
+          {
+            "id": 8,
+            "pos": "n.",
+            "meaning": "收获"
+          },
+          {
+            "id": 9,
+            "pos": "n.",
+            "meaning": "后果"
+          },
+          {
+            "id": 10,
+            "pos": "v.",
+            "meaning": "借"
+          },
+          {
+            "id": 11,
+            "pos": "adj.",
+            "meaning": "精确的"
+          },
+          {
+            "id": 12,
+            "pos": "adj.",
+            "meaning": "足够的"
+          },
+          {
+            "id": 13,
+            "pos": "n.",
+            "meaning": "运输"
+          },
+          {
+            "id": 14,
+            "pos": "n.",
+            "meaning": "证据"
+          },
+          {
+            "id": 15,
+            "pos": "adj.",
+            "meaning": "临时的"
+          }
+        ],
+        "chineseChars": 88,
+        "boundaryNormalizations": 0
+      },
+      "missing": []
+    },
+    {
+      "id": "long-48-quick",
+      "words": [
+        "granite",
+        "terrain",
+        "arctic",
+        "deteriorate",
+        "gulf",
+        "meteorology",
+        "thermal",
+        "tropics",
+        "arid",
+        "humid",
+        "hail",
+        "thaw",
+        "shiver",
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "cover",
+        "reject",
+        "derive",
+        "contribute",
+        "expenses",
+        "sustainable",
+        "resilient",
+        "adapt",
+        "perspective",
+        "thrive",
+        "balance",
+        "camp",
+        "equipment",
+        "resource",
+        "shelter",
+        "challenge",
+        "cooperate",
+        "supply",
+        "rescue",
+        "route",
+        "safety",
+        "reliable",
+        "monitor",
+        "observe",
+        "record",
+        "analyse",
+        "evidence",
+        "predict",
+        "protect"
+      ],
+      "quickMode": true,
+      "seconds": 4.873,
+      "calls": [
+        {
+          "step": "mixed_direct",
+          "maxTokens": 5440
+        }
+      ],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 5440,
+          "attempt": 1,
+          "status": "ok",
+          "durationMs": 4871,
+          "usage": {
+            "inputTokens": 1053,
+            "outputTokens": 1300,
+            "totalTokens": 2353
+          }
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 1,
+        "successfulRequests": 1,
+        "failedRequests": 0,
+        "totalDurationMs": 4871,
+        "totalInputTokens": 1053,
+        "totalOutputTokens": 1300,
+        "totalTokens": 2353,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 1,
+            "successes": 1,
+            "durationMs": 4871
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 5440,
+            "attempt": 1,
+            "status": "ok",
+            "durationMs": 4871,
+            "usage": {
+              "inputTokens": 1053,
+              "outputTokens": 1300,
+              "totalTokens": 2353
+            }
+          }
+        ]
+      },
+      "result": {
+        "issues": [],
+        "title": "高山营地的一天",
+        "article": "granite山坡上，一支camp队正穿过terrain复杂的route。这里靠近arctic圈，meteorology预报说天气将deteriorate。来自gulf的湿气与thermal气流相遇，让tropics和arid区的规律都失效了。空气既humid又寒冷，突然下起hail。队员开始shiver，担心冰雪不会thaw。领队查看budget，决定不能relax警惕。他启动应急process，要求按standard检查装备。队员的attitude和motivation决定了行动速度。他们用防水布cover物资，reject冒险前进。经验derive多次训练，每人contribute自己的技能。为控制expenses，他们选择sustainable方案。这支resilient队伍能adapt变化，从新perspective看问题，在困境中thrive。他们努力balance安全与进度。营地equipment和resource有限，他们搭好shelter。面对challenge，大家cooperate，等待supply。救援队最终完成rescue，保障了safety。一台reliable仪器持续monitor天气。队员observe云层，record数据，analyse后找到evidence，据此predict风暴，并protect全队。",
+        "glosses": [
+          {
+            "id": 1,
+            "pos": "n.",
+            "meaning": "花岗岩"
+          },
+          {
+            "id": 2,
+            "pos": "n.",
+            "meaning": "地形"
+          },
+          {
+            "id": 3,
+            "pos": "adj.",
+            "meaning": "北极"
+          },
+          {
+            "id": 4,
+            "pos": "v.",
+            "meaning": "恶化"
+          },
+          {
+            "id": 5,
+            "pos": "n.",
+            "meaning": "海湾"
+          },
+          {
+            "id": 6,
+            "pos": "n.",
+            "meaning": "气象学"
+          },
+          {
+            "id": 7,
+            "pos": "adj.",
+            "meaning": "热量的"
+          },
+          {
+            "id": 8,
+            "pos": "n.",
+            "meaning": "热带"
+          },
+          {
+            "id": 9,
+            "pos": "adj.",
+            "meaning": "干旱"
+          },
+          {
+            "id": 10,
+            "pos": "adj.",
+            "meaning": "潮湿"
+          },
+          {
+            "id": 11,
+            "pos": "n.",
+            "meaning": "冰雹"
+          },
+          {
+            "id": 12,
+            "pos": "v.",
+            "meaning": "融化"
+          },
+          {
+            "id": 13,
+            "pos": "v.",
+            "meaning": "发抖"
+          },
+          {
+            "id": 14,
+            "pos": "n.",
+            "meaning": "预算"
+          },
+          {
+            "id": 15,
+            "pos": "v.",
+            "meaning": "放松"
+          },
+          {
+            "id": 16,
+            "pos": "n.",
+            "meaning": "流程"
+          },
+          {
+            "id": 17,
+            "pos": "n.",
+            "meaning": "标准"
+          },
+          {
+            "id": 18,
+            "pos": "n.",
+            "meaning": "态度"
+          },
+          {
+            "id": 19,
+            "pos": "n.",
+            "meaning": "动力"
+          },
+          {
+            "id": 20,
+            "pos": "v.",
+            "meaning": "覆盖"
+          },
+          {
+            "id": 21,
+            "pos": "v.",
+            "meaning": "拒绝"
+          },
+          {
+            "id": 22,
+            "pos": "v.",
+            "meaning": "来自"
+          },
+          {
+            "id": 23,
+            "pos": "v.",
+            "meaning": "贡献"
+          },
+          {
+            "id": 24,
+            "pos": "n.",
+            "meaning": "费用"
+          },
+          {
+            "id": 25,
+            "pos": "adj.",
+            "meaning": "可持续的"
+          },
+          {
+            "id": 26,
+            "pos": "adj.",
+            "meaning": "适应力强的"
+          },
+          {
+            "id": 27,
+            "pos": "v.",
+            "meaning": "适应"
+          },
+          {
+            "id": 28,
+            "pos": "n.",
+            "meaning": "视角"
+          },
+          {
+            "id": 29,
+            "pos": "v.",
+            "meaning": "茁壮成长"
+          },
+          {
+            "id": 30,
+            "pos": "v.",
+            "meaning": "平衡"
+          },
+          {
+            "id": 31,
+            "pos": "n.",
+            "meaning": "营地"
+          },
+          {
+            "id": 32,
+            "pos": "n.",
+            "meaning": "设备"
+          },
+          {
+            "id": 33,
+            "pos": "n.",
+            "meaning": "资源"
+          },
+          {
+            "id": 34,
+            "pos": "n.",
+            "meaning": "避难所"
+          },
+          {
+            "id": 35,
+            "pos": "n.",
+            "meaning": "挑战"
+          },
+          {
+            "id": 36,
+            "pos": "v.",
+            "meaning": "合作"
+          },
+          {
+            "id": 37,
+            "pos": "n.",
+            "meaning": "补给"
+          },
+          {
+            "id": 38,
+            "pos": "n.",
+            "meaning": "救援"
+          },
+          {
+            "id": 39,
+            "pos": "n.",
+            "meaning": "路线"
+          },
+          {
+            "id": 40,
+            "pos": "n.",
+            "meaning": "安全"
+          },
+          {
+            "id": 41,
+            "pos": "adj.",
+            "meaning": "可靠的"
+          },
+          {
+            "id": 42,
+            "pos": "v.",
+            "meaning": "监测"
+          },
+          {
+            "id": 43,
+            "pos": "v.",
+            "meaning": "观察"
+          },
+          {
+            "id": 44,
+            "pos": "v.",
+            "meaning": "记录"
+          },
+          {
+            "id": 45,
+            "pos": "v.",
+            "meaning": "分析"
+          },
+          {
+            "id": 46,
+            "pos": "n.",
+            "meaning": "证据"
+          },
+          {
+            "id": 47,
+            "pos": "v.",
+            "meaning": "预测"
+          },
+          {
+            "id": 48,
+            "pos": "v.",
+            "meaning": "保护"
+          }
+        ],
+        "chineseChars": 204,
+        "boundaryNormalizations": 0
+      },
+      "missing": []
+    }
+  ]
+}

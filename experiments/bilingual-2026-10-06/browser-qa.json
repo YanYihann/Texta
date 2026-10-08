@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-06",
+  "origin": "http://127.0.0.1:3013",
+  "notes": "Local mocked API only. No production API/provider/database access.",
+  "stats": {
+    "before": {
+      "enMarks": 12,
+      "zhMarks": 12,
+      "levelRemoved": true,
+      "shortChecked": true,
+      "detailCalls": 0,
+      "translationCalls": 0,
+      "generation": {
+        "words": "budget, relax, process, standard, attitude, motivation, derive, sterility, plume, bristle, cricket, expenses",
+        "shortMode": true,
+        "generationMode": "standard",
+        "generationQuality": "normal"
+      }
+    },
+    "after": {
+      "detailCalls": 1,
+      "translationCalls": 0,
+      "summary": "一股蒸汽",
+      "contextTranslation": "清洁过的设备放进灭菌器后，一股蒸汽①从灭菌器的排气口升起。",
+      "pairedTranslation": "清洁过的设备放进灭菌器后，一股蒸汽从灭菌器的排气口升起。"
+    },
+    "viewport": {
+      "width": 1440,
+      "contentWidth": 1430
+    },
+    "restored": {
+      "title": "Ready for the Workshop",
+      "pairs": 8,
+      "enMarks": 12,
+      "zhMarks": 12
+    },
+    "migrated": {
+      "levelRemoved": true,
+      "shortMode": true,
+      "mode": "standard",
+      "quality": "normal",
+      "words": "budget, process"
+    }
+  },
+  "favorite": {
+    "title": "Ready for the Workshop",
+    "words": 12,
+    "sentencePairs": 8,
+    "alignedWords": 12
+  },
+  "requestCounts": {
+    "/auth/me": 3,
+    "/usage": 3,
+    "/library": 3,
+    "/health": 4,
+    "/library/sync": 4,
+    "/generate": 1,
+    "/vocab/detail": 1
+  },
+  "generationRequests": [
+    {
+      "words": "budget, relax, process, standard, attitude, motivation, derive, sterility, plume, bristle, cricket, expenses",
+      "shortMode": true,
+      "generationMode": "standard",
+      "generationQuality": "normal"
+    }
+  ],
+  "screenshots": {
+    "bilingual-desktop.png": {
+      "width": 1440,
+      "height": 1000
+    },
+    "bilingual-mobile.png": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "mobileOverflowCheck": {
+    "width": 390,
+    "contentWidth": 380
+  }
+}

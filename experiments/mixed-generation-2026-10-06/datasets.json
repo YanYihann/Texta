@@ -1,0 +1,62 @@
+[
+  {
+    "id": "theme-6",
+    "name": "主题词表 · 6词",
+    "words": [
+      "sustainable",
+      "resilient",
+      "adapt",
+      "perspective",
+      "thrive",
+      "balance"
+    ]
+  },
+  {
+    "id": "mixed-12",
+    "name": "混合难词 · 12词",
+    "words": [
+      "budget",
+      "relax",
+      "process",
+      "standard",
+      "attitude",
+      "motivation",
+      "derive",
+      "sterility",
+      "plume",
+      "bristle",
+      "cricket",
+      "expenses"
+    ]
+  },
+  {
+    "id": "long-24",
+    "name": "地理天气与行动 · 24词",
+    "words": [
+      "granite",
+      "terrain",
+      "arctic",
+      "deteriorate",
+      "gulf",
+      "meteorology",
+      "thermal",
+      "tropics",
+      "arid",
+      "humid",
+      "hail",
+      "thaw",
+      "shiver",
+      "budget",
+      "relax",
+      "process",
+      "standard",
+      "attitude",
+      "motivation",
+      "cover",
+      "reject",
+      "derive",
+      "contribute",
+      "expenses"
+    ]
+  }
+]

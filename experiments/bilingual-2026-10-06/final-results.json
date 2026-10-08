@@ -1,0 +1,2622 @@
+{
+  "date": "2026-10-06",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "engineSha256": "5d92e85320caf35222b072defc302b444cc4a4bd1853a5e9776e92073ce0cf1d",
+  "notes": "Signed-in Codex only; no Texta API requests or .env keys. Two independent sample requests run concurrently. CLI tokens/time include harness, reasoning and service latency; do not represent production DeepSeek performance. Initial prompt trials are retained separately.",
+  "results": [
+    {
+      "id": "theme-6",
+      "words": [
+        "sustainable",
+        "resilient",
+        "adapt",
+        "perspective",
+        "thrive",
+        "balance"
+      ],
+      "limits": {
+        "minWords": 102,
+        "maxWords": 160,
+        "hardMin": 61,
+        "hardMax": 200,
+        "maxTokens": 1440,
+        "paragraphs": "2–3"
+      },
+      "calls": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 57.219,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18878,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1486,
+            "reasoning_output_tokens": 996
+          },
+          "tools": [],
+          "text": "{\"title\":\"Lunch Beyond the Roadworks\",\"paragraphs\":[[[\"When road repairs blocked the entrance to Mina’s café, sales fell, and she worried about paying her two employees.\",\"道路维修挡住了米娜咖啡馆的入口，销售额下降了，她开始担心付不起两名员工的工资。\"],[\"Her first idea was to sell lunch online, but a regular customer offered a different ⟦4|perspective⟧: nearby office workers still needed food, even if they could not reach her door.\",\"她最初想在网上卖午餐，但一位常客提出了不同的⟦4|n.|看法⟧：附近的上班族即使到不了她店门口，也仍然需要吃饭。\"]],[[\"Mina decided to ⟦3|adapt⟧ by taking orders over the phone and delivering lunches on foot.\",\"米娜决定通过电话接单、步行送午餐来⟦3|v.|适应变化⟧。\"],[\"To keep the service ⟦1|sustainable⟧, she charged a small delivery fee instead of promising free delivery.\",\"为了让这项服务⟦1|adj.|能够长期维持⟧，她收取少量配送费，而没有承诺免费配送。\"],[\"She also had to ⟦6|balance⟧ delivery work with serving the few people who came through the back entrance.\",\"她还得在配送工作和接待少数从后门进来的客人之间⟦6|v.|兼顾两者⟧。\"],[\"Her ⟦2|resilient⟧ team soon recovered from the stressful first week and settled into a routine.\",\"她⟦2|adj.|抗挫能力强的⟧团队很快从第一周的压力中缓过来，并建立起固定的工作节奏。\"],[\"By the time the road reopened, the café had begun to ⟦5|thrive⟧, with office orders arriving every morning.\",\"到道路重新开放时，咖啡馆的生意已开始⟦5|v.|兴旺起来⟧，每天早上都有来自办公室的订单。\"]]]}",
+          "promptChars": 922
+        }
+      ],
+      "parsed": {
+        "issues": [],
+        "title": "Lunch Beyond the Roadworks",
+        "article": "When road repairs blocked the entrance to Mina’s café, sales fell, and she worried about paying her two employees. Her first idea was to sell lunch online, but a regular customer offered a different perspective: nearby office workers still needed food, even if they could not reach her door.\n\nMina decided to adapt by taking orders over the phone and delivering lunches on foot. To keep the service sustainable, she charged a small delivery fee instead of promising free delivery. She also had to balance delivery work with serving the few people who came through the back entrance. Her resilient team soon recovered from the stressful first week and settled into a routine. By the time the road reopened, the café had begun to thrive, with office orders arriving every morning.",
+        "paragraphsEn": [
+          "When road repairs blocked the entrance to Mina’s café, sales fell, and she worried about paying her two employees. Her first idea was to sell lunch online, but a regular customer offered a different perspective: nearby office workers still needed food, even if they could not reach her door.",
+          "Mina decided to adapt by taking orders over the phone and delivering lunches on foot. To keep the service sustainable, she charged a small delivery fee instead of promising free delivery. She also had to balance delivery work with serving the few people who came through the back entrance. Her resilient team soon recovered from the stressful first week and settled into a routine. By the time the road reopened, the café had begun to thrive, with office orders arriving every morning."
+        ],
+        "paragraphsZh": [
+          "道路维修挡住了米娜咖啡馆的入口，销售额下降了，她开始担心付不起两名员工的工资。她最初想在网上卖午餐，但一位常客提出了不同的看法：附近的上班族即使到不了她店门口，也仍然需要吃饭。",
+          "米娜决定通过电话接单、步行送午餐来适应变化。为了让这项服务能够长期维持，她收取少量配送费，而没有承诺免费配送。她还得在配送工作和接待少数从后门进来的客人之间兼顾两者。她抗挫能力强的团队很快从第一周的压力中缓过来，并建立起固定的工作节奏。到道路重新开放时，咖啡馆的生意已开始兴旺起来，每天早上都有来自办公室的订单。"
+        ],
+        "sentencePairs": [
+          {
+            "paragraph": 0,
+            "en": "When road repairs blocked the entrance to Mina’s café, sales fell, and she worried about paying her two employees.",
+            "zh": "道路维修挡住了米娜咖啡馆的入口，销售额下降了，她开始担心付不起两名员工的工资。"
+          },
+          {
+            "paragraph": 0,
+            "en": "Her first idea was to sell lunch online, but a regular customer offered a different perspective: nearby office workers still needed food, even if they could not reach her door.",
+            "zh": "她最初想在网上卖午餐，但一位常客提出了不同的看法：附近的上班族即使到不了她店门口，也仍然需要吃饭。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Mina decided to adapt by taking orders over the phone and delivering lunches on foot.",
+            "zh": "米娜决定通过电话接单、步行送午餐来适应变化。"
+          },
+          {
+            "paragraph": 1,
+            "en": "To keep the service sustainable, she charged a small delivery fee instead of promising free delivery.",
+            "zh": "为了让这项服务能够长期维持，她收取少量配送费，而没有承诺免费配送。"
+          },
+          {
+            "paragraph": 1,
+            "en": "She also had to balance delivery work with serving the few people who came through the back entrance.",
+            "zh": "她还得在配送工作和接待少数从后门进来的客人之间兼顾两者。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Her resilient team soon recovered from the stressful first week and settled into a routine.",
+            "zh": "她抗挫能力强的团队很快从第一周的压力中缓过来，并建立起固定的工作节奏。"
+          },
+          {
+            "paragraph": 1,
+            "en": "By the time the road reopened, the café had begun to thrive, with office orders arriving every morning.",
+            "zh": "到道路重新开放时，咖啡馆的生意已开始兴旺起来，每天早上都有来自办公室的订单。"
+          }
+        ],
+        "alignment": [
+          {
+            "word": "sustainable",
+            "marker": "①",
+            "english_forms": [
+              "sustainable"
+            ],
+            "zh_terms": [
+              "能够长期维持"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 1,
+                "enStart": 106,
+                "enEnd": 117,
+                "zhStart": 29,
+                "zhEnd": 35
+              }
+            ]
+          },
+          {
+            "word": "resilient",
+            "marker": "①",
+            "english_forms": [
+              "resilient"
+            ],
+            "zh_terms": [
+              "抗挫能力强的"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 294,
+                "enEnd": 303,
+                "zhStart": 84,
+                "zhEnd": 90
+              }
+            ]
+          },
+          {
+            "word": "adapt",
+            "marker": "①",
+            "english_forms": [
+              "adapt"
+            ],
+            "zh_terms": [
+              "适应变化"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 0,
+                "enStart": 16,
+                "enEnd": 21,
+                "zhStart": 17,
+                "zhEnd": 21
+              }
+            ]
+          },
+          {
+            "word": "perspective",
+            "marker": "①",
+            "english_forms": [
+              "perspective"
+            ],
+            "zh_terms": [
+              "看法"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 199,
+                "enEnd": 210,
+                "zhStart": 61,
+                "zhEnd": 63
+              }
+            ]
+          },
+          {
+            "word": "thrive",
+            "marker": "①",
+            "english_forms": [
+              "thrive"
+            ],
+            "zh_terms": [
+              "兴旺起来"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 4,
+                "enStart": 435,
+                "enEnd": 441,
+                "zhStart": 136,
+                "zhEnd": 140
+              }
+            ]
+          },
+          {
+            "word": "balance",
+            "marker": "①",
+            "english_forms": [
+              "balance"
+            ],
+            "zh_terms": [
+              "兼顾两者"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 2,
+                "enStart": 204,
+                "enEnd": 211,
+                "zhStart": 78,
+                "zhEnd": 82
+              }
+            ]
+          }
+        ],
+        "glosses": [
+          {
+            "pos": "adj.",
+            "meaning": "能够长期维持"
+          },
+          {
+            "pos": "adj.",
+            "meaning": "抗挫能力强的"
+          },
+          {
+            "pos": "v.",
+            "meaning": "适应变化"
+          },
+          {
+            "pos": "n.",
+            "meaning": "看法"
+          },
+          {
+            "pos": "v.",
+            "meaning": "兴旺起来"
+          },
+          {
+            "pos": "v.",
+            "meaning": "兼顾两者"
+          }
+        ],
+        "englishWords": 131
+      }
+    },
+    {
+      "id": "random-12",
+      "words": [
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "derive",
+        "sterility",
+        "plume",
+        "bristle",
+        "cricket",
+        "expenses"
+      ],
+      "limits": {
+        "minWords": 144,
+        "maxWords": 220,
+        "hardMin": 86,
+        "hardMax": 275,
+        "maxTokens": 1980,
+        "paragraphs": "2–3"
+      },
+      "calls": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 64.356,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18910,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1732,
+            "reasoning_output_tokens": 1002
+          },
+          "tools": [],
+          "text": "{\"title\":\"Preparing the Clinic\",\"paragraphs\":[[[\"Our ⟦11|cricket⟧ club had offered its hall for a free weekend dental clinic, and I arrived early to help Dr Lee prepare.\",\"我们的⟦11|n.|板球⟧俱乐部提供了大厅，用于周末的免费牙科义诊，我早早到场，帮李医生做准备。\"],[\"He had set a tight ⟦1|budget⟧, so we checked our supplies before buying anything that would add to our ⟦12|expenses⟧.\",\"他制定了紧张的⟦1|n.|预算⟧，所以我们先检查现有用品，再购买任何会增加我们⟦12|n.|开支⟧的东西。\"],[\"My main ⟦6|motivation⟧ was to help neighbours who could not afford a checkup, but I was nervous about handling the instruments.\",\"我主要的⟦6|n.|动力⟧是帮助付不起检查费用的邻居，但操作这些器械让我感到紧张。\"],[\"Dr Lee's calm ⟦5|attitude⟧ helped me focus as he showed me the cleaning ⟦3|process⟧.\",\"李医生向我演示清洗⟦3|n.|流程⟧时，他冷静的⟦5|n.|态度⟧帮助我集中注意力。\"],[\"While checking a pair of forceps, I spotted a loose ⟦10|bristle⟧ from the cleaning brush caught in the hinge.\",\"检查一把钳子时，我发现清洁刷上脱落的一根⟦10|n.|刷毛⟧卡在了铰接处。\"]],[[\"We removed it and cleaned the forceps again before packing the instruments for sterilization.\",\"我们取出了它，再次清洗了钳子，然后将器械包装好，准备灭菌。\"],[\"A small ⟦9|plume⟧ of steam rose from the machine's outlet while the cycle ran.\",\"机器运行这一周期时，一小⟦9|n.|股⟧蒸汽从出口升起。\"],[\"Dr Lee explained that the sealed packages would help maintain the ⟦8|sterility⟧ of the instruments until we opened them for treatment.\",\"李医生解释说，密封包装有助于保持器械的⟦8|n.|无菌状态⟧，直到我们为治疗而打开包装。\"],[\"Every tray had to meet the same ⟦4|standard⟧, and I began to ⟦7|derive⟧ real satisfaction from getting each one ready.\",\"每个托盘都必须达到同一⟦4|n.|标准⟧，而我开始从准备好每个托盘这件事中⟦7|v.|获得⟧实实在在的满足感。\"],[\"Once everything was prepared and the first patients had arrived, he told me I could ⟦2|relax⟧ and take a short break.\",\"一切准备妥当、第一批患者到达后，他告诉我可以⟦2|v.|放松⟧一下，短暂休息一会儿。\"]]]}",
+          "promptChars": 1004
+        }
+      ],
+      "parsed": {
+        "issues": [],
+        "title": "Preparing the Clinic",
+        "article": "Our cricket club had offered its hall for a free weekend dental clinic, and I arrived early to help Dr Lee prepare. He had set a tight budget, so we checked our supplies before buying anything that would add to our expenses. My main motivation was to help neighbours who could not afford a checkup, but I was nervous about handling the instruments. Dr Lee's calm attitude helped me focus as he showed me the cleaning process. While checking a pair of forceps, I spotted a loose bristle from the cleaning brush caught in the hinge.\n\nWe removed it and cleaned the forceps again before packing the instruments for sterilization. A small plume of steam rose from the machine's outlet while the cycle ran. Dr Lee explained that the sealed packages would help maintain the sterility of the instruments until we opened them for treatment. Every tray had to meet the same standard, and I began to derive real satisfaction from getting each one ready. Once everything was prepared and the first patients had arrived, he told me I could relax and take a short break.",
+        "paragraphsEn": [
+          "Our cricket club had offered its hall for a free weekend dental clinic, and I arrived early to help Dr Lee prepare. He had set a tight budget, so we checked our supplies before buying anything that would add to our expenses. My main motivation was to help neighbours who could not afford a checkup, but I was nervous about handling the instruments. Dr Lee's calm attitude helped me focus as he showed me the cleaning process. While checking a pair of forceps, I spotted a loose bristle from the cleaning brush caught in the hinge.",
+          "We removed it and cleaned the forceps again before packing the instruments for sterilization. A small plume of steam rose from the machine's outlet while the cycle ran. Dr Lee explained that the sealed packages would help maintain the sterility of the instruments until we opened them for treatment. Every tray had to meet the same standard, and I began to derive real satisfaction from getting each one ready. Once everything was prepared and the first patients had arrived, he told me I could relax and take a short break."
+        ],
+        "paragraphsZh": [
+          "我们的板球俱乐部提供了大厅，用于周末的免费牙科义诊，我早早到场，帮李医生做准备。他制定了紧张的预算，所以我们先检查现有用品，再购买任何会增加我们开支的东西。我主要的动力是帮助付不起检查费用的邻居，但操作这些器械让我感到紧张。李医生向我演示清洗流程时，他冷静的态度帮助我集中注意力。检查一把钳子时，我发现清洁刷上脱落的一根刷毛卡在了铰接处。",
+          "我们取出了它，再次清洗了钳子，然后将器械包装好，准备灭菌。机器运行这一周期时，一小股蒸汽从出口升起。李医生解释说，密封包装有助于保持器械的无菌状态，直到我们为治疗而打开包装。每个托盘都必须达到同一标准，而我开始从准备好每个托盘这件事中获得实实在在的满足感。一切准备妥当、第一批患者到达后，他告诉我可以放松一下，短暂休息一会儿。"
+        ],
+        "sentencePairs": [
+          {
+            "paragraph": 0,
+            "en": "Our cricket club had offered its hall for a free weekend dental clinic, and I arrived early to help Dr Lee prepare.",
+            "zh": "我们的板球俱乐部提供了大厅，用于周末的免费牙科义诊，我早早到场，帮李医生做准备。"
+          },
+          {
+            "paragraph": 0,
+            "en": "He had set a tight budget, so we checked our supplies before buying anything that would add to our expenses.",
+            "zh": "他制定了紧张的预算，所以我们先检查现有用品，再购买任何会增加我们开支的东西。"
+          },
+          {
+            "paragraph": 0,
+            "en": "My main motivation was to help neighbours who could not afford a checkup, but I was nervous about handling the instruments.",
+            "zh": "我主要的动力是帮助付不起检查费用的邻居，但操作这些器械让我感到紧张。"
+          },
+          {
+            "paragraph": 0,
+            "en": "Dr Lee's calm attitude helped me focus as he showed me the cleaning process.",
+            "zh": "李医生向我演示清洗流程时，他冷静的态度帮助我集中注意力。"
+          },
+          {
+            "paragraph": 0,
+            "en": "While checking a pair of forceps, I spotted a loose bristle from the cleaning brush caught in the hinge.",
+            "zh": "检查一把钳子时，我发现清洁刷上脱落的一根刷毛卡在了铰接处。"
+          },
+          {
+            "paragraph": 1,
+            "en": "We removed it and cleaned the forceps again before packing the instruments for sterilization.",
+            "zh": "我们取出了它，再次清洗了钳子，然后将器械包装好，准备灭菌。"
+          },
+          {
+            "paragraph": 1,
+            "en": "A small plume of steam rose from the machine's outlet while the cycle ran.",
+            "zh": "机器运行这一周期时，一小股蒸汽从出口升起。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Dr Lee explained that the sealed packages would help maintain the sterility of the instruments until we opened them for treatment.",
+            "zh": "李医生解释说，密封包装有助于保持器械的无菌状态，直到我们为治疗而打开包装。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Every tray had to meet the same standard, and I began to derive real satisfaction from getting each one ready.",
+            "zh": "每个托盘都必须达到同一标准，而我开始从准备好每个托盘这件事中获得实实在在的满足感。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Once everything was prepared and the first patients had arrived, he told me I could relax and take a short break.",
+            "zh": "一切准备妥当、第一批患者到达后，他告诉我可以放松一下，短暂休息一会儿。"
+          }
+        ],
+        "alignment": [
+          {
+            "word": "budget",
+            "marker": "①",
+            "english_forms": [
+              "budget"
+            ],
+            "zh_terms": [
+              "预算"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 135,
+                "enEnd": 141,
+                "zhStart": 47,
+                "zhEnd": 49
+              }
+            ]
+          },
+          {
+            "word": "relax",
+            "marker": "①",
+            "english_forms": [
+              "relax"
+            ],
+            "zh_terms": [
+              "放松"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 4,
+                "enStart": 495,
+                "enEnd": 500,
+                "zhStart": 150,
+                "zhEnd": 152
+              }
+            ]
+          },
+          {
+            "word": "process",
+            "marker": "①",
+            "english_forms": [
+              "process"
+            ],
+            "zh_terms": [
+              "流程"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 3,
+                "enStart": 417,
+                "enEnd": 424,
+                "zhStart": 121,
+                "zhEnd": 123
+              }
+            ]
+          },
+          {
+            "word": "standard",
+            "marker": "①",
+            "english_forms": [
+              "standard"
+            ],
+            "zh_terms": [
+              "标准"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 332,
+                "enEnd": 340,
+                "zhStart": 98,
+                "zhEnd": 100
+              }
+            ]
+          },
+          {
+            "word": "attitude",
+            "marker": "①",
+            "english_forms": [
+              "attitude"
+            ],
+            "zh_terms": [
+              "态度"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 3,
+                "enStart": 363,
+                "enEnd": 371,
+                "zhStart": 129,
+                "zhEnd": 131
+              }
+            ]
+          },
+          {
+            "word": "motivation",
+            "marker": "①",
+            "english_forms": [
+              "motivation"
+            ],
+            "zh_terms": [
+              "动力"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 2,
+                "enStart": 233,
+                "enEnd": 243,
+                "zhStart": 82,
+                "zhEnd": 84
+              }
+            ]
+          },
+          {
+            "word": "derive",
+            "marker": "①",
+            "english_forms": [
+              "derive"
+            ],
+            "zh_terms": [
+              "获得"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 357,
+                "enEnd": 363,
+                "zhStart": 117,
+                "zhEnd": 119
+              }
+            ]
+          },
+          {
+            "word": "sterility",
+            "marker": "①",
+            "english_forms": [
+              "sterility"
+            ],
+            "zh_terms": [
+              "无菌状态"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 2,
+                "enStart": 235,
+                "enEnd": 244,
+                "zhStart": 69,
+                "zhEnd": 73
+              }
+            ]
+          },
+          {
+            "word": "plume",
+            "marker": "①",
+            "english_forms": [
+              "plume"
+            ],
+            "zh_terms": [
+              "股"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 1,
+                "enStart": 102,
+                "enEnd": 107,
+                "zhStart": 41,
+                "zhEnd": 42
+              }
+            ]
+          },
+          {
+            "word": "bristle",
+            "marker": "①",
+            "english_forms": [
+              "bristle"
+            ],
+            "zh_terms": [
+              "刷毛"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 4,
+                "enStart": 478,
+                "enEnd": 485,
+                "zhStart": 160,
+                "zhEnd": 162
+              }
+            ]
+          },
+          {
+            "word": "cricket",
+            "marker": "①",
+            "english_forms": [
+              "cricket"
+            ],
+            "zh_terms": [
+              "板球"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 0,
+                "enStart": 4,
+                "enEnd": 11,
+                "zhStart": 3,
+                "zhEnd": 5
+              }
+            ]
+          },
+          {
+            "word": "expenses",
+            "marker": "①",
+            "english_forms": [
+              "expenses"
+            ],
+            "zh_terms": [
+              "开支"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 215,
+                "enEnd": 223,
+                "zhStart": 72,
+                "zhEnd": 74
+              }
+            ]
+          }
+        ],
+        "glosses": [
+          {
+            "pos": "n.",
+            "meaning": "预算"
+          },
+          {
+            "pos": "v.",
+            "meaning": "放松"
+          },
+          {
+            "pos": "n.",
+            "meaning": "流程"
+          },
+          {
+            "pos": "n.",
+            "meaning": "标准"
+          },
+          {
+            "pos": "n.",
+            "meaning": "态度"
+          },
+          {
+            "pos": "n.",
+            "meaning": "动力"
+          },
+          {
+            "pos": "v.",
+            "meaning": "获得"
+          },
+          {
+            "pos": "n.",
+            "meaning": "无菌状态"
+          },
+          {
+            "pos": "n.",
+            "meaning": "股"
+          },
+          {
+            "pos": "n.",
+            "meaning": "刷毛"
+          },
+          {
+            "pos": "n.",
+            "meaning": "板球"
+          },
+          {
+            "pos": "n.",
+            "meaning": "开支"
+          }
+        ],
+        "englishWords": 186
+      }
+    },
+    {
+      "id": "random-12-short",
+      "shortMode": true,
+      "words": [
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "derive",
+        "sterility",
+        "plume",
+        "bristle",
+        "cricket",
+        "expenses"
+      ],
+      "limits": {
+        "minWords": 95,
+        "maxWords": 149,
+        "hardMin": 57,
+        "hardMax": 187,
+        "maxTokens": 1696,
+        "paragraphs": "1–2"
+      },
+      "calls": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 62.049,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18208,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1814,
+            "reasoning_output_tokens": 1292
+          },
+          "tools": [],
+          "text": "{\"title\":\"Small Discoveries\",\"paragraphs\":[[[\"Maya planned a microscope workshop on a ⟦1|budget⟧ that barely covered the ⟦12|expenses⟧.\",\"玛雅计划举办一次显微镜体验课，⟦1|n.|预算⟧勉强够支付⟦12|n.|开支⟧。\"],[\"Her ⟦6|motivation⟧ was to help children notice details they usually missed.\",\"她的⟦6|n.|动力⟧是帮助孩子们注意到平时忽略的细节。\"],[\"Because she could not guarantee ⟦8|sterility⟧ in the borrowed classroom, she ruled out growing bacteria.\",\"因为她无法保证借来的教室处于⟦8|n.|无菌状态⟧，她排除了培养细菌的活动。\"]],[[\"Instead, she brought a peacock ⟦9|plume⟧, a ⟦10|bristle⟧ from a paintbrush, and a dead ⟦11|cricket⟧.\",\"于是，她带来了一根孔雀⟦9|n.|翎羽⟧、一根画笔上的⟦10|n.|刷毛⟧和一只死⟦11|n.|蟋蟀⟧。\"],[\"She set a clear ⟦4|standard⟧: the children had to ⟦7|derive⟧ their conclusions from what they actually saw.\",\"她定下了一条明确的⟦4|n.|标准⟧：孩子们必须根据自己实际看到的情况⟦7|v.|得出⟧自己的结论。\"],[\"One boy's dismissive ⟦5|attitude⟧ changed when he saw tiny hairs on the insect's leg.\",\"一个男孩看到那只昆虫腿上的细小绒毛后，他原本不屑的⟦5|n.|态度⟧发生了变化。\"],[\"By the end, everyone had completed a detailed drawing, and Maya could finally ⟦2|relax⟧.\",\"活动结束时，每个人都完成了一幅细致的图画，玛雅终于可以⟦2|v.|放松⟧了。\"]]]}",
+          "promptChars": 997
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 68.111,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18232,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1610,
+            "reasoning_output_tokens": 1034
+          },
+          "tools": [],
+          "text": "{\"title\":\"Keeping the Clinic Open\",\"paragraphs\":[[[\"A ⟦9|plume⟧ of smoke rose from our clinic's sterilizer just before we opened that morning.\",\"那天早上，就在我们开门前，一⟦9|n.|股烟⟧从诊所的灭菌器里升起。\"],[\"Repair ⟦12|expenses⟧ exceeded our monthly ⟦1|budget⟧, and my manager's gloomy ⟦5|attitude⟧ made the problem feel even worse.\",\"维修⟦12|n.|费用⟧超出了我们每月的⟦1|n.|预算⟧，而经理悲观的⟦5|n.|态度⟧让这个问题显得更加糟糕。\"],[\"We postponed every operation because ⟦8|sterility⟧ was the required ⟦4|standard⟧ for our surgical instruments.\",\"我们推迟了所有手术，因为我们的手术器械必须达到⟦8|n.|无菌状态⟧这一⟦4|n.|标准⟧。\"],[\"While cleaning the room, I removed a loose ⟦10|bristle⟧ from a tray before putting it away.\",\"清理房间时，我先从一个托盘上取下一根脱落的⟦10|n.|刷毛⟧，再把托盘收好。\"]],[[\"My ⟦6|motivation⟧ was simple: local animals needed the clinic.\",\"我的⟦6|n.|动机⟧很简单：当地的动物需要这家诊所。\"],[\"I organized a charity ⟦11|cricket⟧ match, and enough neighbors bought tickets to pay for the repair.\",\"我组织了一场慈善⟦11|n.|板球⟧比赛，买票的邻居足够多，票款足以支付维修费用。\"],[\"The whole ⟦3|process⟧ took a week.\",\"整个⟦3|n.|过程⟧花了一周时间。\"],[\"When the machine passed its safety checks, my manager could finally ⟦2|relax⟧.\",\"机器通过安全检查后，我的经理终于可以⟦2|v.|放松⟧了。\"],[\"I still ⟦7|derive⟧ great satisfaction from seeing the clinic open again.\",\"看到诊所重新开门，我至今仍从中⟦7|v.|获得⟧极大的满足感。\"]]]}",
+          "promptChars": 1037
+        }
+      ],
+      "parsed": {
+        "issues": [],
+        "title": "Keeping the Clinic Open",
+        "article": "A plume of smoke rose from our clinic's sterilizer just before we opened that morning. Repair expenses exceeded our monthly budget, and my manager's gloomy attitude made the problem feel even worse. We postponed every operation because sterility was the required standard for our surgical instruments. While cleaning the room, I removed a loose bristle from a tray before putting it away.\n\nMy motivation was simple: local animals needed the clinic. I organized a charity cricket match, and enough neighbors bought tickets to pay for the repair. The whole process took a week. When the machine passed its safety checks, my manager could finally relax. I still derive great satisfaction from seeing the clinic open again.",
+        "paragraphsEn": [
+          "A plume of smoke rose from our clinic's sterilizer just before we opened that morning. Repair expenses exceeded our monthly budget, and my manager's gloomy attitude made the problem feel even worse. We postponed every operation because sterility was the required standard for our surgical instruments. While cleaning the room, I removed a loose bristle from a tray before putting it away.",
+          "My motivation was simple: local animals needed the clinic. I organized a charity cricket match, and enough neighbors bought tickets to pay for the repair. The whole process took a week. When the machine passed its safety checks, my manager could finally relax. I still derive great satisfaction from seeing the clinic open again."
+        ],
+        "paragraphsZh": [
+          "那天早上，就在我们开门前，一股烟从诊所的灭菌器里升起。维修费用超出了我们每月的预算，而经理悲观的态度让这个问题显得更加糟糕。我们推迟了所有手术，因为我们的手术器械必须达到无菌状态这一标准。清理房间时，我先从一个托盘上取下一根脱落的刷毛，再把托盘收好。",
+          "我的动机很简单：当地的动物需要这家诊所。我组织了一场慈善板球比赛，买票的邻居足够多，票款足以支付维修费用。整个过程花了一周时间。机器通过安全检查后，我的经理终于可以放松了。看到诊所重新开门，我至今仍从中获得极大的满足感。"
+        ],
+        "sentencePairs": [
+          {
+            "paragraph": 0,
+            "en": "A plume of smoke rose from our clinic's sterilizer just before we opened that morning.",
+            "zh": "那天早上，就在我们开门前，一股烟从诊所的灭菌器里升起。"
+          },
+          {
+            "paragraph": 0,
+            "en": "Repair expenses exceeded our monthly budget, and my manager's gloomy attitude made the problem feel even worse.",
+            "zh": "维修费用超出了我们每月的预算，而经理悲观的态度让这个问题显得更加糟糕。"
+          },
+          {
+            "paragraph": 0,
+            "en": "We postponed every operation because sterility was the required standard for our surgical instruments.",
+            "zh": "我们推迟了所有手术，因为我们的手术器械必须达到无菌状态这一标准。"
+          },
+          {
+            "paragraph": 0,
+            "en": "While cleaning the room, I removed a loose bristle from a tray before putting it away.",
+            "zh": "清理房间时，我先从一个托盘上取下一根脱落的刷毛，再把托盘收好。"
+          },
+          {
+            "paragraph": 1,
+            "en": "My motivation was simple: local animals needed the clinic.",
+            "zh": "我的动机很简单：当地的动物需要这家诊所。"
+          },
+          {
+            "paragraph": 1,
+            "en": "I organized a charity cricket match, and enough neighbors bought tickets to pay for the repair.",
+            "zh": "我组织了一场慈善板球比赛，买票的邻居足够多，票款足以支付维修费用。"
+          },
+          {
+            "paragraph": 1,
+            "en": "The whole process took a week.",
+            "zh": "整个过程花了一周时间。"
+          },
+          {
+            "paragraph": 1,
+            "en": "When the machine passed its safety checks, my manager could finally relax.",
+            "zh": "机器通过安全检查后，我的经理终于可以放松了。"
+          },
+          {
+            "paragraph": 1,
+            "en": "I still derive great satisfaction from seeing the clinic open again.",
+            "zh": "看到诊所重新开门，我至今仍从中获得极大的满足感。"
+          }
+        ],
+        "alignment": [
+          {
+            "word": "budget",
+            "marker": "①",
+            "english_forms": [
+              "budget"
+            ],
+            "zh_terms": [
+              "预算"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 124,
+                "enEnd": 130,
+                "zhStart": 39,
+                "zhEnd": 41
+              }
+            ]
+          },
+          {
+            "word": "relax",
+            "marker": "①",
+            "english_forms": [
+              "relax"
+            ],
+            "zh_terms": [
+              "放松"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 254,
+                "enEnd": 259,
+                "zhStart": 82,
+                "zhEnd": 84
+              }
+            ]
+          },
+          {
+            "word": "process",
+            "marker": "①",
+            "english_forms": [
+              "process"
+            ],
+            "zh_terms": [
+              "过程"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 2,
+                "enStart": 165,
+                "enEnd": 172,
+                "zhStart": 55,
+                "zhEnd": 57
+              }
+            ]
+          },
+          {
+            "word": "standard",
+            "marker": "①",
+            "english_forms": [
+              "standard"
+            ],
+            "zh_terms": [
+              "标准"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 2,
+                "enStart": 263,
+                "enEnd": 271,
+                "zhStart": 91,
+                "zhEnd": 93
+              }
+            ]
+          },
+          {
+            "word": "attitude",
+            "marker": "①",
+            "english_forms": [
+              "attitude"
+            ],
+            "zh_terms": [
+              "态度"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 156,
+                "enEnd": 164,
+                "zhStart": 48,
+                "zhEnd": 50
+              }
+            ]
+          },
+          {
+            "word": "motivation",
+            "marker": "①",
+            "english_forms": [
+              "motivation"
+            ],
+            "zh_terms": [
+              "动机"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 0,
+                "enStart": 3,
+                "enEnd": 13,
+                "zhStart": 2,
+                "zhEnd": 4
+              }
+            ]
+          },
+          {
+            "word": "derive",
+            "marker": "①",
+            "english_forms": [
+              "derive"
+            ],
+            "zh_terms": [
+              "获得"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 4,
+                "enStart": 269,
+                "enEnd": 275,
+                "zhStart": 101,
+                "zhEnd": 103
+              }
+            ]
+          },
+          {
+            "word": "sterility",
+            "marker": "①",
+            "english_forms": [
+              "sterility"
+            ],
+            "zh_terms": [
+              "无菌状态"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 2,
+                "enStart": 236,
+                "enEnd": 245,
+                "zhStart": 85,
+                "zhEnd": 89
+              }
+            ]
+          },
+          {
+            "word": "plume",
+            "marker": "①",
+            "english_forms": [
+              "plume"
+            ],
+            "zh_terms": [
+              "股烟"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 0,
+                "enStart": 2,
+                "enEnd": 7,
+                "zhStart": 14,
+                "zhEnd": 16
+              }
+            ]
+          },
+          {
+            "word": "bristle",
+            "marker": "①",
+            "english_forms": [
+              "bristle"
+            ],
+            "zh_terms": [
+              "刷毛"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 3,
+                "enStart": 345,
+                "enEnd": 352,
+                "zhStart": 115,
+                "zhEnd": 117
+              }
+            ]
+          },
+          {
+            "word": "cricket",
+            "marker": "①",
+            "english_forms": [
+              "cricket"
+            ],
+            "zh_terms": [
+              "板球"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 1,
+                "enStart": 81,
+                "enEnd": 88,
+                "zhStart": 28,
+                "zhEnd": 30
+              }
+            ]
+          },
+          {
+            "word": "expenses",
+            "marker": "①",
+            "english_forms": [
+              "expenses"
+            ],
+            "zh_terms": [
+              "费用"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 94,
+                "enEnd": 102,
+                "zhStart": 29,
+                "zhEnd": 31
+              }
+            ]
+          }
+        ],
+        "glosses": [
+          {
+            "pos": "n.",
+            "meaning": "预算"
+          },
+          {
+            "pos": "v.",
+            "meaning": "放松"
+          },
+          {
+            "pos": "n.",
+            "meaning": "过程"
+          },
+          {
+            "pos": "n.",
+            "meaning": "标准"
+          },
+          {
+            "pos": "n.",
+            "meaning": "态度"
+          },
+          {
+            "pos": "n.",
+            "meaning": "动机"
+          },
+          {
+            "pos": "v.",
+            "meaning": "获得"
+          },
+          {
+            "pos": "n.",
+            "meaning": "无菌状态"
+          },
+          {
+            "pos": "n.",
+            "meaning": "股烟"
+          },
+          {
+            "pos": "n.",
+            "meaning": "刷毛"
+          },
+          {
+            "pos": "n.",
+            "meaning": "板球"
+          },
+          {
+            "pos": "n.",
+            "meaning": "费用"
+          }
+        ],
+        "englishWords": 116
+      }
+    },
+    {
+      "id": "weather-24",
+      "words": [
+        "granite",
+        "terrain",
+        "arctic",
+        "deteriorate",
+        "gulf",
+        "meteorology",
+        "thermal",
+        "tropics",
+        "arid",
+        "humid",
+        "hail",
+        "thaw",
+        "shiver",
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "cover",
+        "reject",
+        "derive",
+        "contribute",
+        "expenses"
+      ],
+      "limits": {
+        "minWords": 228,
+        "maxWords": 340,
+        "hardMin": 136,
+        "hardMax": 425,
+        "maxTokens": 3060,
+        "paragraphs": "3–5"
+      },
+      "calls": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 114.943,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18283,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3295,
+            "reasoning_output_tokens": 2070
+          },
+          "tools": [],
+          "text": "{\"title\":\"The Borrowed Station\",\"paragraphs\":[[[\"Mara's ⟦6|meteorology⟧ class needed a new weather station, and her teacher asked her to test a used one before the college bought it.\",\"玛拉所在的⟦6|n.|气象学⟧班需要一台新的气象站，老师请她在学院购买之前测试一台二手气象站。\"],[\"Their small ⟦14|budget⟧ had to ⟦20|cover⟧ both the equipment and travel ⟦24|expenses⟧.\",\"他们有限的⟦14|n.|预算⟧必须能够⟦20|v.|支付⟧设备和出行的⟦24|n.|费用⟧。\"],[\"Two classmates agreed to ⟦23|contribute⟧ their time, but Mara's main ⟦19|motivation⟧ was to keep the college's coastal weather records going.\",\"两位同学同意⟦23|v.|贡献⟧自己的时间，但玛拉主要的⟦19|n.|动力⟧是让学院的海岸气象记录继续下去。\"],[\"The old station had stopped working a month earlier.\",\"旧气象站一个月前就停止工作了。\"]],[[\"They set up the borrowed unit on a ⟦1|granite⟧ ledge above a narrow ⟦5|gulf⟧.\",\"他们把借来的设备架设在一处⟦1|n.|花岗岩⟧岩台上，岩台下方是一片狭窄的⟦5|n.|海湾⟧。\"],[\"Crossing the uneven ⟦2|terrain⟧ with a heavy case took longer than expected.\",\"带着一个沉重的箱子穿过起伏不平的⟦2|n.|地形⟧，花的时间比预想的更长。\"],[\"An ⟦3|arctic⟧ wind made Mara ⟦13|shiver⟧, even with her ⟦7|thermal⟧ jacket zipped up.\",\"一股⟦3|adj.|来自北极的⟧风让玛拉⟦13|v.|打寒战⟧，即使她已经拉好了⟦7|adj.|保暖⟧夹克的拉链。\"],[\"By midday, conditions began to ⟦4|deteriorate⟧, and a sudden shower of ⟦11|hail⟧ drove them into their van.\",\"到了中午，天气状况开始⟦4|v.|恶化⟧，一阵突如其来的⟦11|n.|冰雹⟧迫使他们躲进了自己的面包车。\"],[\"They left the unit outside and watched it through the window.\",\"他们把设备留在外面，透过车窗看着它。\"]],[[\"The seller's report claimed that the model worked well in the ⟦8|tropics⟧ and in ⟦9|arid⟧ regions.\",\"卖家的报告声称，这款型号在⟦8|n.|热带地区⟧和⟦9|adj.|干旱的⟧地区都运行良好。\"],[\"However, it said nothing about how its seals performed in cold, ⟦10|humid⟧ conditions.\",\"然而，报告完全没有提及它的密封件在寒冷、⟦10|adj.|潮湿的⟧条件下表现如何。\"],[\"When the shower ended, they found ice inside the battery compartment.\",\"这阵冰雹停下后，他们发现电池舱里有冰。\"],[\"They brought the unit into the heated van and waited for the ice to ⟦12|thaw⟧ before inspecting it.\",\"他们把设备搬进开着暖气的面包车，等冰⟦12|v.|融化⟧后才检查设备。\"],[\"A split rubber seal had let water in.\",\"一个裂开的橡胶密封件让水进了电池舱。\"]],[[\"Their testing ⟦16|process⟧ required the compartment to remain dry, and this unit failed to meet that ⟦17|standard⟧.\",\"他们的测试⟦16|n.|流程⟧要求电池舱保持干燥，而这台设备未能达到这一⟦17|n.|标准⟧。\"],[\"Mara decided to ⟦21|reject⟧ it, although its software could ⟦22|derive⟧ daily averages from hourly readings.\",\"玛拉决定⟦21|v.|拒绝接受⟧这台设备，尽管它的软件能够根据每小时的读数⟦22|v.|推算出⟧每日平均值。\"],[\"Her teacher approved her cautious ⟦18|attitude⟧ and found another supplier willing to lend them a unit while they saved for a replacement.\",\"老师认可她谨慎的⟦18|n.|态度⟧，并找到了另一家供应商，愿意在他们攒钱购买替代设备期间借给他们一台设备。\"],[\"Only then could Mara ⟦15|relax⟧.\",\"直到这时，玛拉才可以⟦15|v.|放松下来⟧。\"]]]}",
+          "promptChars": 1176
+        }
+      ],
+      "parsed": {
+        "issues": [],
+        "title": "The Borrowed Station",
+        "article": "Mara's meteorology class needed a new weather station, and her teacher asked her to test a used one before the college bought it. Their small budget had to cover both the equipment and travel expenses. Two classmates agreed to contribute their time, but Mara's main motivation was to keep the college's coastal weather records going. The old station had stopped working a month earlier.\n\nThey set up the borrowed unit on a granite ledge above a narrow gulf. Crossing the uneven terrain with a heavy case took longer than expected. An arctic wind made Mara shiver, even with her thermal jacket zipped up. By midday, conditions began to deteriorate, and a sudden shower of hail drove them into their van. They left the unit outside and watched it through the window.\n\nThe seller's report claimed that the model worked well in the tropics and in arid regions. However, it said nothing about how its seals performed in cold, humid conditions. When the shower ended, they found ice inside the battery compartment. They brought the unit into the heated van and waited for the ice to thaw before inspecting it. A split rubber seal had let water in.\n\nTheir testing process required the compartment to remain dry, and this unit failed to meet that standard. Mara decided to reject it, although its software could derive daily averages from hourly readings. Her teacher approved her cautious attitude and found another supplier willing to lend them a unit while they saved for a replacement. Only then could Mara relax.",
+        "paragraphsEn": [
+          "Mara's meteorology class needed a new weather station, and her teacher asked her to test a used one before the college bought it. Their small budget had to cover both the equipment and travel expenses. Two classmates agreed to contribute their time, but Mara's main motivation was to keep the college's coastal weather records going. The old station had stopped working a month earlier.",
+          "They set up the borrowed unit on a granite ledge above a narrow gulf. Crossing the uneven terrain with a heavy case took longer than expected. An arctic wind made Mara shiver, even with her thermal jacket zipped up. By midday, conditions began to deteriorate, and a sudden shower of hail drove them into their van. They left the unit outside and watched it through the window.",
+          "The seller's report claimed that the model worked well in the tropics and in arid regions. However, it said nothing about how its seals performed in cold, humid conditions. When the shower ended, they found ice inside the battery compartment. They brought the unit into the heated van and waited for the ice to thaw before inspecting it. A split rubber seal had let water in.",
+          "Their testing process required the compartment to remain dry, and this unit failed to meet that standard. Mara decided to reject it, although its software could derive daily averages from hourly readings. Her teacher approved her cautious attitude and found another supplier willing to lend them a unit while they saved for a replacement. Only then could Mara relax."
+        ],
+        "paragraphsZh": [
+          "玛拉所在的气象学班需要一台新的气象站，老师请她在学院购买之前测试一台二手气象站。他们有限的预算必须能够支付设备和出行的费用。两位同学同意贡献自己的时间，但玛拉主要的动力是让学院的海岸气象记录继续下去。旧气象站一个月前就停止工作了。",
+          "他们把借来的设备架设在一处花岗岩岩台上，岩台下方是一片狭窄的海湾。带着一个沉重的箱子穿过起伏不平的地形，花的时间比预想的更长。一股来自北极的风让玛拉打寒战，即使她已经拉好了保暖夹克的拉链。到了中午，天气状况开始恶化，一阵突如其来的冰雹迫使他们躲进了自己的面包车。他们把设备留在外面，透过车窗看着它。",
+          "卖家的报告声称，这款型号在热带地区和干旱的地区都运行良好。然而，报告完全没有提及它的密封件在寒冷、潮湿的条件下表现如何。这阵冰雹停下后，他们发现电池舱里有冰。他们把设备搬进开着暖气的面包车，等冰融化后才检查设备。一个裂开的橡胶密封件让水进了电池舱。",
+          "他们的测试流程要求电池舱保持干燥，而这台设备未能达到这一标准。玛拉决定拒绝接受这台设备，尽管它的软件能够根据每小时的读数推算出每日平均值。老师认可她谨慎的态度，并找到了另一家供应商，愿意在他们攒钱购买替代设备期间借给他们一台设备。直到这时，玛拉才可以放松下来。"
+        ],
+        "sentencePairs": [
+          {
+            "paragraph": 0,
+            "en": "Mara's meteorology class needed a new weather station, and her teacher asked her to test a used one before the college bought it.",
+            "zh": "玛拉所在的气象学班需要一台新的气象站，老师请她在学院购买之前测试一台二手气象站。"
+          },
+          {
+            "paragraph": 0,
+            "en": "Their small budget had to cover both the equipment and travel expenses.",
+            "zh": "他们有限的预算必须能够支付设备和出行的费用。"
+          },
+          {
+            "paragraph": 0,
+            "en": "Two classmates agreed to contribute their time, but Mara's main motivation was to keep the college's coastal weather records going.",
+            "zh": "两位同学同意贡献自己的时间，但玛拉主要的动力是让学院的海岸气象记录继续下去。"
+          },
+          {
+            "paragraph": 0,
+            "en": "The old station had stopped working a month earlier.",
+            "zh": "旧气象站一个月前就停止工作了。"
+          },
+          {
+            "paragraph": 1,
+            "en": "They set up the borrowed unit on a granite ledge above a narrow gulf.",
+            "zh": "他们把借来的设备架设在一处花岗岩岩台上，岩台下方是一片狭窄的海湾。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Crossing the uneven terrain with a heavy case took longer than expected.",
+            "zh": "带着一个沉重的箱子穿过起伏不平的地形，花的时间比预想的更长。"
+          },
+          {
+            "paragraph": 1,
+            "en": "An arctic wind made Mara shiver, even with her thermal jacket zipped up.",
+            "zh": "一股来自北极的风让玛拉打寒战，即使她已经拉好了保暖夹克的拉链。"
+          },
+          {
+            "paragraph": 1,
+            "en": "By midday, conditions began to deteriorate, and a sudden shower of hail drove them into their van.",
+            "zh": "到了中午，天气状况开始恶化，一阵突如其来的冰雹迫使他们躲进了自己的面包车。"
+          },
+          {
+            "paragraph": 1,
+            "en": "They left the unit outside and watched it through the window.",
+            "zh": "他们把设备留在外面，透过车窗看着它。"
+          },
+          {
+            "paragraph": 2,
+            "en": "The seller's report claimed that the model worked well in the tropics and in arid regions.",
+            "zh": "卖家的报告声称，这款型号在热带地区和干旱的地区都运行良好。"
+          },
+          {
+            "paragraph": 2,
+            "en": "However, it said nothing about how its seals performed in cold, humid conditions.",
+            "zh": "然而，报告完全没有提及它的密封件在寒冷、潮湿的条件下表现如何。"
+          },
+          {
+            "paragraph": 2,
+            "en": "When the shower ended, they found ice inside the battery compartment.",
+            "zh": "这阵冰雹停下后，他们发现电池舱里有冰。"
+          },
+          {
+            "paragraph": 2,
+            "en": "They brought the unit into the heated van and waited for the ice to thaw before inspecting it.",
+            "zh": "他们把设备搬进开着暖气的面包车，等冰融化后才检查设备。"
+          },
+          {
+            "paragraph": 2,
+            "en": "A split rubber seal had let water in.",
+            "zh": "一个裂开的橡胶密封件让水进了电池舱。"
+          },
+          {
+            "paragraph": 3,
+            "en": "Their testing process required the compartment to remain dry, and this unit failed to meet that standard.",
+            "zh": "他们的测试流程要求电池舱保持干燥，而这台设备未能达到这一标准。"
+          },
+          {
+            "paragraph": 3,
+            "en": "Mara decided to reject it, although its software could derive daily averages from hourly readings.",
+            "zh": "玛拉决定拒绝接受这台设备，尽管它的软件能够根据每小时的读数推算出每日平均值。"
+          },
+          {
+            "paragraph": 3,
+            "en": "Her teacher approved her cautious attitude and found another supplier willing to lend them a unit while they saved for a replacement.",
+            "zh": "老师认可她谨慎的态度，并找到了另一家供应商，愿意在他们攒钱购买替代设备期间借给他们一台设备。"
+          },
+          {
+            "paragraph": 3,
+            "en": "Only then could Mara relax.",
+            "zh": "直到这时，玛拉才可以放松下来。"
+          }
+        ],
+        "alignment": [
+          {
+            "word": "granite",
+            "marker": "①",
+            "english_forms": [
+              "granite"
+            ],
+            "zh_terms": [
+              "花岗岩"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 0,
+                "enStart": 35,
+                "enEnd": 42,
+                "zhStart": 13,
+                "zhEnd": 16
+              }
+            ]
+          },
+          {
+            "word": "terrain",
+            "marker": "①",
+            "english_forms": [
+              "terrain"
+            ],
+            "zh_terms": [
+              "地形"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 1,
+                "enStart": 90,
+                "enEnd": 97,
+                "zhStart": 49,
+                "zhEnd": 51
+              }
+            ]
+          },
+          {
+            "word": "arctic",
+            "marker": "①",
+            "english_forms": [
+              "arctic"
+            ],
+            "zh_terms": [
+              "来自北极的"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 2,
+                "enStart": 146,
+                "enEnd": 152,
+                "zhStart": 65,
+                "zhEnd": 70
+              }
+            ]
+          },
+          {
+            "word": "deteriorate",
+            "marker": "①",
+            "english_forms": [
+              "deteriorate"
+            ],
+            "zh_terms": [
+              "恶化"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 247,
+                "enEnd": 258,
+                "zhStart": 105,
+                "zhEnd": 107
+              }
+            ]
+          },
+          {
+            "word": "gulf",
+            "marker": "①",
+            "english_forms": [
+              "gulf"
+            ],
+            "zh_terms": [
+              "海湾"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 0,
+                "enStart": 64,
+                "enEnd": 68,
+                "zhStart": 30,
+                "zhEnd": 32
+              }
+            ]
+          },
+          {
+            "word": "meteorology",
+            "marker": "①",
+            "english_forms": [
+              "meteorology"
+            ],
+            "zh_terms": [
+              "气象学"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 0,
+                "enStart": 7,
+                "enEnd": 18,
+                "zhStart": 5,
+                "zhEnd": 8
+              }
+            ]
+          },
+          {
+            "word": "thermal",
+            "marker": "①",
+            "english_forms": [
+              "thermal"
+            ],
+            "zh_terms": [
+              "保暖"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 2,
+                "enStart": 190,
+                "enEnd": 197,
+                "zhStart": 86,
+                "zhEnd": 88
+              }
+            ]
+          },
+          {
+            "word": "tropics",
+            "marker": "①",
+            "english_forms": [
+              "tropics"
+            ],
+            "zh_terms": [
+              "热带地区"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 2,
+                "sentence": 0,
+                "enStart": 62,
+                "enEnd": 69,
+                "zhStart": 13,
+                "zhEnd": 17
+              }
+            ]
+          },
+          {
+            "word": "arid",
+            "marker": "①",
+            "english_forms": [
+              "arid"
+            ],
+            "zh_terms": [
+              "干旱的"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 2,
+                "sentence": 0,
+                "enStart": 77,
+                "enEnd": 81,
+                "zhStart": 18,
+                "zhEnd": 21
+              }
+            ]
+          },
+          {
+            "word": "humid",
+            "marker": "①",
+            "english_forms": [
+              "humid"
+            ],
+            "zh_terms": [
+              "潮湿的"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 2,
+                "sentence": 1,
+                "enStart": 155,
+                "enEnd": 160,
+                "zhStart": 49,
+                "zhEnd": 52
+              }
+            ]
+          },
+          {
+            "word": "hail",
+            "marker": "①",
+            "english_forms": [
+              "hail"
+            ],
+            "zh_terms": [
+              "冰雹"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 283,
+                "enEnd": 287,
+                "zhStart": 115,
+                "zhEnd": 117
+              }
+            ]
+          },
+          {
+            "word": "thaw",
+            "marker": "①",
+            "english_forms": [
+              "thaw"
+            ],
+            "zh_terms": [
+              "融化"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 2,
+                "sentence": 3,
+                "enStart": 311,
+                "enEnd": 315,
+                "zhStart": 97,
+                "zhEnd": 99
+              }
+            ]
+          },
+          {
+            "word": "shiver",
+            "marker": "①",
+            "english_forms": [
+              "shiver"
+            ],
+            "zh_terms": [
+              "打寒战"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 2,
+                "enStart": 168,
+                "enEnd": 174,
+                "zhStart": 74,
+                "zhEnd": 77
+              }
+            ]
+          },
+          {
+            "word": "budget",
+            "marker": "①",
+            "english_forms": [
+              "budget"
+            ],
+            "zh_terms": [
+              "预算"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 142,
+                "enEnd": 148,
+                "zhStart": 45,
+                "zhEnd": 47
+              }
+            ]
+          },
+          {
+            "word": "relax",
+            "marker": "①",
+            "english_forms": [
+              "relax"
+            ],
+            "zh_terms": [
+              "放松下来"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 3,
+                "sentence": 3,
+                "enStart": 360,
+                "enEnd": 365,
+                "zhStart": 125,
+                "zhEnd": 129
+              }
+            ]
+          },
+          {
+            "word": "process",
+            "marker": "①",
+            "english_forms": [
+              "process"
+            ],
+            "zh_terms": [
+              "流程"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 3,
+                "sentence": 0,
+                "enStart": 14,
+                "enEnd": 21,
+                "zhStart": 5,
+                "zhEnd": 7
+              }
+            ]
+          },
+          {
+            "word": "standard",
+            "marker": "①",
+            "english_forms": [
+              "standard"
+            ],
+            "zh_terms": [
+              "标准"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 3,
+                "sentence": 0,
+                "enStart": 96,
+                "enEnd": 104,
+                "zhStart": 28,
+                "zhEnd": 30
+              }
+            ]
+          },
+          {
+            "word": "attitude",
+            "marker": "①",
+            "english_forms": [
+              "attitude"
+            ],
+            "zh_terms": [
+              "态度"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 3,
+                "sentence": 2,
+                "enStart": 239,
+                "enEnd": 247,
+                "zhStart": 77,
+                "zhEnd": 79
+              }
+            ]
+          },
+          {
+            "word": "motivation",
+            "marker": "①",
+            "english_forms": [
+              "motivation"
+            ],
+            "zh_terms": [
+              "动力"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 2,
+                "enStart": 266,
+                "enEnd": 276,
+                "zhStart": 82,
+                "zhEnd": 84
+              }
+            ]
+          },
+          {
+            "word": "cover",
+            "marker": "①",
+            "english_forms": [
+              "cover"
+            ],
+            "zh_terms": [
+              "支付"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 156,
+                "enEnd": 161,
+                "zhStart": 51,
+                "zhEnd": 53
+              }
+            ]
+          },
+          {
+            "word": "reject",
+            "marker": "①",
+            "english_forms": [
+              "reject"
+            ],
+            "zh_terms": [
+              "拒绝接受"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 3,
+                "sentence": 1,
+                "enStart": 122,
+                "enEnd": 128,
+                "zhStart": 35,
+                "zhEnd": 39
+              }
+            ]
+          },
+          {
+            "word": "derive",
+            "marker": "①",
+            "english_forms": [
+              "derive"
+            ],
+            "zh_terms": [
+              "推算出"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 3,
+                "sentence": 1,
+                "enStart": 161,
+                "enEnd": 167,
+                "zhStart": 60,
+                "zhEnd": 63
+              }
+            ]
+          },
+          {
+            "word": "contribute",
+            "marker": "①",
+            "english_forms": [
+              "contribute"
+            ],
+            "zh_terms": [
+              "贡献"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 2,
+                "enStart": 227,
+                "enEnd": 237,
+                "zhStart": 68,
+                "zhEnd": 70
+              }
+            ]
+          },
+          {
+            "word": "expenses",
+            "marker": "①",
+            "english_forms": [
+              "expenses"
+            ],
+            "zh_terms": [
+              "费用"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 192,
+                "enEnd": 200,
+                "zhStart": 59,
+                "zhEnd": 61
+              }
+            ]
+          }
+        ],
+        "glosses": [
+          {
+            "pos": "n.",
+            "meaning": "花岗岩"
+          },
+          {
+            "pos": "n.",
+            "meaning": "地形"
+          },
+          {
+            "pos": "adj.",
+            "meaning": "来自北极的"
+          },
+          {
+            "pos": "v.",
+            "meaning": "恶化"
+          },
+          {
+            "pos": "n.",
+            "meaning": "海湾"
+          },
+          {
+            "pos": "n.",
+            "meaning": "气象学"
+          },
+          {
+            "pos": "adj.",
+            "meaning": "保暖"
+          },
+          {
+            "pos": "n.",
+            "meaning": "热带地区"
+          },
+          {
+            "pos": "adj.",
+            "meaning": "干旱的"
+          },
+          {
+            "pos": "adj.",
+            "meaning": "潮湿的"
+          },
+          {
+            "pos": "n.",
+            "meaning": "冰雹"
+          },
+          {
+            "pos": "v.",
+            "meaning": "融化"
+          },
+          {
+            "pos": "v.",
+            "meaning": "打寒战"
+          },
+          {
+            "pos": "n.",
+            "meaning": "预算"
+          },
+          {
+            "pos": "v.",
+            "meaning": "放松下来"
+          },
+          {
+            "pos": "n.",
+            "meaning": "流程"
+          },
+          {
+            "pos": "n.",
+            "meaning": "标准"
+          },
+          {
+            "pos": "n.",
+            "meaning": "态度"
+          },
+          {
+            "pos": "n.",
+            "meaning": "动力"
+          },
+          {
+            "pos": "v.",
+            "meaning": "支付"
+          },
+          {
+            "pos": "v.",
+            "meaning": "拒绝接受"
+          },
+          {
+            "pos": "v.",
+            "meaning": "推算出"
+          },
+          {
+            "pos": "v.",
+            "meaning": "贡献"
+          },
+          {
+            "pos": "n.",
+            "meaning": "费用"
+          }
+        ],
+        "englishWords": 256
+      }
+    },
+    {
+      "id": "phrases-6",
+      "words": [
+        "take care of",
+        "don't",
+        "well-being",
+        "Mother",
+        "care",
+        "look forward to"
+      ],
+      "limits": {
+        "minWords": 102,
+        "maxWords": 160,
+        "hardMin": 61,
+        "hardMax": 200,
+        "maxTokens": 1440,
+        "paragraphs": "2–3"
+      },
+      "calls": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 56.661,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18878,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1479,
+            "reasoning_output_tokens": 1034
+          },
+          "tools": [],
+          "text": "{\"title\":\"Soup at Home\",\"paragraphs\":[[[\"When ⟦4|Mother⟧ broke her ankle, I moved home for two weeks to ⟦1|take care of⟧ her.\",\"⟦4|n.|妈妈⟧脚踝骨折后，我搬回家住了两周，以便⟦1|phr.|照顾⟧她。\"],[\"At the hospital, the nurse showed me how to help her wash and explained the ⟦5|care⟧ her ankle needed.\",\"在医院，护士教我如何帮她洗澡，并说明了她的脚踝需要怎样的⟦5|n.|护理⟧。\"],[\"Before we left, the nurse said, “Please ⟦2|don't⟧ let her walk without her crutches.”\",\"我们离开前，护士说：“请⟦2|v.|不要⟧让她不拄拐杖就走路。”\"]],[[\"Once home, she stayed in bed even when she was allowed to get up, and I worried about her ⟦3|well-being⟧.\",\"回家后，即使已经获准起床，她也一直待在床上，我担心她的⟦3|n.|身心健康⟧。\"],[\"I put a chair by the kitchen window so she could sit with me while I cooked.\",\"我在厨房窗边放了一把椅子，这样我做饭时，她就可以坐在那里陪我。\"],[\"By Friday, she was coming downstairs for breakfast and asking about our next meal.\",\"到了星期五，她已经会下楼吃早餐，还会问我们下一顿吃什么。\"],[\"“I ⟦6|look forward to⟧ your soup every evening,” she told me, reaching for a second bowl.\",\"“我每天晚上都⟦6|phr.|盼着⟧喝你做的汤，”她对我说，伸手去拿第二碗汤。\"]]]}",
+          "promptChars": 925
+        }
+      ],
+      "parsed": {
+        "issues": [],
+        "title": "Soup at Home",
+        "article": "When Mother broke her ankle, I moved home for two weeks to take care of her. At the hospital, the nurse showed me how to help her wash and explained the care her ankle needed. Before we left, the nurse said, “Please don't let her walk without her crutches.”\n\nOnce home, she stayed in bed even when she was allowed to get up, and I worried about her well-being. I put a chair by the kitchen window so she could sit with me while I cooked. By Friday, she was coming downstairs for breakfast and asking about our next meal. “I look forward to your soup every evening,” she told me, reaching for a second bowl.",
+        "paragraphsEn": [
+          "When Mother broke her ankle, I moved home for two weeks to take care of her. At the hospital, the nurse showed me how to help her wash and explained the care her ankle needed. Before we left, the nurse said, “Please don't let her walk without her crutches.”",
+          "Once home, she stayed in bed even when she was allowed to get up, and I worried about her well-being. I put a chair by the kitchen window so she could sit with me while I cooked. By Friday, she was coming downstairs for breakfast and asking about our next meal. “I look forward to your soup every evening,” she told me, reaching for a second bowl."
+        ],
+        "paragraphsZh": [
+          "妈妈脚踝骨折后，我搬回家住了两周，以便照顾她。在医院，护士教我如何帮她洗澡，并说明了她的脚踝需要怎样的护理。我们离开前，护士说：“请不要让她不拄拐杖就走路。”",
+          "回家后，即使已经获准起床，她也一直待在床上，我担心她的身心健康。我在厨房窗边放了一把椅子，这样我做饭时，她就可以坐在那里陪我。到了星期五，她已经会下楼吃早餐，还会问我们下一顿吃什么。“我每天晚上都盼着喝你做的汤，”她对我说，伸手去拿第二碗汤。"
+        ],
+        "sentencePairs": [
+          {
+            "paragraph": 0,
+            "en": "When Mother broke her ankle, I moved home for two weeks to take care of her.",
+            "zh": "妈妈脚踝骨折后，我搬回家住了两周，以便照顾她。"
+          },
+          {
+            "paragraph": 0,
+            "en": "At the hospital, the nurse showed me how to help her wash and explained the care her ankle needed.",
+            "zh": "在医院，护士教我如何帮她洗澡，并说明了她的脚踝需要怎样的护理。"
+          },
+          {
+            "paragraph": 0,
+            "en": "Before we left, the nurse said, “Please don't let her walk without her crutches.”",
+            "zh": "我们离开前，护士说：“请不要让她不拄拐杖就走路。”"
+          },
+          {
+            "paragraph": 1,
+            "en": "Once home, she stayed in bed even when she was allowed to get up, and I worried about her well-being.",
+            "zh": "回家后，即使已经获准起床，她也一直待在床上，我担心她的身心健康。"
+          },
+          {
+            "paragraph": 1,
+            "en": "I put a chair by the kitchen window so she could sit with me while I cooked.",
+            "zh": "我在厨房窗边放了一把椅子，这样我做饭时，她就可以坐在那里陪我。"
+          },
+          {
+            "paragraph": 1,
+            "en": "By Friday, she was coming downstairs for breakfast and asking about our next meal.",
+            "zh": "到了星期五，她已经会下楼吃早餐，还会问我们下一顿吃什么。"
+          },
+          {
+            "paragraph": 1,
+            "en": "“I look forward to your soup every evening,” she told me, reaching for a second bowl.",
+            "zh": "“我每天晚上都盼着喝你做的汤，”她对我说，伸手去拿第二碗汤。"
+          }
+        ],
+        "alignment": [
+          {
+            "word": "take care of",
+            "marker": "①",
+            "english_forms": [
+              "take care of"
+            ],
+            "zh_terms": [
+              "照顾"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 0,
+                "enStart": 59,
+                "enEnd": 71,
+                "zhStart": 19,
+                "zhEnd": 21
+              }
+            ]
+          },
+          {
+            "word": "don't",
+            "marker": "①",
+            "english_forms": [
+              "don't"
+            ],
+            "zh_terms": [
+              "不要"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 2,
+                "enStart": 216,
+                "enEnd": 221,
+                "zhStart": 66,
+                "zhEnd": 68
+              }
+            ]
+          },
+          {
+            "word": "well-being",
+            "marker": "①",
+            "english_forms": [
+              "well-being"
+            ],
+            "zh_terms": [
+              "身心健康"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 0,
+                "enStart": 90,
+                "enEnd": 100,
+                "zhStart": 27,
+                "zhEnd": 31
+              }
+            ]
+          },
+          {
+            "word": "Mother",
+            "marker": "①",
+            "english_forms": [
+              "Mother"
+            ],
+            "zh_terms": [
+              "妈妈"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 0,
+                "enStart": 5,
+                "enEnd": 11,
+                "zhStart": 0,
+                "zhEnd": 2
+              }
+            ]
+          },
+          {
+            "word": "care",
+            "marker": "①",
+            "english_forms": [
+              "care"
+            ],
+            "zh_terms": [
+              "护理"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 153,
+                "enEnd": 157,
+                "zhStart": 51,
+                "zhEnd": 53
+              }
+            ]
+          },
+          {
+            "word": "look forward to",
+            "marker": "①",
+            "english_forms": [
+              "look forward to"
+            ],
+            "zh_terms": [
+              "盼着"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 265,
+                "enEnd": 280,
+                "zhStart": 98,
+                "zhEnd": 100
+              }
+            ]
+          }
+        ],
+        "glosses": [
+          {
+            "pos": "phr.",
+            "meaning": "照顾"
+          },
+          {
+            "pos": "v.",
+            "meaning": "不要"
+          },
+          {
+            "pos": "n.",
+            "meaning": "身心健康"
+          },
+          {
+            "pos": "n.",
+            "meaning": "妈妈"
+          },
+          {
+            "pos": "n.",
+            "meaning": "护理"
+          },
+          {
+            "pos": "phr.",
+            "meaning": "盼着"
+          }
+        ],
+        "englishWords": 116
+      }
+    },
+    {
+      "id": "single-short",
+      "shortMode": true,
+      "words": [
+        "cover"
+      ],
+      "limits": {
+        "minWords": 60,
+        "maxWords": 100,
+        "hardMin": 36,
+        "hardMax": 125,
+        "maxTokens": 950,
+        "paragraphs": "1–2"
+      },
+      "calls": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 28.198,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18146,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 668,
+            "reasoning_output_tokens": 424
+          },
+          "tools": [],
+          "text": "{\"title\":\"The Dry Books\",\"paragraphs\":[[[\"Half an hour before our school’s book sale, rain began falling through a crack in the library roof.\",\"学校的图书售卖活动开始前半小时，雨水开始从图书馆屋顶的一道裂缝漏进来。\"],[\"I ran to the supply cupboard and found a large plastic sheet.\",\"我跑到存放物资的柜子前，找到了一大张塑料布。\"],[\"We used it to ⟦1|cover⟧ the boxes of donated books while the caretaker brought a bucket.\",\"我们用它⟦1|v.|盖住⟧装着捐赠图书的箱子，同时校工拿来了一个水桶。\"],[\"Then we moved the sale to the dining hall and carried everything there on a trolley.\",\"随后，我们把售卖活动改到食堂举行，用一辆手推车把所有东西运了过去。\"],[\"The books stayed dry, and we opened only ten minutes late.\",\"书都没有淋湿，我们只晚了十分钟就开始售书了。\"]]]}",
+          "promptChars": 836
+        }
+      ],
+      "parsed": {
+        "issues": [],
+        "title": "The Dry Books",
+        "article": "Half an hour before our school’s book sale, rain began falling through a crack in the library roof. I ran to the supply cupboard and found a large plastic sheet. We used it to cover the boxes of donated books while the caretaker brought a bucket. Then we moved the sale to the dining hall and carried everything there on a trolley. The books stayed dry, and we opened only ten minutes late.",
+        "paragraphsEn": [
+          "Half an hour before our school’s book sale, rain began falling through a crack in the library roof. I ran to the supply cupboard and found a large plastic sheet. We used it to cover the boxes of donated books while the caretaker brought a bucket. Then we moved the sale to the dining hall and carried everything there on a trolley. The books stayed dry, and we opened only ten minutes late."
+        ],
+        "paragraphsZh": [
+          "学校的图书售卖活动开始前半小时，雨水开始从图书馆屋顶的一道裂缝漏进来。我跑到存放物资的柜子前，找到了一大张塑料布。我们用它盖住装着捐赠图书的箱子，同时校工拿来了一个水桶。随后，我们把售卖活动改到食堂举行，用一辆手推车把所有东西运了过去。书都没有淋湿，我们只晚了十分钟就开始售书了。"
+        ],
+        "sentencePairs": [
+          {
+            "paragraph": 0,
+            "en": "Half an hour before our school’s book sale, rain began falling through a crack in the library roof.",
+            "zh": "学校的图书售卖活动开始前半小时，雨水开始从图书馆屋顶的一道裂缝漏进来。"
+          },
+          {
+            "paragraph": 0,
+            "en": "I ran to the supply cupboard and found a large plastic sheet.",
+            "zh": "我跑到存放物资的柜子前，找到了一大张塑料布。"
+          },
+          {
+            "paragraph": 0,
+            "en": "We used it to cover the boxes of donated books while the caretaker brought a bucket.",
+            "zh": "我们用它盖住装着捐赠图书的箱子，同时校工拿来了一个水桶。"
+          },
+          {
+            "paragraph": 0,
+            "en": "Then we moved the sale to the dining hall and carried everything there on a trolley.",
+            "zh": "随后，我们把售卖活动改到食堂举行，用一辆手推车把所有东西运了过去。"
+          },
+          {
+            "paragraph": 0,
+            "en": "The books stayed dry, and we opened only ten minutes late.",
+            "zh": "书都没有淋湿，我们只晚了十分钟就开始售书了。"
+          }
+        ],
+        "alignment": [
+          {
+            "word": "cover",
+            "marker": "①",
+            "english_forms": [
+              "cover"
+            ],
+            "zh_terms": [
+              "盖住"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 2,
+                "enStart": 176,
+                "enEnd": 181,
+                "zhStart": 61,
+                "zhEnd": 63
+              }
+            ]
+          }
+        ],
+        "glosses": [
+          {
+            "pos": "v.",
+            "meaning": "盖住"
+          }
+        ],
+        "englishWords": 73
+      }
+    },
+    {
+      "id": "overlap-6",
+      "words": [
+        "art",
+        "article",
+        "in",
+        "in spite of",
+        "record",
+        "recording"
+      ],
+      "limits": {
+        "minWords": 102,
+        "maxWords": 160,
+        "hardMin": 61,
+        "hardMax": 200,
+        "maxTokens": 1440,
+        "paragraphs": "2–3"
+      },
+      "calls": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 42.394,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18876,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 982,
+            "reasoning_output_tokens": 516
+          },
+          "tools": [],
+          "text": "{\"title\":\"The Missing Name\",\"paragraphs\":[[[\"Maya arrived at the school’s ⟦1|art⟧ exhibition to write an ⟦2|article⟧ for the local newspaper.\",\"玛雅来到学校的⟦1|n.|美术⟧展览，要为当地报纸写一篇⟦2|n.|文章⟧。\"],[\"She found twelve paintings displayed ⟦3|in⟧ the main hall, but one had no name beside it.\",\"她发现十二幅画陈列⟦3|prep.|在⟧主厅里，但其中一幅旁边没有名字。\"],[\"A boy explained that the unsigned picture showed his grandmother driving the town’s first school bus.\",\"一个男孩解释说，那幅没有署名的画描绘的是他的祖母驾驶镇上第一辆校车的情景。\"]],[[\"Maya asked permission to ⟦5|record⟧ his explanation, but her microphone would not switch on.\",\"玛雅请求允许她⟦5|v.|录下⟧他的讲述，但她的麦克风无法开机。\"],[\"⟦4|In spite of⟧ the equipment problem, she continued the interview, using her phone instead.\",\"⟦4|phr.|尽管⟧设备出了问题，她还是继续采访，改用手机。\"],[\"He then brought his grandmother over, and she supplied the date and corrected one detail: she had driven the second bus, not the first.\",\"随后，他把祖母带了过来，她提供了日期，还纠正了一处细节：她当时驾驶的是第二辆校车，而非第一辆。\"],[\"Before leaving, Maya played the ⟦6|recording⟧ back to them to check that their voices were clear.\",\"离开前，玛雅把⟦6|n.|录音⟧回放给他们听，检查他们的声音是否清晰。\"],[\"That evening, she finished her story with the corrected detail.\",\"那天晚上，她采用纠正后的细节，完成了报道。\"]]]}",
+          "promptChars": 911
+        }
+      ],
+      "parsed": {
+        "issues": [],
+        "title": "The Missing Name",
+        "article": "Maya arrived at the school’s art exhibition to write an article for the local newspaper. She found twelve paintings displayed in the main hall, but one had no name beside it. A boy explained that the unsigned picture showed his grandmother driving the town’s first school bus.\n\nMaya asked permission to record his explanation, but her microphone would not switch on. In spite of the equipment problem, she continued the interview, using her phone instead. He then brought his grandmother over, and she supplied the date and corrected one detail: she had driven the second bus, not the first. Before leaving, Maya played the recording back to them to check that their voices were clear. That evening, she finished her story with the corrected detail.",
+        "paragraphsEn": [
+          "Maya arrived at the school’s art exhibition to write an article for the local newspaper. She found twelve paintings displayed in the main hall, but one had no name beside it. A boy explained that the unsigned picture showed his grandmother driving the town’s first school bus.",
+          "Maya asked permission to record his explanation, but her microphone would not switch on. In spite of the equipment problem, she continued the interview, using her phone instead. He then brought his grandmother over, and she supplied the date and corrected one detail: she had driven the second bus, not the first. Before leaving, Maya played the recording back to them to check that their voices were clear. That evening, she finished her story with the corrected detail."
+        ],
+        "paragraphsZh": [
+          "玛雅来到学校的美术展览，要为当地报纸写一篇文章。她发现十二幅画陈列在主厅里，但其中一幅旁边没有名字。一个男孩解释说，那幅没有署名的画描绘的是他的祖母驾驶镇上第一辆校车的情景。",
+          "玛雅请求允许她录下他的讲述，但她的麦克风无法开机。尽管设备出了问题，她还是继续采访，改用手机。随后，他把祖母带了过来，她提供了日期，还纠正了一处细节：她当时驾驶的是第二辆校车，而非第一辆。离开前，玛雅把录音回放给他们听，检查他们的声音是否清晰。那天晚上，她采用纠正后的细节，完成了报道。"
+        ],
+        "sentencePairs": [
+          {
+            "paragraph": 0,
+            "en": "Maya arrived at the school’s art exhibition to write an article for the local newspaper.",
+            "zh": "玛雅来到学校的美术展览，要为当地报纸写一篇文章。"
+          },
+          {
+            "paragraph": 0,
+            "en": "She found twelve paintings displayed in the main hall, but one had no name beside it.",
+            "zh": "她发现十二幅画陈列在主厅里，但其中一幅旁边没有名字。"
+          },
+          {
+            "paragraph": 0,
+            "en": "A boy explained that the unsigned picture showed his grandmother driving the town’s first school bus.",
+            "zh": "一个男孩解释说，那幅没有署名的画描绘的是他的祖母驾驶镇上第一辆校车的情景。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Maya asked permission to record his explanation, but her microphone would not switch on.",
+            "zh": "玛雅请求允许她录下他的讲述，但她的麦克风无法开机。"
+          },
+          {
+            "paragraph": 1,
+            "en": "In spite of the equipment problem, she continued the interview, using her phone instead.",
+            "zh": "尽管设备出了问题，她还是继续采访，改用手机。"
+          },
+          {
+            "paragraph": 1,
+            "en": "He then brought his grandmother over, and she supplied the date and corrected one detail: she had driven the second bus, not the first.",
+            "zh": "随后，他把祖母带了过来，她提供了日期，还纠正了一处细节：她当时驾驶的是第二辆校车，而非第一辆。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Before leaving, Maya played the recording back to them to check that their voices were clear.",
+            "zh": "离开前，玛雅把录音回放给他们听，检查他们的声音是否清晰。"
+          },
+          {
+            "paragraph": 1,
+            "en": "That evening, she finished her story with the corrected detail.",
+            "zh": "那天晚上，她采用纠正后的细节，完成了报道。"
+          }
+        ],
+        "alignment": [
+          {
+            "word": "art",
+            "marker": "①",
+            "english_forms": [
+              "art"
+            ],
+            "zh_terms": [
+              "美术"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 0,
+                "enStart": 29,
+                "enEnd": 32,
+                "zhStart": 7,
+                "zhEnd": 9
+              }
+            ]
+          },
+          {
+            "word": "article",
+            "marker": "①",
+            "english_forms": [
+              "article"
+            ],
+            "zh_terms": [
+              "文章"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 0,
+                "enStart": 56,
+                "enEnd": 63,
+                "zhStart": 21,
+                "zhEnd": 23
+              }
+            ]
+          },
+          {
+            "word": "in",
+            "marker": "①",
+            "english_forms": [
+              "in"
+            ],
+            "zh_terms": [
+              "在"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 1,
+                "enStart": 126,
+                "enEnd": 128,
+                "zhStart": 33,
+                "zhEnd": 34
+              }
+            ]
+          },
+          {
+            "word": "in spite of",
+            "marker": "①",
+            "english_forms": [
+              "In spite of"
+            ],
+            "zh_terms": [
+              "尽管"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 1,
+                "enStart": 89,
+                "enEnd": 100,
+                "zhStart": 25,
+                "zhEnd": 27
+              }
+            ]
+          },
+          {
+            "word": "record",
+            "marker": "①",
+            "english_forms": [
+              "record"
+            ],
+            "zh_terms": [
+              "录下"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 0,
+                "enStart": 25,
+                "enEnd": 31,
+                "zhStart": 7,
+                "zhEnd": 9
+              }
+            ]
+          },
+          {
+            "word": "recording",
+            "marker": "①",
+            "english_forms": [
+              "recording"
+            ],
+            "zh_terms": [
+              "录音"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 346,
+                "enEnd": 355,
+                "zhStart": 101,
+                "zhEnd": 103
+              }
+            ]
+          }
+        ],
+        "glosses": [
+          {
+            "pos": "n.",
+            "meaning": "美术"
+          },
+          {
+            "pos": "n.",
+            "meaning": "文章"
+          },
+          {
+            "pos": "prep.",
+            "meaning": "在"
+          },
+          {
+            "pos": "phr.",
+            "meaning": "尽管"
+          },
+          {
+            "pos": "v.",
+            "meaning": "录下"
+          },
+          {
+            "pos": "n.",
+            "meaning": "录音"
+          }
+        ],
+        "englishWords": 125
+      }
+    },
+    {
+      "id": "theme-6-repeat",
+      "words": [
+        "sustainable",
+        "resilient",
+        "adapt",
+        "perspective",
+        "thrive",
+        "balance"
+      ],
+      "limits": {
+        "minWords": 102,
+        "maxWords": 160,
+        "hardMin": 61,
+        "hardMax": 200,
+        "maxTokens": 1440,
+        "paragraphs": "2–3"
+      },
+      "calls": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 54.037,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18182,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1399,
+            "reasoning_output_tokens": 907
+          },
+          "tools": [],
+          "text": "{\"title\":\"A Fresh Start in the Garden\",\"paragraphs\":[[[\"When a week of hot weather killed most of the lettuce in our community garden, I nearly gave up.\",\"一周的炎热天气让我们社区花园里的大部分生菜枯死了，我差点就放弃了。\"],[\"I watered after work, but the soil was always dry by then.\",\"我下班后浇水，但到那时土壤总是已经干了。\"],[\"Our neighbor Rosa suggested replacing some lettuce with ⟦2|resilient⟧ herbs that could survive hot, dry weather.\",\"我们的邻居罗莎建议把部分生菜换成能在炎热、干燥的天气中存活的⟦2|adj.|生命力顽强的⟧香草。\"],[\"“You need plants that suit this place,” she said, changing my ⟦4|perspective⟧.\",\"“你需要适合这个地方的植物，”她说，这改变了我的⟦4|n.|看法⟧。\"]],[[\"I decided to ⟦3|adapt⟧ my routine and water early in the morning.\",\"我决定⟦3|v.|调整⟧自己的日常安排，在清晨浇水。\"],[\"Rosa helped me install a barrel to collect rainwater, making the garden more ⟦1|sustainable⟧.\",\"罗莎帮我装了一个收集雨水的桶，让花园变得更加⟦1|adj.|可持续⟧。\"],[\"We also shared the watering, so I could find a ⟦6|balance⟧ between garden work and my job.\",\"我们还分担了浇水的工作，这样我就能在花园事务和本职工作之间找到⟦6|n.|平衡⟧。\"],[\"A month later, the herbs began to ⟦5|thrive⟧, and we picked enough leaves to share with everyone who had helped.\",\"一个月后，香草开始⟦5|v.|茁壮生长⟧，我们采摘了足够的叶子，分给每一个帮过忙的人。\"]]]}",
+          "promptChars": 922
+        }
+      ],
+      "parsed": {
+        "issues": [],
+        "title": "A Fresh Start in the Garden",
+        "article": "When a week of hot weather killed most of the lettuce in our community garden, I nearly gave up. I watered after work, but the soil was always dry by then. Our neighbor Rosa suggested replacing some lettuce with resilient herbs that could survive hot, dry weather. “You need plants that suit this place,” she said, changing my perspective.\n\nI decided to adapt my routine and water early in the morning. Rosa helped me install a barrel to collect rainwater, making the garden more sustainable. We also shared the watering, so I could find a balance between garden work and my job. A month later, the herbs began to thrive, and we picked enough leaves to share with everyone who had helped.",
+        "paragraphsEn": [
+          "When a week of hot weather killed most of the lettuce in our community garden, I nearly gave up. I watered after work, but the soil was always dry by then. Our neighbor Rosa suggested replacing some lettuce with resilient herbs that could survive hot, dry weather. “You need plants that suit this place,” she said, changing my perspective.",
+          "I decided to adapt my routine and water early in the morning. Rosa helped me install a barrel to collect rainwater, making the garden more sustainable. We also shared the watering, so I could find a balance between garden work and my job. A month later, the herbs began to thrive, and we picked enough leaves to share with everyone who had helped."
+        ],
+        "paragraphsZh": [
+          "一周的炎热天气让我们社区花园里的大部分生菜枯死了，我差点就放弃了。我下班后浇水，但到那时土壤总是已经干了。我们的邻居罗莎建议把部分生菜换成能在炎热、干燥的天气中存活的生命力顽强的香草。“你需要适合这个地方的植物，”她说，这改变了我的看法。",
+          "我决定调整自己的日常安排，在清晨浇水。罗莎帮我装了一个收集雨水的桶，让花园变得更加可持续。我们还分担了浇水的工作，这样我就能在花园事务和本职工作之间找到平衡。一个月后，香草开始茁壮生长，我们采摘了足够的叶子，分给每一个帮过忙的人。"
+        ],
+        "sentencePairs": [
+          {
+            "paragraph": 0,
+            "en": "When a week of hot weather killed most of the lettuce in our community garden, I nearly gave up.",
+            "zh": "一周的炎热天气让我们社区花园里的大部分生菜枯死了，我差点就放弃了。"
+          },
+          {
+            "paragraph": 0,
+            "en": "I watered after work, but the soil was always dry by then.",
+            "zh": "我下班后浇水，但到那时土壤总是已经干了。"
+          },
+          {
+            "paragraph": 0,
+            "en": "Our neighbor Rosa suggested replacing some lettuce with resilient herbs that could survive hot, dry weather.",
+            "zh": "我们的邻居罗莎建议把部分生菜换成能在炎热、干燥的天气中存活的生命力顽强的香草。"
+          },
+          {
+            "paragraph": 0,
+            "en": "“You need plants that suit this place,” she said, changing my perspective.",
+            "zh": "“你需要适合这个地方的植物，”她说，这改变了我的看法。"
+          },
+          {
+            "paragraph": 1,
+            "en": "I decided to adapt my routine and water early in the morning.",
+            "zh": "我决定调整自己的日常安排，在清晨浇水。"
+          },
+          {
+            "paragraph": 1,
+            "en": "Rosa helped me install a barrel to collect rainwater, making the garden more sustainable.",
+            "zh": "罗莎帮我装了一个收集雨水的桶，让花园变得更加可持续。"
+          },
+          {
+            "paragraph": 1,
+            "en": "We also shared the watering, so I could find a balance between garden work and my job.",
+            "zh": "我们还分担了浇水的工作，这样我就能在花园事务和本职工作之间找到平衡。"
+          },
+          {
+            "paragraph": 1,
+            "en": "A month later, the herbs began to thrive, and we picked enough leaves to share with everyone who had helped.",
+            "zh": "一个月后，香草开始茁壮生长，我们采摘了足够的叶子，分给每一个帮过忙的人。"
+          }
+        ],
+        "alignment": [
+          {
+            "word": "sustainable",
+            "marker": "①",
+            "english_forms": [
+              "sustainable"
+            ],
+            "zh_terms": [
+              "可持续"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 1,
+                "enStart": 139,
+                "enEnd": 150,
+                "zhStart": 41,
+                "zhEnd": 44
+              }
+            ]
+          },
+          {
+            "word": "resilient",
+            "marker": "①",
+            "english_forms": [
+              "resilient"
+            ],
+            "zh_terms": [
+              "生命力顽强的"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 2,
+                "enStart": 212,
+                "enEnd": 221,
+                "zhStart": 83,
+                "zhEnd": 89
+              }
+            ]
+          },
+          {
+            "word": "adapt",
+            "marker": "①",
+            "english_forms": [
+              "adapt"
+            ],
+            "zh_terms": [
+              "调整"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 0,
+                "enStart": 13,
+                "enEnd": 18,
+                "zhStart": 3,
+                "zhEnd": 5
+              }
+            ]
+          },
+          {
+            "word": "perspective",
+            "marker": "①",
+            "english_forms": [
+              "perspective"
+            ],
+            "zh_terms": [
+              "看法"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 0,
+                "sentence": 3,
+                "enStart": 327,
+                "enEnd": 338,
+                "zhStart": 116,
+                "zhEnd": 118
+              }
+            ]
+          },
+          {
+            "word": "thrive",
+            "marker": "①",
+            "english_forms": [
+              "thrive"
+            ],
+            "zh_terms": [
+              "茁壮生长"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 3,
+                "enStart": 273,
+                "enEnd": 279,
+                "zhStart": 88,
+                "zhEnd": 92
+              }
+            ]
+          },
+          {
+            "word": "balance",
+            "marker": "①",
+            "english_forms": [
+              "balance"
+            ],
+            "zh_terms": [
+              "平衡"
+            ],
+            "occurrences": [
+              {
+                "paragraph": 1,
+                "sentence": 2,
+                "enStart": 199,
+                "enEnd": 206,
+                "zhStart": 76,
+                "zhEnd": 78
+              }
+            ]
+          }
+        ],
+        "glosses": [
+          {
+            "pos": "adj.",
+            "meaning": "可持续"
+          },
+          {
+            "pos": "adj.",
+            "meaning": "生命力顽强的"
+          },
+          {
+            "pos": "v.",
+            "meaning": "调整"
+          },
+          {
+            "pos": "n.",
+            "meaning": "看法"
+          },
+          {
+            "pos": "v.",
+            "meaning": "茁壮生长"
+          },
+          {
+            "pos": "n.",
+            "meaning": "平衡"
+          }
+        ],
+        "englishWords": 122
+      }
+    }
+  ]
+}

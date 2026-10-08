@@ -1,0 +1,42 @@
+{
+  "name": "texta-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Texta Windows desktop client",
+  "author": "Texta",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "icons": "node scripts/icons.cjs",
+    "test": "node --test tests/policy.cjs",
+    "test:smoke": "electron tests/smoke.cjs",
+    "dist": "npm run icons && electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.6.0",
+    "electron-builder": "26.17.0",
+    "sharp": "0.34.5"
+  },
+  "build": {
+    "appId": "top.yanyihan.texta",
+    "productName": "Texta",
+    "asar": true,
+    "directories": { "output": "../output/desktop" },
+    "files": ["main.cjs", "policy.cjs", "loading.html", "offline.html", "assets/icon.png"],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "artifactName": "Texta-Setup-${version}-${arch}.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Texta",
+      "installerLanguages": ["zh_CN", "en_US"],
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

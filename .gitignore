@@ -12,3 +12,19 @@ npm-debug.log*
 data/
 
 /generated/prisma
+
+# Local credentials, diagnostics, database backups and build output
+.env.*
+!.env.example
+*.log
+*.dump
+*.bak
+*.exe
+*.sha256
+coverage/
+
+# Experiment runtime traces; source, datasets and summarized results are retained
+experiments/**/raw/
+experiments/**/isolated/
+experiments/**/code-snapshot.json
+experiments/**/legacy-generation-functions.txt

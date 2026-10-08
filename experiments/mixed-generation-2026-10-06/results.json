@@ -1,0 +1,628 @@
+{
+  "date": "2026-10-06",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "notes": "One initial sample per method and dataset. No repairs or manual edits. CLI usage includes harness/context/reasoning overhead. Wall time includes CLI startup and service latency.",
+  "results": [
+    {
+      "dataset": {
+        "id": "theme-6",
+        "name": "主题词表 · 6词",
+        "words": [
+          "sustainable",
+          "resilient",
+          "adapt",
+          "perspective",
+          "thrive",
+          "balance"
+        ]
+      },
+      "A": {
+        "text": "为让社区食堂的经营更sustainable，店长从顾客的perspective出发，推出分量可选的套餐。原料涨价后，他及时adapt，改用多家农户供应的当季食材，让采购体系更resilient。售价与成本达成balance后，食堂既能留住顾客，又有了利润，得以thrive。",
+        "metrics": {
+          "coverage": "6/6",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 77,
+          "totalChars": 137,
+          "sentences": 3,
+          "leadChineseChars": 10,
+          "tailChineseChars": 0,
+          "maxGapChineseChars": 19,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "seconds": 29.834,
+        "usage": {
+          "input_tokens": 18573,
+          "cached_input_tokens": 12544,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 515,
+          "reasoning_output_tokens": 377
+        },
+        "ids": [
+          1,
+          4,
+          3,
+          2,
+          6,
+          5
+        ],
+        "textRaw": "为让社区食堂的经营更sustainable，店长从顾客的perspective出发，推出分量可选的套餐。原料涨价后，他及时adapt，改用多家农户供应的当季食材，让采购体系更resilient。售价与成本达成balance后，食堂既能留住顾客，又有了利润，得以thrive。",
+        "metricsRaw": {
+          "coverage": "6/6",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 77,
+          "totalChars": 137,
+          "sentences": 3,
+          "leadChineseChars": 10,
+          "tailChineseChars": 0,
+          "maxGapChineseChars": 19,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "boundarySpacesAdded": 0
+      },
+      "B": {
+        "english": "Maya planted <w2>resilient</w2> vegetables that needed little water to make her community garden more <w1>sustainable</w1>. When a drought began, a farmer's <w4>perspective</w4> helped her <w3>adapt</w3> her watering routine. Watering directly at the roots each dawn struck a <w6>balance</w6> between conserving water and helping the plants <w5>thrive</w5>.",
+        "translated": "玛雅种下需水少的<w2>适应力强的</w2>蔬菜，让社区菜园更<w1>可持续</w1>。旱灾来临时，一位农民的<w4>观点</w4>帮她<w3>调整</w3>浇水安排。每天黎明直接浇根部，在节水与让植物<w5>茁壮生长</w5>之间取得了<w6>平衡</w6>。",
+        "text": "玛雅种下需水少的resilient蔬菜，让社区菜园更sustainable。旱灾来临时，一位农民的perspective帮她adapt浇水安排。每天黎明直接浇根部，在节水与让植物thrive之间取得了balance。",
+        "metrics": {
+          "coverage": "6/6",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 53,
+          "totalChars": 108,
+          "sentences": 3,
+          "leadChineseChars": 8,
+          "tailChineseChars": 0,
+          "maxGapChineseChars": 20,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "seconds": 51.95,
+        "usage": {
+          "input_tokens": 35746,
+          "cached_input_tokens": 25088,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 966,
+          "reasoning_output_tokens": 717
+        },
+        "idsEnglish": [
+          2,
+          1,
+          4,
+          3,
+          6,
+          5
+        ],
+        "idsChinese": [
+          2,
+          1,
+          4,
+          3,
+          5,
+          6
+        ],
+        "textRaw": "玛雅种下需水少的resilient蔬菜，让社区菜园更sustainable。旱灾来临时，一位农民的perspective帮她adapt浇水安排。每天黎明直接浇根部，在节水与让植物thrive之间取得了balance。",
+        "metricsRaw": {
+          "coverage": "6/6",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 53,
+          "totalChars": 108,
+          "sentences": 3,
+          "leadChineseChars": 8,
+          "tailChineseChars": 0,
+          "maxGapChineseChars": 20,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "boundarySpacesAdded": 0
+      },
+      "calls": [
+        {
+          "name": "theme-6-A",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 29.834,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18573,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 515,
+            "reasoning_output_tokens": 377
+          },
+          "toolItems": [],
+          "error": null
+        },
+        {
+          "name": "theme-6-B1",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 34.914,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 17874,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 616,
+            "reasoning_output_tokens": 496
+          },
+          "toolItems": [],
+          "error": null
+        },
+        {
+          "name": "theme-6-B2",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 17.036,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 17872,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 350,
+            "reasoning_output_tokens": 221
+          },
+          "toolItems": [],
+          "error": null
+        }
+      ]
+    },
+    {
+      "dataset": {
+        "id": "mixed-12",
+        "name": "混合难词 · 12词",
+        "words": [
+          "budget",
+          "relax",
+          "process",
+          "standard",
+          "attitude",
+          "motivation",
+          "derive",
+          "sterility",
+          "plume",
+          "bristle",
+          "cricket",
+          "expenses"
+        ]
+      },
+      "A": {
+        "text": "为查明养殖场cricket出现sterility的原因，我把有限的budget用于检测，削减了其他expenses。检查喷药设备时，我发现清洗刷脱落的一根bristle卡在喷头内，导致plume偏向养殖箱。恢复繁殖的motivation促使我以谨慎的attitude继续排查。我按实验standard完成检测process，没有因经费紧张而relax样本筛选条件。结合药物残留数据和对照实验，我从结果中derive出农药暴露导致繁殖异常的结论。",
+        "metrics": {
+          "coverage": "12/12",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 125,
+          "totalChars": 222,
+          "sentences": 5,
+          "leadChineseChars": 6,
+          "tailChineseChars": 14,
+          "maxGapChineseChars": 24,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "seconds": 48.71,
+        "usage": {
+          "input_tokens": 17945,
+          "cached_input_tokens": 12544,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 1256,
+          "reasoning_output_tokens": 1034
+        },
+        "ids": [
+          11,
+          8,
+          1,
+          12,
+          10,
+          9,
+          6,
+          5,
+          4,
+          3,
+          2,
+          7
+        ],
+        "textRaw": "为查明养殖场cricket出现sterility的原因，我把有限的budget用于检测，削减了其他expenses。检查喷药设备时，我发现清洗刷脱落的一根bristle卡在喷头内，导致plume偏向养殖箱。恢复繁殖的motivation促使我以谨慎的attitude继续排查。我按实验standard完成检测process，没有因经费紧张而relax样本筛选条件。结合药物残留数据和对照实验，我从结果中derive出农药暴露导致繁殖异常的结论。",
+        "metricsRaw": {
+          "coverage": "12/12",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 125,
+          "totalChars": 222,
+          "sentences": 5,
+          "leadChineseChars": 6,
+          "tailChineseChars": 14,
+          "maxGapChineseChars": 24,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "boundarySpacesAdded": 0
+      },
+      "B": {
+        "english": "Our <w1>budget</w1> barely covered the <w12>expenses</w12> of testing a <w11>cricket</w11> flour grinder. When a <w9>plume</w9> of dust escaped and a brush <w10>bristle</w10> appeared in the flour, I stopped the <w3>process</w3>. My assistant’s impatient <w5>attitude</w5> led him to suggest we <w2>relax</w2> our safety rules. The risk of wasting another batch gave him enough <w6>motivation</w6> to replace the brush and restore the equipment to our <w4>standard</w4> of <w8>sterility</w8>. We then tested fresh samples to <w7>derive</w7> reliable operating settings.",
+        "translated": "我们的<w1>预算</w1>仅够支付测试<w11>蟋蟀</w11>粉研磨机的<w12>费用</w12>。一团<w9>羽状尘雾</w9>逸出，面粉里又出现一根<w10>刷毛</w10>，我便停止了<w3>流程</w3>。助手的急躁<w5>态度</w5>使他提议<w2>放宽</w2>安全规定。再浪费一批的风险给了他足够的<w6>动力</w6>，促使他更换刷子，让设备恢复到我们的<w8>无菌</w8><w4>标准</w4>。随后，我们测试新样品，以<w7>得出</w7>可靠的运行参数。",
+        "text": "我们的budget仅够支付测试cricket粉研磨机的expenses。一团plume逸出，面粉里又出现一根bristle，我便停止了process。助手的急躁attitude使他提议relax安全规定。再浪费一批的风险给了他足够的motivation，促使他更换刷子，让设备恢复到我们的sterility standard。随后，我们测试新样品，以derive可靠的运行参数。",
+        "metrics": {
+          "coverage": "12/12",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 91,
+          "totalChars": 189,
+          "sentences": 5,
+          "leadChineseChars": 3,
+          "tailChineseChars": 7,
+          "maxGapChineseChars": 18,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "seconds": 66.008,
+        "usage": {
+          "input_tokens": 35879,
+          "cached_input_tokens": 25088,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 1440,
+          "reasoning_output_tokens": 1032
+        },
+        "idsEnglish": [
+          1,
+          12,
+          11,
+          9,
+          10,
+          3,
+          5,
+          2,
+          6,
+          4,
+          8,
+          7
+        ],
+        "idsChinese": [
+          1,
+          11,
+          12,
+          9,
+          10,
+          3,
+          5,
+          2,
+          6,
+          8,
+          4,
+          7
+        ],
+        "textRaw": "我们的budget仅够支付测试cricket粉研磨机的expenses。一团plume逸出，面粉里又出现一根bristle，我便停止了process。助手的急躁attitude使他提议relax安全规定。再浪费一批的风险给了他足够的motivation，促使他更换刷子，让设备恢复到我们的sterilitystandard。随后，我们测试新样品，以derive可靠的运行参数。",
+        "metricsRaw": {
+          "coverage": "10/12",
+          "missing": [
+            "standard",
+            "sterility"
+          ],
+          "repeats": [],
+          "chineseChars": 91,
+          "totalChars": 188,
+          "sentences": 5,
+          "leadChineseChars": 3,
+          "tailChineseChars": 7,
+          "maxGapChineseChars": 26,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": [
+            "sterilitystandard"
+          ]
+        },
+        "boundarySpacesAdded": 1
+      },
+      "calls": [
+        {
+          "name": "mixed-12-A",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 48.71,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 17945,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1256,
+            "reasoning_output_tokens": 1034
+          },
+          "toolItems": [],
+          "error": null
+        },
+        {
+          "name": "mixed-12-B1",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 33.408,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 17925,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 718,
+            "reasoning_output_tokens": 516
+          },
+          "toolItems": [],
+          "error": null
+        },
+        {
+          "name": "mixed-12-B2",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 32.6,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 17954,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 722,
+            "reasoning_output_tokens": 516
+          },
+          "toolItems": [],
+          "error": null
+        }
+      ]
+    },
+    {
+      "dataset": {
+        "id": "long-24",
+        "name": "地理天气与行动 · 24词",
+        "words": [
+          "granite",
+          "terrain",
+          "arctic",
+          "deteriorate",
+          "gulf",
+          "meteorology",
+          "thermal",
+          "tropics",
+          "arid",
+          "humid",
+          "hail",
+          "thaw",
+          "shiver",
+          "budget",
+          "relax",
+          "process",
+          "standard",
+          "attitude",
+          "motivation",
+          "cover",
+          "reject",
+          "derive",
+          "contribute",
+          "expenses"
+        ]
+      },
+      "A": {
+        "text": "我们的meteorology小组准备在arctic地区的gulf沿岸设站，但budget有限。当地terrain复杂，我们决定把thermal监测仪固定在一块稳固的granite上。为比较仪器在不同气候下的表现，我们调取了tropics中arid和humid地区的测试资料。安装时突降hail，天气继续deteriorate，队员冷得shiver，只好暂停作业。负责人想让剩余经费cover新增的expenses，建议减少安全检查。我reject了提议，坚持不能relax既定standard。这份认真attitude增强了队员支持项目的motivation，大家同意contribute部分个人补贴，保留检查。天气好转后，我们开始监测冻土的thaw，随后process观测与测试资料，从中derive仪器所需的校准参数。",
+        "metrics": {
+          "coverage": "24/24",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 178,
+          "totalChars": 361,
+          "sentences": 8,
+          "leadChineseChars": 3,
+          "tailChineseChars": 9,
+          "maxGapChineseChars": 24,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "seconds": 49.936,
+        "usage": {
+          "input_tokens": 18081,
+          "cached_input_tokens": 12544,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 1391,
+          "reasoning_output_tokens": 1034
+        },
+        "ids": [
+          6,
+          3,
+          5,
+          14,
+          2,
+          7,
+          1,
+          8,
+          9,
+          10,
+          11,
+          4,
+          13,
+          20,
+          24,
+          21,
+          15,
+          17,
+          18,
+          19,
+          23,
+          12,
+          16,
+          22
+        ],
+        "textRaw": "我们的meteorology小组准备在arctic地区的gulf沿岸设站，但budget有限。当地terrain复杂，我们决定把thermal监测仪固定在一块稳固的granite上。为比较仪器在不同气候下的表现，我们调取了tropics中arid和humid地区的测试资料。安装时突降hail，天气继续deteriorate，队员冷得shiver，只好暂停作业。负责人想让剩余经费cover新增的expenses，建议减少安全检查。我reject了提议，坚持不能relax既定standard。这份认真attitude增强了队员支持项目的motivation，大家同意contribute部分个人补贴，保留检查。天气好转后，我们开始监测冻土的thaw，随后process观测与测试资料，从中derive仪器所需的校准参数。",
+        "metricsRaw": {
+          "coverage": "24/24",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 178,
+          "totalChars": 361,
+          "sentences": 8,
+          "leadChineseChars": 3,
+          "tailChineseChars": 9,
+          "maxGapChineseChars": 24,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "boundarySpacesAdded": 0
+      },
+      "B": {
+        "english": "Our <w6>meteorology</w6> team reached a station beside an <w3>arctic</w3> <w5>gulf</w5>. We installed <w7>thermal</w7> sensors across the <w1>granite</w1> <w2>terrain</w2>. We hoped to <w22>derive</w22> climate patterns by comparing our readings with data from <w9>arid</w9> deserts and the <w10>humid</w10> <w8>tropics</w8>. When <w11>hail</w11> struck and conditions began to <w4>deteriorate</w4>, we took <w20>cover</w20> inside, where we continued to <w13>shiver</w13>. We let the ice <w12>thaw</w12> before following the <w17>standard</w17> <w16>process</w16> for checking the damaged sensors. Our limited <w14>budget</w14> forced us to <w21>reject</w21> costly replacements and cut travel <w24>expenses</w24>. The leader’s practical <w18>attitude</w18> restored our <w19>motivation</w19>, and we repaired enough sensors to <w23>contribute</w23> reliable readings before we could <w15>relax</w15>.",
+        "translated": "我们<w6>气象学</w6>小组抵达<w3>北极的</w3><w5>海湾</w5>旁的研究站，在<w1>花岗岩</w1><w2>地形</w2>上布设<w7>热</w7>传感器。我们希望对比读数与<w9>干旱的</w9>沙漠及<w10>潮湿的</w10><w8>热带</w8>数据，<w22>推导出</w22>气候规律。<w11>冰雹</w11>来袭，状况开始<w4>恶化</w4>，我们进屋寻求<w20>庇护</w20>，仍不停<w13>发抖</w13>。等冰<w12>融化</w12>后，我们按<w17>标准</w17><w16>流程</w16>检查受损传感器。有限的<w14>预算</w14>迫使我们<w21>拒绝</w21>昂贵的更换方案并削减差旅<w24>开支</w24>。领队的务实<w18>态度</w18>让我们重拾<w19>动力</w19>，修好足够的传感器，<w23>提供</w23>可靠读数后才得以<w15>放松</w15>。",
+        "text": "我们meteorology小组抵达arctic gulf旁的研究站，在granite terrain上布设thermal传感器。我们希望对比读数与arid沙漠及humid tropics数据，derive气候规律。hail来袭，状况开始deteriorate，我们进屋寻求cover，仍不停shiver。等冰thaw后，我们按standard process检查受损传感器。有限的budget迫使我们reject昂贵的更换方案并削减差旅expenses。领队的务实attitude让我们重拾motivation，修好足够的传感器，contribute可靠读数后才得以relax。",
+        "metrics": {
+          "coverage": "24/24",
+          "missing": [],
+          "repeats": [],
+          "chineseChars": 109,
+          "totalChars": 289,
+          "sentences": 6,
+          "leadChineseChars": 2,
+          "tailChineseChars": 0,
+          "maxGapChineseChars": 12,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": []
+        },
+        "seconds": 80.057,
+        "usage": {
+          "input_tokens": 36112,
+          "cached_input_tokens": 25088,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2098,
+          "reasoning_output_tokens": 1421
+        },
+        "idsEnglish": [
+          6,
+          3,
+          5,
+          7,
+          1,
+          2,
+          22,
+          9,
+          10,
+          8,
+          11,
+          4,
+          20,
+          13,
+          12,
+          17,
+          16,
+          14,
+          21,
+          24,
+          18,
+          19,
+          23,
+          15
+        ],
+        "idsChinese": [
+          6,
+          3,
+          5,
+          1,
+          2,
+          7,
+          9,
+          10,
+          8,
+          22,
+          11,
+          4,
+          20,
+          13,
+          12,
+          17,
+          16,
+          14,
+          21,
+          24,
+          18,
+          19,
+          23,
+          15
+        ],
+        "textRaw": "我们meteorology小组抵达arcticgulf旁的研究站，在graniteterrain上布设thermal传感器。我们希望对比读数与arid沙漠及humidtropics数据，derive气候规律。hail来袭，状况开始deteriorate，我们进屋寻求cover，仍不停shiver。等冰thaw后，我们按standardprocess检查受损传感器。有限的budget迫使我们reject昂贵的更换方案并削减差旅expenses。领队的务实attitude让我们重拾motivation，修好足够的传感器，contribute可靠读数后才得以relax。",
+        "metricsRaw": {
+          "coverage": "16/24",
+          "missing": [
+            "granite",
+            "terrain",
+            "arctic",
+            "gulf",
+            "tropics",
+            "humid",
+            "process",
+            "standard"
+          ],
+          "repeats": [],
+          "chineseChars": 109,
+          "totalChars": 285,
+          "sentences": 6,
+          "leadChineseChars": 2,
+          "tailChineseChars": 0,
+          "maxGapChineseChars": 14,
+          "chineseOnlySentences": 0,
+          "unexpectedEnglish": [
+            "arcticgulf",
+            "graniteterrain",
+            "humidtropics",
+            "standardprocess"
+          ]
+        },
+        "boundarySpacesAdded": 4
+      },
+      "calls": [
+        {
+          "name": "long-24-A",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 49.936,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18081,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1391,
+            "reasoning_output_tokens": 1034
+          },
+          "toolItems": [],
+          "error": null
+        },
+        {
+          "name": "long-24-B1",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 47.467,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18029,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1365,
+            "reasoning_output_tokens": 1034
+          },
+          "toolItems": [],
+          "error": null
+        },
+        {
+          "name": "long-24-B2",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "seconds": 32.59,
+          "exitCode": 0,
+          "usage": {
+            "input_tokens": 18083,
+            "cached_input_tokens": 12544,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 733,
+            "reasoning_output_tokens": 387
+          },
+          "toolItems": [],
+          "error": null
+        }
+      ]
+    }
+  ],
+  "postprocessing": "Only a deterministic space between adjacent target markers before restoring words. Raw pre-guard results retained. No model retries or semantic edits."
+}

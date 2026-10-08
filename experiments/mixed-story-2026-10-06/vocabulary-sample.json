@@ -1,0 +1,199 @@
+{
+  "words": [
+    "stature",
+    "flesh",
+    "skull",
+    "eyelash",
+    "gorge",
+    "womb"
+  ],
+  "prompt": "为英语学习生成可长期复用的通用词典卡，不引用任何文章、用户或故事。只输出JSON数组，每个输入词恰好一项。\n格式：[{\"word\":\"输入原词\",\"pos\":\"n.\",\"usIpa\":\"/美式IPA/\",\"ukIpa\":\"/英式IPA/\",\"meanings\":[\"常用中文义一\",\"常用中文义二\"],\"collocations\":[\"常用英文搭配 · 中文\",\"另一搭配 · 中文\"],\"wordFormation\":\"简短中文构词说明\",\"synonyms\":[\"近义词 · 中文\"],\"antonyms\":[\"反义词 · 中文\"]}]\n词性用n./v./adj./adv./prep./pron./conj./num./det./int./phr.。保留输入原词及顺序；释义1–3项，优先现代英语常用义，不为特定主题选择古义。搭配1–2项，词根说明不超过60字，近义词/反义词各0–2项。\n音标必须为真实IPA，不用普通字母拼读。若是短语或无法可靠给出某个音标，写空字符串；不编造音标、词源或反义词。构词无可分析部分时明确说明；不适用的近反义词用空数组，不使用“待补充”“生成失败”等占位内容。\n[\"stature\",\"flesh\",\"skull\",\"eyelash\",\"gorge\",\"womb\"]",
+  "call": {
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "seconds": 41.861,
+    "exitCode": 0,
+    "usage": {
+      "input_tokens": 18544,
+      "cached_input_tokens": 12544,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1120,
+      "reasoning_output_tokens": 340
+    },
+    "tools": [],
+    "text": "[\n  {\n    \"word\": \"stature\",\n    \"pos\": \"n.\",\n    \"usIpa\": \"/ˈstætʃɚ/\",\n    \"ukIpa\": \"/ˈstætʃə/\",\n    \"meanings\": [\"身高；身材\", \"声望；地位\"],\n    \"collocations\": [\"short stature · 身材矮小\", \"gain in stature · 声望提高\"],\n    \"wordFormation\": \"现代英语中无常用的可拆分构词部分。\",\n    \"synonyms\": [\"height · 身高\", \"prestige · 声望\"],\n    \"antonyms\": []\n  },\n  {\n    \"word\": \"flesh\",\n    \"pos\": \"n.\",\n    \"usIpa\": \"/flɛʃ/\",\n    \"ukIpa\": \"/fleʃ/\",\n    \"meanings\": [\"肉；肌肉组织\", \"果肉\", \"肉体\"],\n    \"collocations\": [\"human flesh · 人体的肉\", \"fruit flesh · 果肉\"],\n    \"wordFormation\": \"单纯词，无常用的可拆分构词部分。\",\n    \"synonyms\": [\"meat · 肉\"],\n    \"antonyms\": []\n  },\n  {\n    \"word\": \"skull\",\n    \"pos\": \"n.\",\n    \"usIpa\": \"/skʌl/\",\n    \"ukIpa\": \"/skʌl/\",\n    \"meanings\": [\"颅骨；头骨\"],\n    \"collocations\": [\"a skull fracture · 颅骨骨折\", \"the base of the skull · 颅底\"],\n    \"wordFormation\": \"单纯词，无常用的可拆分构词部分。\",\n    \"synonyms\": [\"cranium · 颅骨\"],\n    \"antonyms\": []\n  },\n  {\n    \"word\": \"eyelash\",\n    \"pos\": \"n.\",\n    \"usIpa\": \"/ˈaɪlæʃ/\",\n    \"ukIpa\": \"/ˈaɪlæʃ/\",\n    \"meanings\": [\"睫毛\"],\n    \"collocations\": [\"long eyelashes · 长睫毛\", \"false eyelashes · 假睫毛\"],\n    \"wordFormation\": \"复合词：eye（眼）+ lash（睫毛）。\",\n    \"synonyms\": [\"lash · 睫毛\"],\n    \"antonyms\": []\n  },\n  {\n    \"word\": \"gorge\",\n    \"pos\": \"n.\",\n    \"usIpa\": \"/ɡɔːrdʒ/\",\n    \"ukIpa\": \"/ɡɔːdʒ/\",\n    \"meanings\": [\"峡谷\"],\n    \"collocations\": [\"a deep gorge · 深峡谷\", \"a narrow gorge · 狭窄的峡谷\"],\n    \"wordFormation\": \"现代英语中无常用的可拆分构词部分。\",\n    \"synonyms\": [\"canyon · 峡谷\", \"ravine · 深沟；峡谷\"],\n    \"antonyms\": []\n  },\n  {\n    \"word\": \"womb\",\n    \"pos\": \"n.\",\n    \"usIpa\": \"/wuːm/\",\n    \"ukIpa\": \"/wuːm/\",\n    \"meanings\": [\"子宫\"],\n    \"collocations\": [\"in the womb · 在子宫内\", \"a mother's womb · 母亲的子宫\"],\n    \"wordFormation\": \"单纯词，无常用的可拆分构词部分；字母 b 不发音。\",\n    \"synonyms\": [\"uterus · 子宫\"],\n    \"antonyms\": []\n  }\n]"
+  },
+  "parsed": {
+    "issues": [],
+    "entries": [
+      {
+        "word": "stature",
+        "pos": "n.",
+        "usIpa": "/ˈstætʃɚ/",
+        "ukIpa": "/ˈstætʃə/",
+        "senses": [
+          {
+            "marker": "①",
+            "meaning": "身高；身材"
+          },
+          {
+            "marker": "②",
+            "meaning": "声望；地位"
+          }
+        ],
+        "baseMeanings": [
+          "身高；身材",
+          "声望；地位"
+        ],
+        "collocations": [
+          "short stature · 身材矮小",
+          "gain in stature · 声望提高"
+        ],
+        "wordFormation": "现代英语中无常用的可拆分构词部分。",
+        "synonyms": [
+          "height · 身高",
+          "prestige · 声望"
+        ],
+        "antonyms": [],
+        "detailsReady": true
+      },
+      {
+        "word": "flesh",
+        "pos": "n.",
+        "usIpa": "/flɛʃ/",
+        "ukIpa": "/fleʃ/",
+        "senses": [
+          {
+            "marker": "①",
+            "meaning": "肉；肌肉组织"
+          },
+          {
+            "marker": "②",
+            "meaning": "果肉"
+          },
+          {
+            "marker": "③",
+            "meaning": "肉体"
+          }
+        ],
+        "baseMeanings": [
+          "肉；肌肉组织",
+          "果肉",
+          "肉体"
+        ],
+        "collocations": [
+          "human flesh · 人体的肉",
+          "fruit flesh · 果肉"
+        ],
+        "wordFormation": "单纯词，无常用的可拆分构词部分。",
+        "synonyms": [
+          "meat · 肉"
+        ],
+        "antonyms": [],
+        "detailsReady": true
+      },
+      {
+        "word": "skull",
+        "pos": "n.",
+        "usIpa": "/skʌl/",
+        "ukIpa": "/skʌl/",
+        "senses": [
+          {
+            "marker": "①",
+            "meaning": "颅骨；头骨"
+          }
+        ],
+        "baseMeanings": [
+          "颅骨；头骨"
+        ],
+        "collocations": [
+          "a skull fracture · 颅骨骨折",
+          "the base of the skull · 颅底"
+        ],
+        "wordFormation": "单纯词，无常用的可拆分构词部分。",
+        "synonyms": [
+          "cranium · 颅骨"
+        ],
+        "antonyms": [],
+        "detailsReady": true
+      },
+      {
+        "word": "eyelash",
+        "pos": "n.",
+        "usIpa": "/ˈaɪlæʃ/",
+        "ukIpa": "/ˈaɪlæʃ/",
+        "senses": [
+          {
+            "marker": "①",
+            "meaning": "睫毛"
+          }
+        ],
+        "baseMeanings": [
+          "睫毛"
+        ],
+        "collocations": [
+          "long eyelashes · 长睫毛",
+          "false eyelashes · 假睫毛"
+        ],
+        "wordFormation": "复合词：eye（眼）+ lash（睫毛）。",
+        "synonyms": [
+          "lash · 睫毛"
+        ],
+        "antonyms": [],
+        "detailsReady": true
+      },
+      {
+        "word": "gorge",
+        "pos": "n.",
+        "usIpa": "/ɡɔːrdʒ/",
+        "ukIpa": "/ɡɔːdʒ/",
+        "senses": [
+          {
+            "marker": "①",
+            "meaning": "峡谷"
+          }
+        ],
+        "baseMeanings": [
+          "峡谷"
+        ],
+        "collocations": [
+          "a deep gorge · 深峡谷",
+          "a narrow gorge · 狭窄的峡谷"
+        ],
+        "wordFormation": "现代英语中无常用的可拆分构词部分。",
+        "synonyms": [
+          "canyon · 峡谷",
+          "ravine · 深沟；峡谷"
+        ],
+        "antonyms": [],
+        "detailsReady": true
+      },
+      {
+        "word": "womb",
+        "pos": "n.",
+        "usIpa": "/wuːm/",
+        "ukIpa": "/wuːm/",
+        "senses": [
+          {
+            "marker": "①",
+            "meaning": "子宫"
+          }
+        ],
+        "baseMeanings": [
+          "子宫"
+        ],
+        "collocations": [
+          "in the womb · 在子宫内",
+          "a mother's womb · 母亲的子宫"
+        ],
+        "wordFormation": "单纯词，无常用的可拆分构词部分；字母 b 不发音。",
+        "synonyms": [
+          "uterus · 子宫"
+        ],
+        "antonyms": [],
+        "detailsReady": true
+      }
+    ]
+  },
+  "notes": "Codex text sample only. No Texta or DeepSeek requests."
+}

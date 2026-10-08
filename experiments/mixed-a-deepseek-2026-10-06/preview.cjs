@@ -1,0 +1,33 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const {createRequire}=require('node:module');
+const express=require('express');
+const root=path.resolve(__dirname,'../..'), app=express(), requests=[];
+const context=vm.createContext({require:createRequire(path.join(root,'server.js')),process,console,__dirname:root,fetch,URL,AbortController,setTimeout,clearTimeout,Buffer,structuredClone});
+const source=fs.readFileSync(path.join(root,'server.js'),'utf8');
+vm.runInContext(source.slice(0,source.lastIndexOf('bootstrap().catch')),context);
+const helpers=vm.runInContext('({normalizeLexicon,buildBaseLexiconForResponse,buildArticleRuns,splitParagraphs})',context);
+const user={id:'mixed-qa',name:'本地测试',role:'user',plan:'free'},usage={remaining:9,used:1,limit:10,isUnlimited:false};
+let library={favorites:[],notebookEntries:[],vocabPrefs:{},libraryFolders:[]};
+app.use(express.json());
+app.get('/site-config.js',(_,res)=>res.type('js').send('window.TEXTA_API_BASE=location.origin;'));
+app.get('/__qa',(_,res)=>res.json({requests,library}));
+app.use('/api',(req,res,next)=>{requests.push({method:req.method,path:req.path,body:req.body});next();});
+app.get('/api/auth/me',(_,res)=>res.json({user}));
+app.get('/api/health',(_,res)=>res.json({ok:true,service:'texta-api',libraryVersion:3}));
+app.get('/api/usage',(_,res)=>res.json({user,usage}));
+app.get('/api/library',(_,res)=>res.json(library));
+app.post('/api/library/sync',(req,res)=>{library=req.body;res.json({ok:true});});
+app.post('/api/spellcheck',(_,res)=>res.json({items:[]}));
+app.post('/api/generate',(_,res)=>{
+  const row=JSON.parse(fs.readFileSync(path.join(__dirname,'results.json'),'utf8')).results.find(row=>row.id==='theme-6');
+  if(!row?.result)return res.status(503).json({error:'No validated fixture'});
+  const {result,words}=row;
+  const lexicon=helpers.normalizeLexicon(words,result.glosses.map((g,i)=>({word:words[i],pos:g.pos,meanings:[g.meaning]})),'core');
+  const contextGlosses=result.glosses.map((g,i)=>({word:words[i],pos:g.pos,contextMeaning:g.meaning,marker:'①'}));
+  res.json({title:result.title,defaultTitle:result.title,article:result.article,generationMode:'mixed',generationQuality:'normal',usageCost:1,model:'deepseek-v3.2',words,missing:[],lexicon,baseLexicon:helpers.buildBaseLexiconForResponse(lexicon),contextGlosses,runs:helpers.buildArticleRuns(result.article,words,contextGlosses),paragraphsEn:helpers.splitParagraphs(result.article),paragraphsZh:[],alignment:[],usage});
+});
+app.post('/api/vocab/detail',(req,res)=>{
+  res.json({ok:true,entry:{word:req.body.word,pos:'adj.',usIpa:'/test/',ukIpa:'/test/',senses:[{meaning:'测试释义',marker:'①'}],baseMeanings:['测试释义'],collocations:['测试搭配'],wordFormation:'测试词根',synonyms:['test'],antonyms:['test']}});
+});
+app.use(express.static(path.join(root,'public')));
+app.listen(3012,'127.0.0.1',()=>console.log('Local UI fixture at http://127.0.0.1:3012/app.html (no database access).'));

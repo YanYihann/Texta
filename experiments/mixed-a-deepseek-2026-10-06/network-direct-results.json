@@ -1,0 +1,226 @@
+{
+  "model": "deepseek-v3.2",
+  "date": "2026-10-06",
+  "results": [
+    {
+      "id": "theme-6",
+      "words": [
+        "sustainable",
+        "resilient",
+        "adapt",
+        "perspective",
+        "thrive",
+        "balance"
+      ],
+      "quickMode": false,
+      "seconds": 33.956,
+      "calls": [],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1030,
+          "attempt": 1,
+          "status": "retry",
+          "durationMs": 10846,
+          "error": "fetch failed"
+        },
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1030,
+          "attempt": 2,
+          "status": "retry",
+          "durationMs": 10611,
+          "error": "fetch failed"
+        },
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1030,
+          "attempt": 3,
+          "status": "error",
+          "durationMs": 10682,
+          "error": "fetch failed"
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 3,
+        "successfulRequests": 0,
+        "failedRequests": 3,
+        "totalDurationMs": 32139,
+        "totalInputTokens": 0,
+        "totalOutputTokens": 0,
+        "totalTokens": 0,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 3,
+            "successes": 0,
+            "durationMs": 32139
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1030,
+            "attempt": 1,
+            "status": "retry",
+            "durationMs": 10846,
+            "error": "fetch failed"
+          },
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1030,
+            "attempt": 2,
+            "status": "retry",
+            "durationMs": 10611,
+            "error": "fetch failed"
+          },
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1030,
+            "attempt": 3,
+            "status": "error",
+            "durationMs": 10682,
+            "error": "fetch failed"
+          }
+        ]
+      },
+      "missing": [
+        "sustainable",
+        "resilient",
+        "adapt",
+        "perspective",
+        "thrive",
+        "balance"
+      ],
+      "error": "Network connection to OpenAI failed after 3 attempts. Check network/proxy, or set OPENAI_BASE_URL in .env."
+    },
+    {
+      "id": "mixed-12",
+      "words": [
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "derive",
+        "sterility",
+        "plume",
+        "bristle",
+        "cricket",
+        "expenses"
+      ],
+      "quickMode": false,
+      "seconds": 33.809,
+      "calls": [],
+      "trace": [
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1660,
+          "attempt": 1,
+          "status": "retry",
+          "durationMs": 10647,
+          "error": "fetch failed"
+        },
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1660,
+          "attempt": 2,
+          "status": "retry",
+          "durationMs": 10668,
+          "error": "fetch failed"
+        },
+        {
+          "step": "mixed_direct",
+          "model": "deepseek-v3.2",
+          "mode": "chat",
+          "maxTokens": 1660,
+          "attempt": 3,
+          "status": "error",
+          "durationMs": 10666,
+          "error": "fetch failed"
+        }
+      ],
+      "diagnostics": {
+        "totalRequests": 3,
+        "successfulRequests": 0,
+        "failedRequests": 3,
+        "totalDurationMs": 31981,
+        "totalInputTokens": 0,
+        "totalOutputTokens": 0,
+        "totalTokens": 0,
+        "byStep": [
+          {
+            "step": "mixed_direct",
+            "requests": 3,
+            "successes": 0,
+            "durationMs": 31981
+          }
+        ],
+        "calls": [
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1660,
+            "attempt": 1,
+            "status": "retry",
+            "durationMs": 10647,
+            "error": "fetch failed"
+          },
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1660,
+            "attempt": 2,
+            "status": "retry",
+            "durationMs": 10668,
+            "error": "fetch failed"
+          },
+          {
+            "step": "mixed_direct",
+            "model": "deepseek-v3.2",
+            "mode": "chat",
+            "maxTokens": 1660,
+            "attempt": 3,
+            "status": "error",
+            "durationMs": 10666,
+            "error": "fetch failed"
+          }
+        ]
+      },
+      "missing": [
+        "budget",
+        "relax",
+        "process",
+        "standard",
+        "attitude",
+        "motivation",
+        "derive",
+        "sterility",
+        "plume",
+        "bristle",
+        "cricket",
+        "expenses"
+      ],
+      "error": "Network connection to OpenAI failed after 3 attempts. Check network/proxy, or set OPENAI_BASE_URL in .env."
+    }
+  ]
+}
