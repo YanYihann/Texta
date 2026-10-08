@@ -2,6 +2,18 @@
 
 # dependencies
 /node_modules
+
+# Shared assets copied from root public/ during dev/build.
+/public/fonts/
+/public/vendor/
+/public/assets/
+/public/workspace.css
+/public/controls.css
+/public/vocabulary.css
+/public/legal.css
+/public/billing.css
+/public/favicon.svg
+/public/logo.svg
 /.pnp
 .pnp.*
 .yarn/*
@@ -32,6 +44,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
 
 # vercel
 .vercel

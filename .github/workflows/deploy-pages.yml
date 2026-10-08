@@ -27,10 +27,30 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend-react/package-lock.json
+
+      - name: Install frontend
+        run: npm ci --prefix frontend-react
+
+      - name: Check frontend
+        run: |
+          npm run lint --prefix frontend-react
+          npm test --prefix frontend-react
+
+      - name: Build Next.js static export
+        run: npm run build --prefix frontend-react
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://api-texta.yanyihan.top
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./public
+          path: ./frontend-react/out
 
       - name: Deploy to GitHub Pages
         id: deployment

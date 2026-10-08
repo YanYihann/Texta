@@ -381,3 +381,11 @@ Vocabulary typing uses bold text with an aligned paint layer over the native tex
 ## Account and plans navigation — 2026-10-05
 
 The login card contains only authentication controls; the product introduction and plan links are removed. Registration disclosures and public policy pages remain accessible from the authentication and pricing pages. The account popover contains identity, usage, administration where authorized, help and theme settings, without the policy/contact links or duplicated plan entry. A single `Plus / Pro 套餐` navigation link is styled as a 44px button immediately beside Account and remains available to all signed-in roles. It uses the incumbent panel, line, primary, soft and radius tokens, with visible keyboard focus. Narrow phones keep the two account actions together on their own row; intermediate widths move study navigation to a second row. English uses `Plus / Pro plans`. Purchasing remains paused at the backend.
+
+## Next.js migration · October 8, 2026
+
+The production React components now live in `frontend-react/src/components/texta/`. They import the existing workspace, control, vocabulary, policy and billing CSS, preserving Texta's six palettes and self-hosted reading font. React owns state, account switching, focusable word highlights and native dialog interactions; the legacy DOM scripts are retained for rollback and are not shipped in the Next.js runtime.
+
+The vocabulary editor retains tags, file import, local spelling assistance and Tab completion. The reading and definition panels scroll independently. Mobile navigation switches input, article and word details, and Escape exits reading mode. Notebook filters and calendar counts are derived from the current account's library; the first-added date remains stable when cards are refreshed. Export previews use the same stored article data and explicitly escape user content.
+
+Verification uses fixture API responses and browser interaction; it does not assert real payment settlement or live model accuracy. Runtime, compatibility and rollback details are in [the migration document](docs/next-frontend.md).

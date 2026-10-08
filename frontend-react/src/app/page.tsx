@@ -1,5 +1,5 @@
-import DemoOne from "@/components/ui/demo";
+import { AuthPage } from "@/components/texta/auth-page";
 
 export default function Home() {
-  return <DemoOne />;
+  return <AuthPage />;
 }

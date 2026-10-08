@@ -12,7 +12,7 @@ English vocabulary learners, including IELTS students. The confirmed task is the
 Turn supplied English words and phrases into contextual reading with Chinese support and reusable study material.
 
 ## Capabilities and Constraints
-Preserve authentication, usage allowances, standard and mixed generation, generation quality, spellcheck, imports, bilingual reading, pronunciation, favorites, history, notebook, cloud synchronization, PDF/Word exports and administrator access. Existing Express API and static public frontend remain the implementation boundary. Publish to https://texta.yanyihan.top through the repository's GitHub Pages deployment.
+Preserve authentication, usage allowances, standard and mixed generation, spelling assistance, imports, bilingual reading, pronunciation, favorites, history, notebook, cloud synchronization, PDF/Word exports and administrator access. The production frontend is Next.js / React / TypeScript in frontend-react/, statically exported for GitHub Pages at https://texta.yanyihan.top. Keep the existing Express API and data schema. public/ provides shared resources and the legacy rollback frontend. Retain old HTML links and browser data compatibility.
 
 ## Brand Commitments
 Texta name. Default Chinese with English switching. Direct functional copy. No slogan section, decorative microcopy or diagonal arrows. Broad visual replacement authorized. Smooth interaction is a priority.

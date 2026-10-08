@@ -20,3 +20,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm ci --prefix frontend-react
+      - run: npm run lint --prefix frontend-react
+      - run: npm test --prefix frontend-react
+      - run: npm run build --prefix frontend-react
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://api-texta.yanyihan.top

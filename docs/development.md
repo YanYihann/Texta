@@ -14,6 +14,17 @@ npm test
 
 核心检查使用模拟模型、内存数据库替身和 HTTP 夹具，不需要真实生成 API Key。这些检查不能证明真实 PostgreSQL 锁行为、所有模型输出、正式支付或跨设备数据同步。
 
+## Next.js 前端检查
+
+```bash
+npm ci --prefix frontend-react
+npm run lint --prefix frontend-react
+npm test --prefix frontend-react
+npm run build --prefix frontend-react
+```
+
+前端测试使用本地存储和 HTTP 替身，验证旧数据迁移、账号隔离、同步失败保护、并发修改、双语定位和导出转义。构建包含类型检查和静态路由验收。运行与浏览器验收范围见 [Next.js 前端](next-frontend.md)。Core tests 工作流在 PR 中执行这些检查，Pages 发布时也会检查前端。
+
 ## 真实数据库检查
 
 计费集成测试需要预先初始化的专用数据库。`BILLING_TEST_DATABASE_URL` 的 schema 必须匹配 `texta_billing_test_[a-z0-9_]+`；未设置时跳过。它写入固定测试夹具，重复运行前应在专用测试环境清理夹具。

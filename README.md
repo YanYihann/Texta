@@ -50,7 +50,7 @@ Texta 是面向英语词汇学习者的全栈学习工具，适合雅思备考�
 
 学习材料可以继续保存到收藏夹和生词本，标记掌握状态，并导出 PDF 或 Word。中文界面默认启用，也可切换为英文。
 
-当前线上版本使用 `public/` 中的静态前端和独立 Express API。`desktop/` 是连接同一线上站点的 Windows 客户端；`frontend-react/` 是开发中的 Next.js 前端，尚未替代线上版本。微信登录相关后端已包含在本仓库，微信小程序客户端源码不在本仓库内。
+网页前端已迁移至 `frontend-react/` 中的 Next.js / React / TypeScript，通过静态导出继续发布到 [texta.yanyihan.top](https://texta.yanyihan.top/)，并连接原有 Express API。`desktop/` 连接同一线上站点；`public/` 保留共享样式、字体、词表、导出资源、政策正文及旧版回退页面。旧的 `app.html`、套餐页和管理页链接仍兼容。微信登录相关后端已包含在本仓库，微信小程序客户端源码不在本仓库内。
 
 <a id="features"></a>
 
@@ -90,17 +90,17 @@ Texta 是面向英语词汇学习者的全栈学习工具，适合雅思备考�
 
 | 部分 | 当前实现 |
 | --- | --- |
-| 线上前端 | HTML、CSS、JavaScript；GitHub Pages |
+| 线上前端 | Next.js 16、React 19、TypeScript；静态导出至 GitHub Pages |
 | 服务端 | Node.js、Express 4；账号、学习库、生成、计费 API |
 | 数据 | Prisma 6、PostgreSQL；账号、收藏、生词本、词典缓存与支付订单 |
 | 模型 | OpenAI-compatible API；当前部署配置为 302.ai / DeepSeek V3.2 |
 | 文档导出 | 前端 PDF / Word 导出；PDF 使用 html2canvas 与 jsPDF |
 | Windows 客户端 | Electron、electron-builder、NSIS |
-| 前端重写 | Next.js 16、React 19、TypeScript、Tailwind CSS；开发中 |
+| 界面与资源 | 沿用 Texta 原有 CSS 主题、自托管字体和本地词表 |
 
 ```mermaid
 flowchart LR
-  Web["Web · public/"] --> API["Express API · server.js"]
+  Web["Web · Next.js 静态导出"] --> API["Express API · server.js"]
   Desktop["Windows · Electron"] --> Web
   API --> Gen["文章生成与词典准备"]
   Gen --> Model["OpenAI-compatible 模型服务"]
@@ -153,7 +153,7 @@ OPENAI_MODEL_NORMAL=deepseek-v3.2
 OPENAI_API_MODE=chat
 OPENAI_BASE_URL=https://api.302.ai/v1
 OPENAI_TIMEOUT_MS=60000
-FRONTEND_ORIGIN=http://localhost:3000
+FRONTEND_ORIGIN=http://localhost:3001
 PORT=3000
 ```
 
@@ -161,13 +161,14 @@ PORT=3000
 
 ### 3. 连接本地 API
 
-仓库中的 `public/site-config.js` 默认指向线上 API。**本地开发时**将其中的配置改为：
+安装前端依赖，并创建本地 API 配置：
 
-```javascript
-window.TEXTA_API_BASE = "";
+```bash
+npm ci --prefix frontend-react
+cp frontend-react/.env.local.example frontend-react/.env.local
 ```
 
-这会让前端请求同源的本地 Express 服务。发布 GitHub Pages 时需要配置线上 API 地址，避免把本地配置直接发布到线上。
+示例中的 `NEXT_PUBLIC_API_BASE_URL=http://localhost:3000` 对应本地 Express 服务。该变量是公开的 API 地址，不能填写密钥；线上构建由 Pages 工作流设置为 `https://api-texta.yanyihan.top`。`public/site-config.js` 仅供旧版回退页面使用。
 
 ### 4. 初始化并启动
 
@@ -178,16 +179,15 @@ npm run db:push -- --skip-generate
 npm start
 ```
 
-打开 <http://localhost:3000>；健康检查为 <http://localhost:3000/api/health>。服务启动依赖当前数据库结构，包括 `VocabularyDetail` 表。
+保持 API 运行，另开终端启动前端。健康检查为 <http://localhost:3000/api/health>。服务启动依赖当前数据库结构，包括 `VocabularyDetail` 表。
 
-开发中的 Next.js 前端可单独运行：
+启动 Next.js 前端：
 
 ```bash
-npm ci --prefix frontend-react
-npm run dev --prefix frontend-react -- --port 3001
+npm run dev --prefix frontend-react
 ```
 
-该前端仍在迁移中，完整学习流程以 `public/` 为准。
+打开 [http://localhost:3001](http://localhost:3001)。迁移后的路由、缓存兼容与构建预览见 [Next.js 前端](docs/next-frontend.md)。
 
 <a id="desktop"></a>
 
@@ -223,9 +223,12 @@ npm run desktop:build
 
 ```bash
 npm test
+npm run lint --prefix frontend-react
+npm test --prefix frontend-react
+npm run build --prefix frontend-react
 ```
 
-该命令覆盖微信账号、账号合并、计费、两种文章生成、词典缓存、网页微信状态、学习库和句子翻译。桌面客户端需要单独安装依赖后验证：
+根目录测试覆盖微信账号、账号合并、计费、两种文章生成、词典缓存、学习库和句子翻译。前端检查覆盖账号缓存隔离、旧短语标识、首次云端读取失败保护、同步期间编辑、双语对齐及导出转义；构建包含 TypeScript 检查和静态路由验证。桌面客户端需要单独安装依赖后验证：
 
 ```bash
 npm run test:desktop
@@ -240,8 +243,8 @@ npm run test:smoke --prefix desktop
 
 | 组件 | 配置与入口 |
 | --- | --- |
-| 静态前端 | `.github/workflows/deploy-pages.yml` 发布 `public/`；`public/CNAME` 配置自定义域名 |
-| API | `render.yaml` 定义 Render 服务；`public/site-config.js` 指定前端使用的 API 地址 |
+| Next.js 前端 | `.github/workflows/deploy-pages.yml` 安装、检查并构建 `frontend-react/out/` 后发布；复制 `public/CNAME` 保留自定义域名 |
+| API | `render.yaml` 定义 Render 服务；前端构建变量 `NEXT_PUBLIC_API_BASE_URL` 指定 API 地址 |
 | 数据库 | PostgreSQL；现有 Render 构建流程执行 Prisma schema 同步 |
 | 桌面版 | `.github/workflows/build-desktop.yml` 手动构建 Windows x64 安装包 |
 
@@ -255,13 +258,13 @@ npm run test:smoke --prefix desktop
 
 ```text
 Texta/
-├── public/                 # 当前线上网页、样式、字体与导出资源
+├── public/                 # 共享样式、字体、导出资源、政策及旧版回退
 ├── auth/                   # 微信身份、邮箱关联和账号合并
 ├── billing/                # 套餐、积分、订单和 FastSpring
 ├── generation/             # 双语、混合故事与完整词汇卡
 ├── prisma/schema.prisma    # PostgreSQL 数据模型
 ├── desktop/                # Electron 客户端、图标、构建和测试
-├── frontend-react/         # Next.js 前端重写（开发中）
+├── frontend-react/         # 当前 Next.js 前端、静态导出和数据兼容检查
 ├── tests/                  # 核心回归检查与本地预览夹具
 ├── experiments/            # 生成实验脚本、数据集、报告与结果
 ├── docs/                   # 文档索引、截图、配置和历史资料
@@ -286,7 +289,7 @@ Texta/
 - [x] 收藏、生词本、掌握状态及学习库同步
 - [x] 邮箱登录、微信身份关联与账号合并后端
 - [x] PDF / Word 导出与 Windows 客户端构建
-- [ ] 完成 Next.js 前端迁移
+- [x] 完成 Next.js 前端迁移，兼容旧链接与旧学习资料
 - [ ] 扩充真实 PostgreSQL 环境中的集成验证
 - [ ] 完成正式支付启用与真实结算验收
 - [ ] 完成桌面版签名、正式下载分发与更新机制

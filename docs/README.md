@@ -8,6 +8,7 @@
 | --- | --- |
 | [开发与验证](development.md) | 测试入口、夹具、数据库检查及实验边界 |
 | [部署说明](deployment.md) | Pages、Render、数据库、密钥和发布流程 |
+| [Next.js 前端](next-frontend.md) | 新前端运行、静态部署、旧数据兼容与迁移验收 |
 | [Windows 桌面版](desktop.md) | 客户端运行、安装包、签名和分发 |
 | [产品要求](../PRODUCT.md) | 学习流程、能力和产品边界 |
 | [界面规范](../DESIGN.md) | 排版、颜色、动效和交互 |

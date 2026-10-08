@@ -1,12 +1,14 @@
 # 部署说明
 
-当前生产结构是 GitHub Pages 静态前端、Render Express API 和 PostgreSQL。Next.js 目录仍为开发中的重写。
+当前生产结构是 Next.js / React 静态导出至 GitHub Pages、Render Express API 和 PostgreSQL。
 
 ## 网页前端
 
-`.github/workflows/deploy-pages.yml` 在 `main` 更新时发布 `public/`，也可手动运行。仓库的 Pages Source 应设置为 GitHub Actions。
+`.github/workflows/deploy-pages.yml` 在 `main` 更新时安装、检查并构建 `frontend-react/`，发布 `frontend-react/out/`；也可手动运行。仓库的 Pages Source 应设置为 GitHub Actions。
 
-`public/CNAME` 指定 `texta.yanyihan.top`；域名 DNS 需配置到 GitHub Pages。`public/site-config.js` 中的 `window.TEXTA_API_BASE` 当前为 `https://api-texta.yanyihan.top`。本地运行使用同源空字符串，发布前恢复部署地址。
+`public/CNAME` 指定 `texta.yanyihan.top`，构建后自动复制到导出目录；域名 DNS 继续指向 GitHub Pages。工作流中的 `NEXT_PUBLIC_API_BASE_URL` 指定 `https://api-texta.yanyihan.top`。本地前端使用 `frontend-react/.env.local` 配置本地 API。`public/site-config.js` 仅供旧版回退页面使用。
+
+新路由、旧 `.html` 链接兼容、用户缓存迁移及回退流程见 [Next.js 前端](next-frontend.md)。网站切换不需要修改云端数据或更换域名。
 
 ## Express API
 
