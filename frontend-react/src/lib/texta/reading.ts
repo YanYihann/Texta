@@ -1,6 +1,9 @@
 import type { Article, LexiconEntry } from "./types";
 import { wordKey } from "./library";
 
+// Slice by saved offsets before cleaning: old word/translation alignment stays intact.
+export const articleProse = (text: string) => text.replace(/①/g, "");
+
 export interface Highlight {
   start: number;
   end: number;

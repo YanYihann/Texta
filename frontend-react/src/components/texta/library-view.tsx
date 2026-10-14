@@ -1,4 +1,5 @@
 "use client";
+import { articleProse } from "@/lib/texta/reading";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { id, type LibraryStore } from "@/lib/texta/library";
 import type { Article, Folder } from "@/lib/texta/types";
@@ -217,7 +218,7 @@ export function LibraryView({
                   )}
                 </span>
                 <span className="fav-preview">
-                  {article.article.slice(0, 150)}
+                  {articleProse(article.article.slice(0, 150))}
                 </span>
               </button>
               <div className="fav-actions">

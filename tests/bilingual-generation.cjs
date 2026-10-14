@@ -3,6 +3,17 @@ const fs = require('node:fs'), vm = require('node:vm');
 const { bilingualLimits, buildBilingualPrompt, parseBilingualResponse, generateBilingualStory } = require('../generation/bilingual.cjs');
 const { bilingualAnswer } = require('./fixtures/bilingual.cjs');
 const words = ['budget','process'];
+test('prose sense markers are removed before bilingual offsets are computed', () => {
+  const text=bilingualAnswer().replaceAll('⟦1|budget⟧','①⟦1|budget⟧①').replaceAll('⟦1|n.|预算⟧','①⟦1|n.|预算⟧①');
+  const result=parseBilingualResponse(text,words);
+  assert.deepEqual(result.issues,[]);
+  assert.ok(!JSON.stringify([result.article,result.paragraphsZh,result.sentencePairs]).includes('①'));
+  for(const row of result.alignment) for(const hit of row.occurrences) {
+    assert.equal(result.paragraphsEn[hit.paragraph].slice(hit.enStart,hit.enEnd),row.english_forms[0]);
+    assert.equal(result.paragraphsZh[hit.paragraph].slice(hit.zhStart,hit.zhEnd),row.zh_terms[0]);
+  }
+  assert.equal(result.alignment[0].marker,'①');
+});
 test('paired output preserves complete stories and exact aligned word spans', () => {
   const result = parseBilingualResponse(bilingualAnswer(), words);
   assert.deepEqual(result.issues, []); assert.equal(result.paragraphsEn.length, 1);

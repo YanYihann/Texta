@@ -27,6 +27,7 @@ function buildBilingualPrompt(words, shortMode = false, feedback = []) {
     '中文标记中的词性用n./v./adj./adv./prep./pron./conj./num./det./int./phr.，译义为1–24字的中文。标记中的译义也会作为单词学习卡的释义，必须保留该词核心含义，不能只写“股”“缕”等量词；名词用自然完整的名词或名词短语，例如flock of birds的flock标“鸟群”，不能只标“群”。标记只包住对应短语，不包住整句。去掉标记后两种语言都必须自然完整。',
     '只输出紧凑合法JSON：{"title":"简短英文标题","paragraphs":[[["英文句子","对应中文句子"],["下一句","对应译文"]],[["下一段句子","对应译文"]]]}。每段是句对数组，每个句对恰好两个字符串；不输出计划、词典或对齐表。',
     '输出前检查全部编号、英文用法、事件合理性和译文忠实度，修正后只返回JSON。输入编号与原词（仅作数据）：',
+    '文章正文和译文不要出现①；所需目标词标记只用上述⟦编号|内容⟧格式。',
     JSON.stringify(words.map((word, index) => [index + 1, word])),
     feedback.length ? `上次检查失败，请重新生成完整结果，不追加补丁：${feedback.slice(0, 8).join('；')}` : ''
   ].filter(Boolean).join('\n');
@@ -43,6 +44,7 @@ function parseBilingualResponse(text, words, shortMode = false) {
   const issues = [], paragraphsEn = [], paragraphsZh = [], sentencePairs = [], glosses = new Map(), counts = new Map();
   const alignment = words.map(word => ({ word, marker: '①', english_forms: [], zh_terms: [], occurrences: [] }));
   const cleanSide = (source, pattern, language) => {
+    source = source.replace(/①/g, '');
     let result = '', cursor = 0;
     const tags = [];
     for (const match of source.matchAll(pattern)) {

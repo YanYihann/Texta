@@ -20,6 +20,14 @@ test('adjacent tags retain exact English boundaries and matching contextual mean
   assert.equal(result.article, fullStory('我们的Budget process需要调整。'));
   assert.deepEqual(result.glosses.map(row => row.meaning), ['预算', '流程']);
 });
+test('mixed prose drops sense labels without removing vocabulary or Chinese meaning', () => {
+  const clean=parseMixedResponse(answer(),['budget','process']);
+  const raw=JSON.parse(answer());raw.article='①'+raw.article.replaceAll('⟧','⟧①');
+  const result=parseMixedResponse(JSON.stringify(raw),['budget','process']);
+  assert.deepEqual(result.issues,[]);
+  assert.equal(result.article,clean.article);
+  assert.deepEqual(result.glosses,clean.glosses);
+});
 
 test('malformed, missing, repeated, unknown, extra English, wrong meanings and verbose output are rejected', () => {
   for (const response of ['not JSON', '{"article":4,"glosses":[]}',

@@ -1,7 +1,7 @@
 "use client";
 import { Fragment, memo } from "react";
 import type { Article } from "@/lib/texta/types";
-import { highlights } from "@/lib/texta/reading";
+import { highlights, articleProse } from "@/lib/texta/reading";
 import { wordKey } from "@/lib/texta/library";
 import { useText } from "./provider";
 
@@ -69,7 +69,7 @@ function Highlighted({
   for (const span of spans) {
     if (span.start < cursor) continue;
     nodes.push(
-      text.slice(cursor, span.start),
+      articleProse(text.slice(cursor, span.start)),
       <Mark
         key={`${span.start}-${span.word}`}
         {...span}
@@ -77,12 +77,12 @@ function Highlighted({
         onSelect={onSelect}
         language={language}
       >
-        {text.slice(span.start, span.end)}
+        {articleProse(text.slice(span.start, span.end))}
       </Mark>,
     );
     cursor = span.end;
   }
-  nodes.push(text.slice(cursor));
+  nodes.push(articleProse(text.slice(cursor)));
   return <>{nodes}</>;
 }
 export const ArticleReader = memo(function ArticleReader({
@@ -122,17 +122,17 @@ export const ArticleReader = memo(function ArticleReader({
                       active={active}
                       onSelect={onSelect}
                     >
-                      {run.text}
+                      {articleProse(run.text)}
                     </Mark>
                     {showChinese ? (
                       <span className="mixed-note">
                         <span>{run.pos}</span>{" "}
-                        {run.displayMeaning || run.meaning}
+                        {articleProse(run.displayMeaning || run.meaning || "")}
                       </span>
                     ) : null}
                   </span>
                 ) : (
-                  <Fragment key={index}>{run.text}</Fragment>
+                  <Fragment key={index}>{articleProse(run.text)}</Fragment>
                 ),
               )}
             </p>

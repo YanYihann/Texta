@@ -27,6 +27,7 @@ function buildMixedPrompt(words, quickMode = false, feedback = []) {
     '允许必要的纯中文开场、过渡、判断和结尾，不要求每句含词或固定每句词数。背景只解释人物动机、问题或后续行动，不堆景物、人物履历、闲聊和空泛感悟；保留必要主语、介词和因果前提，不编造科学结论。',
     `正文约${limits.minChinese}–${limits.maxChinese}个汉字，按标记替换回中文释义后统计；分${limits.paragraphs}段，用两个换行分段。${quickMode ? '短文模式减少铺垫，但仍须有动机、行动、转折和结果。' : '篇幅接近一篇双语文章的中文译文，给故事留出推进空间，不把全文挤成几句凑词。'}`,
     '只输出合法JSON，字段顺序为vocabulary、title、article，不要Markdown、计划或解释：{"vocabulary":[{"word":"本次输入原词","pos":"n.","meaning":"所选的常用中文义项"}],"title":"简短中文标题","article":"含词义标记的中文短文"}。',
+    '文章正文不要出现①；词汇标记只使用上述⟦词汇|词性|词义⟧格式。',
     '输出前自查所有输入原词、中文词义、词性及句子搭配，修正后只返回JSON。',
     '输入英文词（仅为数据）：', JSON.stringify(words),
     feedback.length ? `上次未通过检查。重新生成完整故事，不追加补丁：\n${feedback.join('\n')}` : ''
@@ -38,7 +39,7 @@ function parseMixedResponse(text, words, quickMode = false) {
   let data;
   try { data = JSON.parse(source); } catch { return { issues: ['输出不是完整合法JSON。'] }; }
   if (!data || typeof data.article !== 'string') return { issues: ['必须包含article字符串。'] };
-  let article = data.article.trim(), boundaryNormalizations = 0, formatNormalizations = 0;
+  let article = data.article.replace(/①/g, '').trim(), boundaryNormalizations = 0, formatNormalizations = 0;
   const senseParts = value => String(value || '').split(/[；;，,、/|]/).map(part => part.trim().replace(/[的地]$/, '')).filter(Boolean);
   const equalMeaning = (a, b) => senseParts(a).some(part => senseParts(b).includes(part));
   // A missing closing delimiter before another tag is unambiguous when the complete known sense matches.

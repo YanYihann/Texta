@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/texta/api";
+import { articleProse } from "@/lib/texta/reading";
 import type { LexiconEntry, Mastery } from "@/lib/texta/types";
 import { useText } from "./provider";
 
@@ -127,11 +128,10 @@ export function DefinitionCard({
         <section className="glossary-section article-context">
           <h4>{t("在本文中")}</h4>
           <p className="context-label">{t("原文例句")}</p>
-          <blockquote>{context.en}</blockquote>
+          <blockquote>{articleProse(context.en)}</blockquote>
           <p className="context-label">{t("例句译文")}</p>
           <p>
-            {existingTranslation ||
-              translated ||
+            {articleProse(existingTranslation || translated) ||
               t(translationError || "正在翻译例句…")}
           </p>
         </section>

@@ -1,5 +1,5 @@
 import type { Article, NotebookEntry } from "./types";
-import { highlights } from "./reading";
+import { highlights, articleProse } from "./reading";
 
 export interface ExportSource {
   article?: Article;
@@ -30,11 +30,11 @@ function highlighted(
   for (const span of spans) {
     if (span.start < cursor) continue;
     html +=
-      escape(text.slice(cursor, span.start)) +
-      `<mark>${escape(text.slice(span.start, span.end))}</mark>`;
+      escape(articleProse(text.slice(cursor, span.start))) +
+      `<mark>${escape(articleProse(text.slice(span.start, span.end)))}</mark>`;
     cursor = span.end;
   }
-  return html + escape(text.slice(cursor));
+  return html + escape(articleProse(text.slice(cursor)));
 }
 export const EXPORT_STYLE = `.texta-export-doc{color:#222724;background:#fff;font:16px/1.7 'Segoe UI','Microsoft YaHei',sans-serif;overflow-wrap:anywhere}.texta-export-doc h1{font:700 30px/1.25 Georgia,'Songti SC',serif;margin:0 0 24px}.texta-export-doc h2{font:700 24px/1.3 Georgia,serif;margin:0 0 6px}.texta-export-doc p{margin:0 0 12px}.texta-export-doc .en{font:20px/1.6 Georgia,'Songti SC',serif}.texta-export-doc .zh{font-size:15px;color:#505a51}.texta-export-doc mark{background:#dae8d4;color:#294e37;font-weight:700}.texta-export-doc .export-block{margin:0 0 20px;break-inside:avoid}.texta-export-doc .word-row{border-bottom:1px solid #d8ded7;padding-bottom:16px}.texta-export-doc small{font:13px/1.4 'Segoe UI','Microsoft YaHei',sans-serif;color:#606963}.texta-export-doc .mixed-word{display:inline-flex;flex-direction:column;text-align:center;vertical-align:baseline;margin:0 2px}.texta-export-doc .mixed-word small{margin-top:2px}.texta-export-doc .mixed{white-space:pre-wrap;font:20px/2 Georgia,'Songti SC',serif}`;
 export function buildExportHtml(
@@ -53,12 +53,12 @@ export function buildExportHtml(
       };
       for (const run of article.runs) {
         if (run.type === "word")
-          paragraph += `<span class="mixed-word"><mark>${escape(run.text)}</mark>${settings.includeChinese ? `<small>${escape(run.pos)} ${escape(run.displayMeaning || run.meaning)}</small>` : ""}</span>`;
+          paragraph += `<span class="mixed-word"><mark>${escape(articleProse(run.text))}</mark>${settings.includeChinese ? `<small>${escape(run.pos)} ${escape(articleProse(run.displayMeaning || run.meaning || ""))}</small>` : ""}</span>`;
         else {
           const parts = run.text.split(/\n\s*\n/);
           for (let i = 0; i < parts.length; i++) {
             if (i) flush();
-            paragraph += escape(parts[i]);
+            paragraph += escape(articleProse(parts[i]));
           }
         }
       }

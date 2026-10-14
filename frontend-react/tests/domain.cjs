@@ -282,3 +282,18 @@ test("word import deduplicates case without breaking phrases, and exports escape
   assert.ok(html.includes("&lt;img"));
   assert.ok(html.includes("有韧性"));
 });
+test("old prose markers disappear from both export modes while exact word spans stay intact", () => {
+  const value = { ...article(), paragraphsEn:["①A resilient① community thrives."], paragraphsZh:["①一个有韧性的①社区蓬勃发展。"],
+    alignment:[{word:"resilient",occurrences:[{paragraph:0,sentence:0,enStart:3,enEnd:12,zhStart:3,zhEnd:7}]}] };
+  const settings={title:"Reading",includeChinese:true,margin:12};
+  const html=buildExportHtml({article:value},settings);
+  assert.ok(!html.includes("①"));
+  assert.ok(html.includes("A <mark>resilient</mark> community thrives."));
+  assert.ok(html.includes("一个<mark>有韧性的</mark>社区蓬勃发展。"));
+  assert.equal(value.paragraphsEn[0].slice(3,12),"resilient");
+  const mixed={...value,generationMode:"mixed",runs:[{type:"text",text:"①一个 "},{type:"word",text:"resilient①",word:"resilient",pos:"adj.",displayMeaning:"①有韧性的"},{type:"text",text:" 社区。①"}]};
+  const mixedHtml=buildExportHtml({article:mixed},settings);
+  assert.ok(!mixedHtml.includes("①"));
+  assert.ok(mixedHtml.includes("<mark>resilient</mark>"));
+  assert.ok(mixedHtml.includes("有韧性的"));
+});
