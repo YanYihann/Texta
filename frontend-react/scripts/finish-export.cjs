@@ -28,6 +28,24 @@ function segmentAliases(directory, prefix = "") {
   }
 }
 segmentAliases(output);
+// Cloudflare email obfuscation rewrites server-rendered text before React hydrates.
+// Its supported email_off markers preserve React's markup, including legal copy.
+function protectMarkup(directory) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) protectMarkup(file);
+    else if (entry.name.endsWith(".html")) {
+      const html = fs.readFileSync(file, "utf8");
+      fs.writeFileSync(
+        file,
+        html
+          .replace(/(<body\b[^>]*>)/i, "$1<!--email_off-->")
+          .replace(/<\/body>/i, "<!--/email_off--></body>"),
+      );
+    }
+  }
+}
+protectMarkup(output);
 // Preserve old bookmarks and Electron navigation, including query strings and fragments.
 for (const route of [
   "app",

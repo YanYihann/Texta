@@ -34,7 +34,13 @@ import type {
   WechatConnection,
 } from "@/lib/texta/types";
 import { PageFrame, usePreference, useSession, useText } from "./provider";
-import { Footer, LanguageButton, Loading, Modal } from "./shared";
+import {
+  Footer,
+  LanguageButton,
+  Loading,
+  Modal,
+  useDismissPopover,
+} from "./shared";
 import { ArticleReader, type SelectWord } from "./article-reader";
 import { DefinitionCard } from "./definition-card";
 import { LibraryView } from "./library-view";
@@ -148,6 +154,7 @@ function LearningWorkspace({
     alive = useRef(true),
     wechatSerial = useRef(0),
     menu = useRef<HTMLDetailsElement>(null);
+  useDismissPopover(menu);
   // These are request counters: cleanup invalidates their current values.
   useEffect(() => {
     alive.current = true;
@@ -475,7 +482,15 @@ function LearningWorkspace({
               {t("Plus / Pro 套餐")}
             </Link>
             <details ref={menu} className="account-menu">
-              <summary>{t("账户")}</summary>
+              <summary>
+                <span className="avatar" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="8" r="3" />
+                    <path d="M5 21v-3a7 7 0 0 1 14 0v3" />
+                  </svg>
+                </span>
+                {t("账户")}
+              </summary>
               <div className="account-popover">
                 <div className="user-row">
                   <span className="user-badge">
@@ -546,20 +561,35 @@ function LearningWorkspace({
                 >
                   {t("使用说明")}
                 </button>
-                <label className="theme-heading">
-                  {t("主题样式")}
-                  <select
-                    aria-label={t("主题样式")}
-                    value={theme}
-                    onChange={(event) => setTheme(event.target.value)}
-                  >
+                <fieldset className="theme-picker">
+                  <legend className="theme-heading">{t("主题样式")}</legend>
+                  <div className="theme-options">
                     {Object.entries(themes).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {t(label)}
-                      </option>
+                      <button
+                        type="button"
+                        key={key}
+                        aria-pressed={theme === key}
+                        onClick={() => setTheme(key)}
+                      >
+                        <span
+                          className="theme-swatch"
+                          data-palette={key}
+                          aria-hidden="true"
+                        />
+                        <span>{t(label)}</span>
+                        {theme === key ? (
+                          <svg
+                            className="theme-check"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                          >
+                            <path d="m5 12 4 4L19 6" />
+                          </svg>
+                        ) : null}
+                      </button>
                     ))}
-                  </select>
-                </label>
+                  </div>
+                </fieldset>
               </div>
             </details>
           </div>
@@ -569,9 +599,10 @@ function LearningWorkspace({
         id="study-workspace"
         tabIndex={-1}
         className="app-shell workspace-content"
+        data-study-view={tab}
         data-next-mobile={mobile}
       >
-        <div className="sync-state" role="status">
+        <div className="sync-state" role="status" data-status={snapshot.status}>
           {t(
             snapshot.message ||
               {

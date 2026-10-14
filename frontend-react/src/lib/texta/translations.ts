@@ -1,5 +1,6 @@
 // Shared UI copy from the incumbent interface. Learning content is never translated.
 export const dictionary: Record<string, string> = {
+  个词: "words",
   服务条款: "Terms of Service",
   隐私政策: "Privacy Policy",
   退款政策: "Refund Policy",

@@ -1,7 +1,39 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import Link from "next/link";
 import { useText } from "./provider";
+
+export function useDismissPopover(ref: RefObject<HTMLDetailsElement | null>) {
+  useEffect(() => {
+    const details = ref.current;
+    if (!details) return;
+    const outside = (event: Event) => {
+      if (event.target instanceof Node && !details.contains(event.target))
+        details.open = false;
+    };
+    const keyboard = (event: KeyboardEvent) => {
+      const summary = details.querySelector("summary");
+      if (event.key === "Escape" && details.open) {
+        event.preventDefault();
+        event.stopPropagation();
+        details.open = false;
+        summary?.focus();
+      } else if (event.key === "ArrowDown" && event.target === summary) {
+        event.preventDefault();
+        details.open = true;
+        details.querySelector<HTMLElement>("button, input, select, a")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("focusin", outside);
+    details.addEventListener("keydown", keyboard);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("focusin", outside);
+      details.removeEventListener("keydown", keyboard);
+    };
+  }, [ref]);
+}
 
 export function LanguageButton() {
   const { language, setLanguage } = useText();
@@ -67,10 +99,12 @@ export function Modal({
   title,
   onClose,
   children,
+  className = "",
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const { t } = useText();
@@ -86,7 +120,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className="react-dialog"
+      className={`react-dialog ${className}`}
       aria-labelledby="dialog-title"
       onCancel={(event) => {
         event.preventDefault();

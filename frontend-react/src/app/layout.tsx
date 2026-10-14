@@ -5,6 +5,7 @@ import "../../../public/vocabulary.css";
 import "../../../public/legal.css";
 import "../../../public/billing.css";
 import "./globals.css";
+import "./refinements.css";
 import { TextaProvider } from "@/components/texta/provider";
 
 export const metadata: Metadata = {

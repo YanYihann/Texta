@@ -1,0 +1,434 @@
+/* Preserve the legacy reading edition; React state drives local feedback. */
+:root {
+  --motion-feedback: 140ms;
+  --motion-reveal: 220ms;
+}
+body .texta-composer {
+  display: block;
+  padding: 0;
+  margin: 28px 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+}
+.texta-composer .section-heading label {
+  font-size: 21px;
+  font-weight: 650;
+}
+.texta-composer .vocabulary-editor {
+  min-height: 132px;
+}
+body .texta-composer #wordInput,
+.texta-composer .composer-completion {
+  width: 100%;
+  padding: 10px 3px;
+  font: 700 20px/1.6 var(--font-reading);
+  letter-spacing: normal;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+}
+body .texta-composer #wordInput {
+  display: block;
+  min-height: 52px;
+  max-height: 140px;
+  resize: none;
+  position: relative;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: none;
+  caret-color: var(--primary);
+}
+body .texta-composer #wordInput::placeholder {
+  font: 16px/2 var(--font-ui);
+}
+.texta-composer .composer-completion > span:first-child {
+  visibility: hidden;
+}
+body .texta-composer .has-paint #wordInput {
+  color: transparent;
+}
+.texta-composer .draft-paint {
+  font: 700 20px/1.6 var(--font-reading);
+}
+body .texta-composer .has-paint #wordInput::selection {
+  color: var(--text);
+  background: var(--highlight-en);
+}
+.texta-composer .expand-words {
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.texta-composer .chip {
+  align-items: center;
+}
+body .texta-composer .chip .chip-correction {
+  font: 13px var(--font-ui);
+  padding: 8px;
+}
+.texta-composer .file-tools-row svg,
+.generation-more svg,
+#generateBtn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.texta-composer .generation-popover p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.texta-composer .generation-mode {
+  position: relative;
+  isolation: isolate;
+}
+.texta-composer .generation-mode::before {
+  content: "";
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc((100% - 12px) / 2);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--control-shadow);
+  transition: transform var(--motion-reveal) var(--ease-out);
+  z-index: -1;
+}
+.texta-composer .generation-mode[data-mode="standard"]::before {
+  transform: translateX(calc(100% + 4px));
+}
+body .texta-composer .generation-mode button {
+  flex: 1;
+  position: relative;
+  white-space: nowrap;
+}
+body .texta-composer .generation-mode button[aria-pressed="true"] {
+  background: transparent;
+  box-shadow: none;
+}
+.texta-composer .generation-mode button:focus-visible {
+  outline-offset: -2px;
+}
+.texta-composer .composer-example {
+  font-size: 14px;
+}
+.texta-composer .generation-summary {
+  font-variant-numeric: tabular-nums;
+}
+body .texta-composer #generateBtn {
+  min-width: 164px;
+}
+body .texta-composer #generateBtn[aria-busy="true"] {
+  min-width: 200px;
+}
+
+/* The selected word carries the same ink wash into its dictionary heading. */
+.glossary > .glossary-item.active {
+  animation: definition-arrival var(--motion-feedback) ease-out;
+}
+.glossary > .glossary-item.active .glossary-word {
+  animation: linked-word-ink 520ms var(--ease-out);
+}
+@keyframes definition-arrival {
+  from {
+    opacity: 0.72;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes linked-word-ink {
+  from {
+    background-color: var(--highlight-en);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+body mark.vocab-active {
+  outline: 1px solid var(--primary);
+  outline-offset: 1px;
+}
+.library-tab::after {
+  transform-origin: center;
+}
+body .library-tab.active::after {
+  animation: tab-selection var(--motion-feedback) var(--ease-out);
+}
+@keyframes tab-selection {
+  from {
+    transform: scaleX(0.6);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.workspace-content > .library-panel,
+.workspace-content > .notebook-view {
+  animation: definition-arrival var(--motion-feedback) ease-out;
+}
+.theme-picker {
+  border: 0;
+  padding: 0;
+  margin: 16px 0 0;
+  min-width: 0;
+}
+.theme-picker .theme-heading {
+  margin: 0 0 10px;
+}
+.theme-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+body .theme-options button {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  min-height: 44px;
+  font-size: 13px;
+}
+body .theme-options button[aria-pressed="true"] {
+  background: var(--soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.theme-check {
+  margin-left: auto;
+  width: 15px;
+  height: 15px;
+}
+.theme-options .theme-swatch[data-palette="dark"] {
+  background: #232c25;
+}
+.theme-options .theme-swatch[data-palette="system"] {
+  background: var(--panel);
+}
+body .generation-more[open] .generation-popover,
+body .account-menu[open] .account-popover {
+  animation: popover-arrival var(--motion-reveal) var(--ease-out);
+  transform-origin: top right;
+}
+@keyframes popover-arrival {
+  from {
+    opacity: 0.6;
+    transform: translateY(-4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.react-dialog[open] {
+  animation: dialog-arrival var(--motion-reveal) var(--ease-out);
+}
+.react-dialog[open]::backdrop {
+  animation: backdrop-arrival var(--motion-reveal) ease-out;
+}
+.react-dialog .modal-card {
+  animation: none;
+  box-shadow: none;
+}
+@keyframes dialog-arrival {
+  from {
+    opacity: 0.65;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes backdrop-arrival {
+  from {
+    background-color: transparent;
+  }
+  to {
+    background-color: var(--overlay);
+  }
+}
+.sync-state {
+  font-variant-numeric: tabular-nums;
+}
+.sync-state::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--primary);
+}
+.sync-state[data-status="saved"] {
+  opacity: 0.8;
+}
+.sync-state[data-status="offline"] {
+  color: var(--warning);
+}
+.sync-state[data-status="offline"]::before {
+  background: currentColor;
+}
+.sync-state[data-status="syncing"]::before,
+.sync-state[data-status="loading"]::before {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--line);
+  border-top-color: var(--primary);
+  background: transparent;
+  animation: spin 800ms linear infinite;
+}
+body .export-dialog .modal-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  max-height: 88dvh;
+}
+.export-dialog .modal-head,
+.export-dialog .modal-actions {
+  flex-shrink: 0;
+  padding: 20px 28px;
+  margin: 0;
+}
+.export-dialog .modal-head {
+  border-bottom: 1px solid var(--line);
+}
+.export-dialog .modal-actions {
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+body .export-dialog .export-preview-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overscroll-behavior: contain;
+}
+.react-dialog .modal-head h2 {
+  font-size: 21px;
+  margin: 0;
+}
+.definition-pagination,
+.usage-table,
+.admin-table,
+.calendar-count {
+  font-variant-numeric: tabular-nums;
+}
+::selection {
+  background: var(--highlight-en);
+  color: var(--vocab-ink);
+}
+textarea,
+input {
+  caret-color: var(--primary);
+}
+.article,
+.glossary,
+.account-popover,
+.export-preview-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+  scrollbar-gutter: stable;
+}
+.glossary-section blockquote {
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) {
+  body .texta-composer #generateBtn:not(:disabled):hover svg {
+    transform: translateX(3px);
+  }
+  #generateBtn svg {
+    transition: transform var(--motion-feedback) var(--ease-out);
+  }
+}
+@media (max-width: 860px) {
+  .next-mobile-nav {
+    gap: 6px;
+  }
+  .next-mobile-nav button {
+    min-height: 44px;
+    transition:
+      background-color var(--motion-feedback),
+      color var(--motion-feedback);
+  }
+}
+@media (max-width: 640px) {
+  body .texta-composer {
+    margin-top: 20px;
+    border-radius: 16px;
+  }
+  .texta-composer .section-heading label {
+    font-size: 19px;
+  }
+  .texta-composer .word-entry {
+    padding: 18px;
+  }
+  .texta-composer .vocabulary-editor {
+    min-height: 112px;
+  }
+  .texta-composer .generation-more {
+    order: 1;
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .texta-composer .generation-popover {
+    left: 0;
+    right: auto;
+  }
+  .texta-composer .composer-example {
+    grid-column: 1 / -1;
+    order: 4;
+    justify-self: end;
+  }
+  body .texta-composer .chip .chip-edit {
+    font-size: 20px;
+  }
+  body .texta-composer .chip .chip-remove {
+    min-height: 44px;
+  }
+  body .texta-composer #generateBtn {
+    min-width: 142px;
+  }
+  body .texta-composer .generation-mode button {
+    white-space: normal;
+    min-width: 0;
+  }
+  .export-dialog .modal-head,
+  .export-dialog .modal-actions {
+    padding: 16px;
+  }
+  body .export-dialog .export-preview-scroll {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body .texta-composer .generation-mode::before,
+  #generateBtn svg {
+    transition: none;
+  }
+  .glossary > .glossary-item.active,
+  .glossary > .glossary-item.active .glossary-word,
+  body .library-tab.active::after,
+  body .generation-more[open] .generation-popover,
+  body .account-menu[open] .account-popover,
+  .react-dialog[open],
+  .react-dialog[open]::backdrop,
+  .workspace-content > .library-panel,
+  .workspace-content > .notebook-view,
+  .sync-state::before {
+    animation: none;
+  }
+  body .texta-composer #generateBtn:hover svg {
+    transform: none;
+  }
+}
+@media (forced-colors: active) {
+  body .texta-composer .has-paint #wordInput {
+    color: CanvasText;
+  }
+  .texta-composer .generation-mode::before {
+    display: none;
+  }
+  body .texta-composer .generation-mode button[aria-pressed="true"] {
+    outline: 2px solid Highlight;
+  }
+}

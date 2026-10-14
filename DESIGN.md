@@ -389,3 +389,11 @@ The production React components now live in `frontend-react/src/components/texta
 The vocabulary editor retains tags, file import, local spelling assistance and Tab completion. The reading and definition panels scroll independently. Mobile navigation switches input, article and word details, and Escape exits reading mode. Notebook filters and calendar counts are derived from the current account's library; the first-added date remains stable when cards are refreshed. Export previews use the same stored article data and explicitly escape user content.
 
 Verification uses fixture API responses and browser interaction; it does not assert real payment settlement or live model accuracy. Runtime, compatibility and rollback details are in [the migration document](docs/next-frontend.md).
+
+## Next.js refinement · October 15, 2026
+
+The migration's vocabulary panel now uses the incumbent unified composer: a framed warm surface, large serif vocabulary tags, import/clear controls in the heading, inline typing completion and a separate settings bar. Output modes use a sliding selected surface; short mode remains in More settings. Difficulty is not reintroduced: the current API intentionally ignores the retired setting. Typing keeps IME composition and Shift+Tab navigation intact, and saved drafts continue to use the original account keys.
+
+The authored interaction is the link between an article highlight and the same word in the definition heading: an ink wash confirms selection without moving the prose or replaying the whole reading panel. Other feedback is bounded: 140ms navigation/definition feedback and 220ms popover/dialog reveals. The six themes use visible swatches, labels and a selection check. Popovers close on outside pointer/focus and Escape, returning focus to the trigger; Arrow Down opens their first control. Reduced motion keeps selected colors and states while removing spatial animation.
+
+Export previews retain a fixed heading and confirmation footer; only their middle scrolls, including on short phones. Palette-based selection, caret and scrollbar styles extend the existing reading system. Production static HTML includes Cloudflare email-obfuscation exclusion markers to preserve server/client markup during React hydration. No new animation dependency or remote visual asset is added.

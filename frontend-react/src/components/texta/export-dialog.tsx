@@ -44,6 +44,7 @@ export function ExportDialog({
   return (
     <Modal
       title="导出前预览"
+      className="export-dialog"
       onClose={() => {
         if (!busy) onClose();
       }}
