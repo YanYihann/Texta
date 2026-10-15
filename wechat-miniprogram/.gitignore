@@ -1,0 +1,10 @@
+node_modules/
+artifacts/
+backup/
+project.private.config.json
+*.log
+.env
+private.*.key
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/build/

@@ -1,0 +1,8 @@
+.user-email { margin-top: 10rpx; overflow-wrap: anywhere; }
+.quota { margin-top: 22rpx; }
+.quota-value { color: var(--primary); font-size: 40rpx; font-weight: 600; }
+.study-summary .row { padding: 16rpx 0; }
+.menu button { background: transparent; text-align: left; border-bottom: 1rpx solid var(--line); border-radius: 0; padding: 12rpx 0; min-height: 100rpx; }
+.menu button:last-child { border-bottom: 0; }
+.version { text-align: center; margin-top: 36rpx; }
+.wechat-description { margin: 18rpx 0; }

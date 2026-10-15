@@ -1,0 +1,45 @@
+.article-title { font-family: Georgia, 'Songti SC', serif; font-size: 48rpx; line-height: 1.3; font-weight: 600; overflow-wrap: break-word; }
+.article-meta { margin-top: 16rpx; }
+.reading-hint { margin: 12rpx 0; }
+.paper { background: var(--panel); border-radius: 24rpx; padding: 28rpx 24rpx; }
+.paragraph + .paragraph { margin-top: 38rpx; }
+.english { font-family: Georgia, 'Times New Roman', serif; line-height: 1.85; overflow-wrap: break-word; white-space: pre-wrap; }
+.english.mixed { font-family: -apple-system, 'PingFang SC', sans-serif; }
+.translation { color: var(--muted); font-size: 30rpx; line-height: 1.85; margin-top: 22rpx; }
+.highlight { background: var(--highlight); color: var(--vocab); border-radius: 4rpx; font-weight: 600; padding: 3rpx 0; }
+.highlight-zh { background: var(--highlightZh); color: var(--vocab); border-radius: 4rpx; padding: 3rpx 0; }
+.reading-actions { display: flex; flex-wrap: wrap; gap: 14rpx; }
+.reading-actions button { flex: 1; padding: 0 18rpx; font-size: 28rpx; }
+.glossary-word { font-family: Georgia, serif; font-size: 38rpx; font-weight: 600; overflow-wrap: break-word; }
+.glossary-meaning { margin-top: 12rpx; font-size: 28rpx; }
+.word-row { min-height: 100rpx; }
+.ipa { margin-top: 8rpx; }
+.export-canvas { position: fixed; left: -4000px; top: 0; width: 1120px; height: 1584px; pointer-events: none; }
+
+.reading-header { margin-bottom: 24rpx; }
+.reading-actions button { min-width: 160rpx; }
+.export-settings { padding-top: 24rpx; border-top: 1rpx solid var(--line); }
+.export-formats { margin-top: 20rpx; }
+.export-field { margin-top: 24rpx; }
+.export-field .field { margin-top: 12rpx; }
+.export-setting-row { margin-top: 20rpx; min-height: 88rpx; }
+.margin-picker { color: var(--primary); background: var(--panel); border: 1rpx solid var(--line); padding: 20rpx; border-radius: 14rpx; min-height: 88rpx; }
+.export-note { margin: 22rpx 0 16rpx; }
+.preview-scroll { max-height: 760rpx; height: 760rpx; border: 1rpx solid var(--line); border-radius: 16rpx; background: #fff; }
+.export-paper { color: #202b24; background: #fff; padding: 32rpx; }
+.export-paper.margin-0 { padding: 24rpx; }
+.export-paper.margin-2 { padding: 44rpx; }
+.export-paper-title { font-family: Georgia, 'Songti SC', serif; font-size: 38rpx; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.export-paper-meta { color: #606963; font-size: 22rpx; margin-top: 16rpx; margin-bottom: 30rpx; }
+.export-paragraph + .export-paragraph { margin-top: 28rpx; }
+.export-english { font-family: Georgia, 'Songti SC', serif; font-size: 29rpx; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.export-chinese { color: #4d5e52; font-size: 25rpx; line-height: 1.85; margin-top: 14rpx; white-space: pre-wrap; }
+.export-highlight { background: #e4eddd; font-weight: 600; }
+.export-heading { font-size: 30rpx; font-weight: 600; margin: 32rpx 0 16rpx; }
+.export-table-row { display: flex; border-bottom: 1rpx solid #dce3da; font-size: 23rpx; line-height: 1.6; }
+.export-table-row text { padding: 14rpx 8rpx; width: 53%; overflow-wrap: anywhere; }
+.export-table-row text:first-child { width: 30%; font-family: Georgia, serif; font-weight: 600; }
+.export-table-row text:nth-child(2) { width: 17%; }
+.export-table-head { background: #edf2eb; font-weight: 600; }
+.export-table-row.stripe { background: #f7f9f5; }
+.export-confirm { margin-top: 24rpx; }

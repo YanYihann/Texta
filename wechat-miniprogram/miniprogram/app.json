@@ -1,0 +1,53 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/library/library",
+    "pages/profile/profile",
+    "pages/auth/auth",
+    "pages/result/result",
+    "pages/legal/legal"
+  ],
+  "window": {
+    "navigationBarTitleText": "Texta",
+    "navigationBarBackgroundColor": "#f6f7f4",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6f7f4",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#606963",
+    "selectedColor": "#386548",
+    "backgroundColor": "#fcfcfa",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "生成",
+        "iconPath": "assets/write.png",
+        "selectedIconPath": "assets/write-active.png"
+      },
+      {
+        "pagePath": "pages/library/library",
+        "text": "资料库",
+        "iconPath": "assets/book.png",
+        "selectedIconPath": "assets/book-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "assets/user.png",
+        "selectedIconPath": "assets/user-active.png"
+      }
+    ]
+  },
+  "networkTimeout": {
+    "request": 120000,
+    "downloadFile": 60000
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json",
+  "usingComponents": {
+    "theme-switcher": "/components/theme-switcher/theme-switcher"
+  }
+}

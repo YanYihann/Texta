@@ -1,0 +1,1 @@
+{ "navigationBarTitleText": "资料库", "enablePullDownRefresh": true, "usingComponents": { "word-sheet": "/components/word-sheet/word-sheet" } }

@@ -1,0 +1,6 @@
+.theme-grid { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 20rpx; }
+button.theme-choice { display: flex; align-items: center; gap: 14rpx; width: calc((100% - 16rpx) / 2); padding: 0 20rpx; background: var(--panel); color: var(--text); border: 1rpx solid var(--line); text-align: left; font-size: 28rpx; }
+.theme-choice.selected { border-color: var(--primary); background: var(--soft); color: var(--primary); }
+.swatch { width: 30rpx; height: 30rpx; border-radius: 7rpx; border: 1rpx solid var(--muted); flex-shrink: 0; }
+.selected-mark { margin-left: auto; width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--primary); }
+.theme-trigger { border: 1rpx solid var(--line); background: var(--panel); color: var(--primary); }

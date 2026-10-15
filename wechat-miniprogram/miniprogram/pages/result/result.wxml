@@ -1,0 +1,45 @@
+<view class="theme-root" style="{{themeStyle}}">
+<view class="screen reading-screen">
+  <block wx:if="{{article}}">
+    <view class="row reading-header"><text class="section-title">{{exportOpen ? "导出预览" : "文章阅读"}}</text><theme-switcher selected="{{themeId}}" /></view>
+    <view class="article-title">{{article.title}}</view><view class="muted article-meta">{{article.words.length}} 个目标词 · {{article.generationMode === 'mixed' ? '中文嵌词' : '中英对照'}}</view>
+    <block wx:if="{{!exportOpen}}">
+    <view class="section tabs"><button wx:if="{{article.generationMode !== 'mixed'}}" class="tab {{view === 'paired' ? 'active' : ''}}" data-view="paired" bindtap="changeView">中英对照</button><button class="tab {{view === 'english' ? 'active' : ''}}" data-view="english" bindtap="changeView">{{article.generationMode === 'mixed' ? '文章' : '英文'}}</button><button class="tab {{view === 'glossary' ? 'active' : ''}}" data-view="glossary" bindtap="changeView">词汇表</button></view>
+    <view class="reading-hint row"><text class="muted">点击高亮词查看词义</text><button class="plain small" bindtap="size">调整字号</button></view>
+    <view wx:if="{{view !== 'glossary'}}" class="paper">
+      <view wx:for="{{blocks}}" wx:for-item="paragraph" wx:key="index" class="paragraph">
+        <view class="english {{article.generationMode === 'mixed' ? 'mixed' : ''}}" style="font-size: {{fontSize}}rpx;"><text wx:for="{{paragraph.en}}" wx:key="index" wx:for-item="segment" class="{{segment.word ? 'highlight' : ''}}" data-word="{{segment.word}}" bindtap="openWord">{{segment.text}}</text></view>
+        <view wx:if="{{view === 'paired' && paragraph.hasZh}}" class="translation"><text wx:for="{{paragraph.zh}}" wx:key="index" wx:for-item="segment" class="{{segment.word ? 'highlight-zh' : ''}}" data-word="{{segment.word}}" bindtap="openWord">{{segment.text}}</text></view>
+      </view>
+    </view>
+    <view wx:else><view wx:for="{{glossary}}" wx:key="word" class="list-row word-row" bindtap="openWord" data-word="{{item.word}}" role="button"><view class="row"><text class="glossary-word">{{item.word}}</text><text class="muted">{{item.pos}}</text></view><view class="muted ipa" wx:if="{{item.usIpa}}">{{item.usIpa}}</view><view class="glossary-meaning"><text wx:for="{{item.baseMeanings}}" wx:key="*this">{{index ? '；' : ''}}{{item}}</text><text wx:if="{{!item.baseMeanings.length}}" wx:for="{{item.senses}}" wx:key="index">{{index ? '；' : ''}}{{item.meaning}}</text></view></view></view>
+    <view class="section reading-actions"><button class="{{saved ? 'secondary' : 'primary'}}" bindtap="save" disabled="{{saving || saved}}" loading="{{saving}}">{{saved ? '已收藏' : '收藏文章'}}</button><button class="secondary" bindtap="exportFile" loading="{{exporting}}" disabled="{{exporting}}">导出文件</button><button class="plain" bindtap="copy">复制</button></view>
+    </block>
+    <view wx:if="{{exportOpen}}" class="export-settings section">
+      <view class="row"><text class="section-title">导出设置</text><button class="plain small" bindtap="closeExport" disabled="{{exporting}}">返回阅读</button></view>
+      <view class="tabs export-formats"><button class="tab {{exportType === 'pdf' ? 'active' : ''}}" data-type="pdf" bindtap="changeExportType" disabled="{{exporting}}">PDF</button><button class="tab {{exportType === 'docx' ? 'active' : ''}}" data-type="docx" bindtap="changeExportType" disabled="{{exporting}}">Word</button><button class="tab {{exportType === 'txt' ? 'active' : ''}}" data-type="txt" bindtap="changeExportType" disabled="{{exporting}}">文本</button></view>
+      <view class="export-field"><view class="muted">导出标题</view><input class="field" value="{{exportTitle}}" bindinput="exportTitleInput" maxlength="160" disabled="{{exporting}}" aria-label="导出标题" /></view>
+      <view class="row export-setting-row" wx:if="{{hasChinese}}"><text>包含中文翻译</text><switch checked="{{includeChinese}}" color="{{themeColor}}" bindchange="changeExportChinese" disabled="{{exporting}}" aria-label="包含中文翻译" /></view>
+      <view class="row export-setting-row" wx:if="{{exportType !== 'txt'}}"><text>页边距</text><picker range="{{margins}}" value="{{marginIndex}}" bindchange="changeMargin" disabled="{{exporting}}"><view class="margin-picker">{{margins[marginIndex]}}</view></picker></view>
+      <view class="muted export-note">浅色纸面 · 保留词汇高亮{{exportType === 'txt' ? '（文本仅保留内容）' : ''}}</view>
+      <scroll-view scroll-y="{{true}}" class="preview-scroll">
+        <view class="export-paper margin-{{marginIndex}}">
+          <view class="export-paper-title">{{exportPreview.title}}</view>
+          <view class="export-paper-meta">{{exportPreview.mode}} · {{exportPreview.count}} 个目标词</view>
+          <view wx:for="{{exportPreview.paragraphs}}" wx:for-item="paragraph" wx:key="index" class="export-paragraph">
+            <view class="export-english"><text wx:for="{{paragraph.en}}" wx:for-item="segment" wx:key="index" class="{{segment.word ? 'export-highlight' : ''}}">{{segment.text}}</text></view>
+            <view wx:if="{{paragraph.hasZh}}" class="export-chinese"><text wx:for="{{paragraph.zh}}" wx:for-item="segment" wx:key="index" class="{{segment.word ? 'export-highlight' : ''}}">{{segment.text}}</text></view>
+          </view>
+          <view wx:if="{{exportPreview.glossary.length}}" class="export-glossary"><view class="export-heading">词汇表</view><view class="export-table-row export-table-head"><text>英文</text><text>词性</text><text>中文翻译</text></view><view wx:for="{{exportPreview.glossary}}" wx:key="word" class="export-table-row {{index % 2 ? 'stripe' : ''}}"><text>{{item.word}}</text><text>{{item.pos}}</text><text>{{item.meaning}}</text></view></view>
+        </view>
+      </scroll-view>
+      <button class="primary full export-confirm" bindtap="confirmExport" disabled="{{exporting}}" loading="{{exporting}}">{{exporting ? '正在生成文件…' : '确认导出 ' + (exportType === 'pdf' ? 'PDF' : exportType === 'docx' ? 'Word' : '文本')}}</button>
+    </view>
+    <view wx:if="{{notice}}" class="notice">{{notice}}</view>
+  </block>
+  <view wx:if="{{error}}" class="error">{{error}}</view><button wx:if="{{!article}}" class="secondary full section" bindtap="back">返回生成页</button>
+</view>
+<canvas type="2d" id="exportCanvas" class="export-canvas"></canvas>
+<word-sheet open="{{wordOpen}}" entry="{{entry}}" article="{{article}}" bind:close="closeWord" bind:source="source" />
+
+</view>

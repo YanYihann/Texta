@@ -1,6 +1,6 @@
 # 部署说明
 
-当前生产结构是 Next.js / React 静态导出至 GitHub Pages、Render Express API 和 PostgreSQL。
+当前项目包含 Next.js / React 静态网页、原生微信小程序和 Electron 客户端，共用 Render Express API 与 PostgreSQL。网页发布到 GitHub Pages；微信小程序通过独立的微信上传与审核流程发布。
 
 ## 网页前端
 
@@ -31,7 +31,7 @@ npm start
 
 ## 可选功能与验收
 
-- 微信身份配置与账号合并：[wechat-login.md](wechat-login.md)。小程序前端源码在本仓库之外。
+- 微信身份配置与账号合并：[wechat-login.md](wechat-login.md)。小程序源码位于 `wechat-miniprogram/`，导入、公共 API 地址、合法域名、编译与发布见 [小程序说明](../wechat-miniprogram/README.md)。AppID 需与服务端微信配置匹配；GitHub Pages 发布不会自动更新微信正式版。
 - FastSpring 支付配置、测试模式和正式启用：[FASTSPRING_SETUP.md](../FASTSPRING_SETUP.md)。Test webhook 不能授予正式权益。
 - Windows 安装包：[desktop.md](desktop.md)。构建工作流手动触发，安装包作为 Actions artifact 下载；Release 分发需要单独发布。
 

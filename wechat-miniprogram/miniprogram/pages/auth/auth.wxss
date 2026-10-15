@@ -1,0 +1,12 @@
+.auth-screen { padding-top: 64rpx; }
+.form-group { margin-top: 28rpx; }
+.field-label { font-size: 28rpx; margin-bottom: 12rpx; }
+.agreement { margin: 28rpx 0; color: var(--muted); font-size: 26rpx; }
+.agreement label { display: flex; align-items: center; }
+.agreement-links { display: flex; margin-left: 42rpx; }
+.agreement-links button { padding: 0 14rpx; }
+.auth-hint { margin-top: 28rpx; }
+.wechat-hint { margin-top: 16rpx; }
+.email-label { margin-top: 40rpx; color: var(--muted); font-size: 26rpx; }
+.binding-account { margin: 12rpx 0 20rpx; overflow-wrap: anywhere; }
+button.auth-submit { margin-top: 24rpx; }

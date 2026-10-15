@@ -9,6 +9,7 @@
 | [开发与验证](development.md) | 测试入口、夹具、数据库检查及实验边界 |
 | [部署说明](deployment.md) | Pages、Render、数据库、密钥和发布流程 |
 | [Next.js 前端](next-frontend.md) | 新前端运行、静态部署、旧数据兼容与迁移验收 |
+| [微信小程序](../wechat-miniprogram/README.md) | 原生页面、功能、开发工具导入、编译、导出和发布 |
 | [Windows 桌面版](desktop.md) | 客户端运行、安装包、签名和分发 |
 | [产品要求](../PRODUCT.md) | 学习流程、能力和产品边界 |
 | [界面规范](../DESIGN.md) | 排版、颜色、动效和交互 |
@@ -34,6 +35,8 @@
 | [政策页面](texta-policy-ui.md) | 隐私、条款与退款页面 |
 
 ## 历史资料
+
+小程序源码、类型配置、测试和维护脚本已统一放入 `wechat-miniprogram/`；原 1.0.0–1.1.2 发布与认证记录保留在该目录，并明确标注为历史状态。开发工具私有配置、预览二维码和本机备份不进入仓库。
 
 - [旧版单词生成流程](archive/word-to-article-process.md)：重构前的流程与提示词快照，不能用于判断当前实现。
 - [作品集整理素材](archive/portfolio-source.md)：历史功能整理，部分设置已被后续实现替换。

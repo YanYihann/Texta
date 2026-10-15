@@ -1,0 +1,17 @@
+<view class="theme-root" style="{{themeStyle}}">
+<view class="screen">
+  <view class="page-title">我的 Texta</view><view class="subtitle">把值得记住的词，慢慢变熟悉。</view>
+  <view wx:if="{{!loggedIn}}" class="section panel empty"><view class="section-title">登录，继续你的学习</view><view class="muted">微信快捷登录，无需邮箱或密码。</view><button class="primary" bindtap="login">微信快捷登录</button></view>
+  <block wx:else>
+    <view class="section panel"><view class="section-title">{{user.name}}</view><view class="muted user-email">{{user.email || '微信账号'}}</view><view class="divider"></view><view class="row"><text>当前套餐</text><text class="tag">{{planName}}</text></view><view class="row quota" wx:if="{{usage}}"><text>今日可用次数</text><text class="quota-value">{{usage.isUnlimited ? '不限' : usage.remaining}}</text></view><view class="muted" wx:if="{{usage}}">今日已用 {{usage.used}} 次{{usage.isUnlimited ? '' : '，每日额度 ' + usage.limit + ' 次'}}。</view></view>
+    <view class="section study-summary" bindtap="library" role="button"><view class="row"><text>收藏文章</text><text>{{favoritesCount}} 篇</text></view><view class="row"><text>生词本</text><text>{{notebookCount}} 个词</text></view><view class="row"><text>已掌握生词</text><text>{{masteredCount}} 个词</text></view></view>
+    <button class="secondary full section" bindtap="sync" disabled="{{syncing}}" loading="{{syncing}}">同步学习资料</button>
+    <view class="section panel"><view class="section-title">账号设置</view><view class="row"><text>网页版登录邮箱</text><text class="tag">{{user.email ? '已绑定' : '未绑定'}}</text></view><view class="muted user-email">{{user.email || '可绑定新邮箱，或验证原密码后关联已有 Texta 账号。'}}</view><button wx:if="{{!user.email}}" class="secondary full" bindtap="bindEmail">绑定邮箱</button></view>
+    <view class="section panel"><view class="row"><text>微信快捷登录</text><text class="tag">{{wechatChecking ? '检查中' : wechatBound ? '已绑定' : wechatEnabled ? '未绑定' : '暂未启用'}}</text></view><view class="muted wechat-description">绑定后，可用当前微信直接登录同一个 Texta 账号。</view><button wx:if="{{wechatEnabled && !wechatBound}}" class="secondary full" bindtap="bindWechat">绑定当前微信</button></view>
+  </block>
+  <view class="section"><view class="section-title">配色主题</view><view class="muted">与 PC 端一致，自动记住你的选择。</view><theme-switcher selected="{{themeId}}" expanded="{{true}}" /></view>
+  <view class="section menu"><button bindtap="health">检查后端连接</button><button bindtap="website">复制网页版地址</button><button bindtap="legal" data-type="privacy">隐私政策</button><button bindtap="legal" data-type="terms">服务条款</button><button bindtap="contact">联系开发者</button><button wx:if="{{loggedIn}}" class="danger" bindtap="logout">退出登录</button></view>
+  <view wx:if="{{error}}" class="error">{{error}}</view><view wx:if="{{notice}}" class="notice">{{notice}}</view><view class="muted version">Texta 小程序 · 1.1.2</view>
+</view>
+
+</view>

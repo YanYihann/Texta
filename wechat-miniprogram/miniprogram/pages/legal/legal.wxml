@@ -1,0 +1,4 @@
+<view class="theme-root" style="{{themeStyle}}">
+<view class="screen"><view class="page-title">{{title}}</view><view class="notice">{{supplement}}</view><view wx:for="{{sections}}" wx:key="index" class="section"><view class="section-title">{{item.title}}</view><text class="policy-copy" user-select>{{item.text}}</text></view><button class="secondary full section" bindtap="contact">复制开发者联系邮箱</button></view>
+
+</view>

@@ -1,5 +1,7 @@
 # WeChat mini program login and email association
 
+The native client is included in [`wechat-miniprogram/`](../wechat-miniprogram/README.md). Import that directory into WeChat DevTools; the browser client remains in `frontend-react/`. Both use the existing Express API below.
+
 WeChat quick login creates a free account for a new app-scoped identity. Email is optional. Account settings offer a new email/password on the same user ID or an explicit association with an existing email account using its original password. No email OTP service is configured; setting a new email follows existing registration rules, while merging an existing account proves possession of its password.
 
 ## API

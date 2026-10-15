@@ -1,0 +1,5 @@
+.search { margin-top: 24rpx; }
+.filters { display: flex; gap: 8rpx; margin-top: 16rpx; }
+.article-tap { min-height: 88rpx; padding: 4rpx 0; }
+.remove { display: inline-block; font-size: 24rpx; margin-top: 6rpx; padding: 0; min-height: 76rpx; }
+.notebook-word { font-family: Georgia, serif; font-size: 36rpx; font-weight: 600; overflow-wrap: break-word; }

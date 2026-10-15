@@ -9,7 +9,7 @@ output/
 .DS_Store
 Thumbs.db
 npm-debug.log*
-data/
+/data/
 
 /generated/prisma
 

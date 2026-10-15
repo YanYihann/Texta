@@ -25,6 +25,19 @@ npm run build --prefix frontend-react
 
 前端测试使用本地存储和 HTTP 替身，验证旧数据迁移、账号隔离、同步失败保护、并发修改、双语定位和导出转义。构建包含类型检查和静态路由验收。运行与浏览器验收范围见 [Next.js 前端](next-frontend.md)。Core tests 工作流在 PR 中执行这些检查，Pages 发布时也会检查前端。
 
+## 微信小程序检查
+
+```bash
+npm run mini:check
+npm run test:mini
+```
+
+这两项无需安装小程序开发依赖，检查原生页面、事件绑定、图标、输入、阅读、导出、认证和学习库同步。Core tests 工作流也执行它们。
+
+本机已安装微信开发者工具时执行 `npm run mini:compile`，编译 WXML / WXSS。模拟器自动化依赖先用 `npm ci --prefix wechat-miniprogram` 安装；运行方式及真实接口脚本的区别见 [小程序文档](../wechat-miniprogram/README.md)。公众平台审核和真机验收不包含在单元测试中。
+
+2026-10-15 仓库整合验证：小程序 49 项测试、55 个资源文件检查、8 个 WXML / 9 个 WXSS 本机编译通过；网页 12 项领域测试通过；核心后端 53 项通过、1 项专用数据库测试跳过，学习库与上下文独立检查通过。上述结果不代表重新执行了真实微信登录、付费生成或公众平台发布。
+
 ## 真实数据库检查
 
 计费集成测试需要预先初始化的专用数据库。`BILLING_TEST_DATABASE_URL` 的 schema 必须匹配 `texta_billing_test_[a-z0-9_]+`；未设置时跳过。它写入固定测试夹具，重复运行前应在专用测试环境清理夹具。

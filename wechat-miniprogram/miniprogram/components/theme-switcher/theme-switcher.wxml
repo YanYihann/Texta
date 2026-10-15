@@ -1,0 +1,4 @@
+<view wx:if="{{expanded}}" class="theme-grid">
+  <button wx:for="{{palettes}}" wx:key="id" class="theme-choice {{selected === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="choose" aria-label="{{item.name}}主题{{selected === item.id ? '，已选中' : ''}}"><view class="swatch" style="background:{{item.swatch}};"></view><text>{{item.name}}</text><view wx:if="{{selected === item.id}}" class="selected-mark"></view></button>
+</view>
+<button wx:else class="secondary small theme-trigger" bindtap="open" aria-label="切换配色主题">主题</button>

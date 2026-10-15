@@ -1,0 +1,26 @@
+<view class="theme-root" style="{{themeStyle}}">
+<view class="screen">
+  <view class="row"><text class="brand">Texta</text><view class="header-tools"><theme-switcher selected="{{themeId}}" /><button wx:if="{{!loggedIn}}" class="plain small" bindtap="login">登录</button></view></view>
+  <view class="subtitle">把单词放进文章，在语境中记住它们。</view>
+  <view class="section editor-panel">
+    <view class="row input-heading"><text class="section-title">输入词汇</text><button class="plain small" bindtap="clear" disabled="{{loading || !count}}">清空</button></view>
+    <view class="word-chips" wx:if="{{chips.length}}">
+      <view wx:for="{{chips}}" wx:key="word" class="word-chip {{item.issue ? 'possible-typo' : ''}}"><button class="chip-edit" data-index="{{index}}" bindtap="editWord" disabled="{{loading}}" aria-label="编辑词汇 {{item.word}}">{{item.word}}</button><button class="chip-remove" data-index="{{index}}" bindtap="removeWord" disabled="{{loading}}" aria-label="删除词汇 {{item.word}}"><view class="close-icon"></view></button></view>
+    </view>
+    <textarea class="word-input {{focused ? 'is-focused' : ''}}" value="{{draftInput}}" focus="{{focused}}" bindinput="onDraftInput" bindconfirm="commitDraft" bindfocus="focusEditor" bindblur="blurEditor" disabled="{{loading}}" maxlength="12000" placeholder="{{chips.length ? '继续输入单词或短语…' : '输入或粘贴想学习的单词与短语…'}}" placeholder-class="placeholder" placeholder-style="color:{{themeMuted}}" show-confirm-bar="{{false}}" adjust-position="{{true}}" confirm-type="done" aria-label="输入词汇" />
+    <button wx:if="{{completion}}" class="completion plain small" bindtap="acceptCompletion"><text class="muted">补全为</text><text class="completion-word">{{completion}}</text><text class="muted">点击填入</text></button>
+    <button wx:if="{{draftSuggestion}}" class="spelling-suggestion plain small" bindtap="replaceSuggestion" data-draft="{{true}}">建议拼写：{{draftSuggestion.suggestion}} · 点击替换</button>
+    <view class="row input-help"><text class="muted">逗号或回车添加 · 点击词汇编辑</text><text class="muted {{count > 120 ? 'danger' : ''}}">{{count}} / 120</text></view>
+    <view wx:if="{{suggestions.length}}" class="spelling-hints"><text class="muted">可能的拼写问题</text><button wx:for="{{suggestions}}" wx:key="word" class="spelling-suggestion" bindtap="replaceSuggestion" data-index="{{index}}">{{item.word}} → {{item.suggestion}}</button></view>
+    <view class="input-actions"><button class="secondary small" bindtap="importFile" disabled="{{loading}}">导入词表</button><button class="secondary small" bindtap="paste" disabled="{{loading}}">粘贴</button><button class="plain small" bindtap="example" disabled="{{loading}}">试试示例</button></view>
+  </view>
+  <view class="section generation-options">
+    <view class="tabs"><button class="tab {{mode === 'standard' ? 'active' : ''}}" bindtap="changeMode" data-mode="standard" disabled="{{loading}}">中英对照</button><button class="tab {{mode === 'mixed' ? 'active' : ''}}" bindtap="changeMode" data-mode="mixed" disabled="{{loading}}">中文嵌词</button></view>
+    <view class="mode-help muted">{{mode === 'standard' ? '英文文章配中文翻译，点击高亮词查看词义。' : '在中文故事里嵌入英文单词，熟悉词义。'}}</view>
+    <view class="row short-option"><view><text>短文模式</text><view class="muted">适合快速复习</view></view><switch checked="{{shortMode}}" bindchange="toggleShort" color="{{themeColor}}" disabled="{{loading}}" aria-label="短文模式" /></view>
+  </view>
+  <view class="section generate-action"><button class="primary full" hover-class="primary-hover" loading="{{loading}}" disabled="{{loading || !count || count > 120}}" bindtap="generate">{{loading ? '生成中…' : '生成学习文章'}}</button><view class="below-action muted">{{usageText}}</view></view>
+  <view wx:if="{{error}}" class="error">{{error}}</view><view wx:if="{{status}}" class="notice" role="status">{{status}}</view>
+  <view class="section" wx:if="{{recent.length}}"><view class="section-title">继续阅读</view><button wx:for="{{recent}}" wx:key="id" class="recent-row" bindtap="openRecent" data-id="{{item.id}}"><view class="list-title">{{item.title}}</view><view class="list-meta">{{item.wordCount}} 个目标词</view></button></view>
+</view>
+</view>

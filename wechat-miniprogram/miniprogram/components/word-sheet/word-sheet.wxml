@@ -1,0 +1,21 @@
+<view wx:if="{{open}}" class="overlay">
+  <view class="shade" bindtap="close" catchtouchmove="noop"></view>
+  <view class="sheet">
+    <view class="row sheet-header"><text class="word">{{entry.word}}</text><button class="plain small" bindtap="close" aria-label="关闭词义">关闭</button></view>
+    <scroll-view scroll-y class="sheet-body">
+      <view class="muted" wx:if="{{entry.pos}}">{{entry.pos}}</view>
+      <view class="ipa" wx:if="{{entry.usIpa}}">美 {{entry.usIpa}}</view><view class="ipa" wx:if="{{entry.ukIpa}}">英 {{entry.ukIpa}}</view>
+      <view class="context" wx:if="{{entry.contextMeaning}}"><text class="label">本文词义</text><view>{{entry.contextMeaning}}</view></view>
+      <view class="definition-section" wx:if="{{entry.baseMeanings.length}}"><text class="label">常用释义</text><view wx:for="{{entry.baseMeanings}}" wx:key="*this">{{item}}</view></view>
+      <view class="definition-section" wx:elif="{{entry.senses.length}}"><view wx:for="{{entry.senses}}" wx:key="index">{{item.meaning}}</view></view>
+      <view class="definition-section" wx:if="{{entry.collocations.length}}"><text class="label">常用搭配</text><view wx:for="{{entry.collocations}}" wx:key="*this">{{item}}</view></view>
+      <view class="definition-section" wx:if="{{entry.synonyms.length}}"><text class="label">近义词</text><view wx:for="{{entry.synonyms}}" wx:key="*this">{{item}}</view></view>
+      <view class="definition-section" wx:if="{{entry.antonyms.length}}"><text class="label">反义词</text><view wx:for="{{entry.antonyms}}" wx:key="*this">{{item}}</view></view>
+      <view class="definition-section" wx:if="{{entry.wordFormation}}"><text class="label">构词</text><view>{{entry.wordFormation}}</view></view>
+      <view wx:if="{{!entry.detailsReady}}" class="notice">这条旧资料未包含完整词典卡；新生成的文章会准备完整词义。</view>
+      <button wx:if="{{article.article}}" class="plain small" bindtap="source">查看来源文章</button>
+      <view wx:if="{{feedback}}" class="notice">{{feedback}}</view>
+    </scroll-view>
+    <view class="sheet-actions"><button class="secondary" bindtap="toggleMastery" disabled="{{saving}}">{{mastered ? '标为未掌握' : '标为已掌握'}}</button><button class="primary" bindtap="addWord" disabled="{{inNotebook || saving}}">{{inNotebook ? '已在生词本' : '加入生词本'}}</button></view>
+  </view>
+</view>

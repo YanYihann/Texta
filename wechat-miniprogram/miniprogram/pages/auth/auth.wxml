@@ -1,0 +1,33 @@
+<view class="theme-root" style="{{themeStyle}}">
+<view class="screen auth-screen">
+  <text class="brand">Texta</text>
+  <view class="subtitle">{{emailBinding ? '绑定邮箱，在网页端继续同一份学习。' : '微信快捷登录，开始你的词汇学习。'}}</view>
+  <view class="agreement"><checkbox-group bindchange="agreement"><label><checkbox value="agree" color="{{themeColor}}" checked="{{agreed}}" /><text>我已阅读并同意</text></label></checkbox-group><view class="agreement-links"><button class="plain small" bindtap="legal" data-type="terms">服务条款</button><button class="plain small" bindtap="legal" data-type="privacy">隐私政策</button></view></view>
+  <block wx:if="{{emailBinding}}">
+    <view class="section panel"><view class="section-title">网页版登录设置</view><view class="muted">{{emailMode === 'existing' ? '输入已有 Texta 邮箱账号的原密码。验证后，微信将关联此账号，并自动合并收藏、生词及学习状态，保留邮箱账号套餐。' : '填写新邮箱并设置密码，绑定后即可在网页端登录，沿用当前资料。'}}</view></view>
+    <view class="section tabs"><button class="tab {{emailMode === 'new' ? 'active' : ''}}" data-mode="new" bindtap="changeEmailMode" disabled="{{loading}}">绑定新邮箱</button><button class="tab {{emailMode === 'existing' ? 'active' : ''}}" data-mode="existing" bindtap="changeEmailMode" disabled="{{loading}}">关联已有账号</button></view>
+    <view class="form-group"><view class="field-label">邮箱</view><input class="field" placeholder="用于登录网页版的邮箱" placeholder-style="color:{{themeMuted}}" data-field="email" value="{{email}}" bindinput="onInput" maxlength="254" disabled="{{loading}}" /></view>
+    <view class="form-group"><view class="field-label">{{emailMode === 'existing' ? '原账号密码' : '设置密码'}}</view><input class="field" password placeholder="{{emailMode === 'existing' ? '输入原账号密码' : '至少 6 位'}}" placeholder-style="color:{{themeMuted}}" data-field="password" value="{{password}}" bindinput="onInput" maxlength="200" disabled="{{loading}}" /></view>
+    <view wx:if="{{emailMode !== 'existing'}}" class="form-group"><view class="field-label">确认密码</view><input class="field" password placeholder="再次输入密码" placeholder-style="color:{{themeMuted}}" data-field="passwordConfirm" value="{{passwordConfirm}}" bindinput="onInput" maxlength="200" confirm-type="done" bindconfirm="bindEmail" disabled="{{loading}}" /></view>
+    <button class="primary full auth-submit" bindtap="bindEmail" loading="{{loading}}" disabled="{{loading}}">{{loading ? '正在处理…' : emailMode === 'existing' ? '验证并合并账号' : '绑定邮箱'}}</button>
+    <view class="muted auth-hint">{{emailMode === 'existing' ? '两边已用额度会相加。同一生词保留最新状态；合并前会同步本机资料。若另有微信绑定或微信账号已有套餐、订单，会提示核对后处理。' : '已有邮箱账号请选择“关联已有账号”，输入原密码即可合并。'}}</view>
+  </block>
+  <block wx:elif="{{bindingUser}}">
+    <view class="section panel"><view class="section-title">绑定当前微信</view><view class="binding-account">{{bindingUser.email}}</view><view class="muted">确认后可用当前微信登录这个 Texta 账号，沿用已有资料和套餐。</view></view>
+    <button class="primary full auth-submit" bindtap="bindWechat" loading="{{loading && action === 'bind'}}" disabled="{{loading || !wechatReady}}">{{loading ? '正在绑定…' : '确认绑定微信'}}</button>
+    <button class="plain full section" bindtap="skipBinding" disabled="{{loading}}">暂不绑定，继续使用</button>
+  </block>
+  <block wx:else>
+    <view class="section"><button class="primary full" bindtap="wechatLogin" loading="{{loading && action === 'wechat'}}" disabled="{{loading || !wechatReady}}">{{wechatChecking ? '正在检查微信登录…' : loading && action === 'wechat' ? '正在微信登录…' : '微信快捷登录'}}</button><view class="muted wechat-hint">{{wechatReady ? '首次使用自动创建账号，无需填写邮箱或密码。需要网页版时，可在设置中绑定邮箱。' : wechatChecking ? '正在连接登录服务。' : '微信登录暂不可用，可使用下方邮箱登录。'}}</view></view>
+    <button class="plain full section" bindtap="toggleEmail" disabled="{{loading}}">{{emailExpanded ? '收起邮箱登录' : '已有 Texta 邮箱账号？使用邮箱登录'}}</button>
+    <block wx:if="{{emailExpanded || (!wechatChecking && !wechatReady)}}">
+      <view class="section tabs"><button class="tab {{mode === 'login' ? 'active' : ''}}" data-mode="login" bindtap="changeMode" disabled="{{loading}}">登录</button><button class="tab {{mode === 'register' ? 'active' : ''}}" data-mode="register" bindtap="changeMode" disabled="{{loading}}">注册</button></view>
+      <view class="section" wx:if="{{mode === 'register'}}"><view class="field-label">昵称</view><input class="field" placeholder="怎么称呼你" placeholder-style="color:{{themeMuted}}" data-field="name" value="{{name}}" bindinput="onInput" maxlength="60" disabled="{{loading}}" /></view>
+      <view class="form-group"><view class="field-label">邮箱</view><input class="field" placeholder="你的 Texta 邮箱" placeholder-style="color:{{themeMuted}}" data-field="email" value="{{email}}" bindinput="onInput" maxlength="254" disabled="{{loading}}" /></view>
+      <view class="form-group"><view class="field-label">密码</view><input class="field" password placeholder="至少 6 位" placeholder-style="color:{{themeMuted}}" data-field="password" value="{{password}}" bindinput="onInput" maxlength="200" confirm-type="done" bindconfirm="submit" disabled="{{loading}}" /></view>
+      <button class="secondary full auth-submit" bindtap="submit" loading="{{loading && action === 'email'}}" disabled="{{loading}}">{{loading && action === 'email' ? '正在连接…' : mode === 'register' ? '注册并登录' : '邮箱登录'}}</button>
+    </block>
+  </block>
+  <view wx:if="{{notice}}" class="notice">{{notice}}</view><view wx:if="{{error}}" class="error">{{error}}</view>
+</view>
+</view>
