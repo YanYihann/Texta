@@ -1,16 +1,18 @@
+**English** | [简体中文](README.zh-CN.md)
+
 <a id="readme-top"></a>
 
 <div align="center">
   <a href="https://texta.yanyihan.top/"><img src="public/logo.svg" alt="Texta" width="168" /></a>
-  <h1>Texta · 串词记</h1>
-  <p><strong>把单词放进文章，在语境中记住它们。</strong></p>
-  <p>输入词表 → 生成文章 → 对照阅读 → 收藏复习 → 导出学习材料</p>
+  <h1>Texta</h1>
+  <p><strong>Turn your vocabulary into stories. Learn words in context.</strong></p>
+  <p>Add words → Generate an article → Read in context → Save and review → Export study materials</p>
   <p>
-    <a href="https://texta.yanyihan.top/">网页版</a> ·
-    <a href="wechat-miniprogram/README.md">微信小程序</a> ·
-    <a href="docs/desktop.md">Windows 桌面版</a> ·
-    <a href="docs/README.md">开发文档</a> ·
-    <a href="https://github.com/YanYihann/Texta/issues">问题反馈</a>
+    <a href="https://texta.yanyihan.top/">Web App</a> ·
+    <a href="wechat-miniprogram/README.md">WeChat Mini Program</a> ·
+    <a href="docs/desktop.md">Windows Desktop</a> ·
+    <a href="docs/README.md">Documentation</a> ·
+    <a href="https://github.com/YanYihann/Texta/issues">Report an Issue</a>
   </p>
 </div>
 
@@ -18,166 +20,166 @@
   <a href="https://github.com/YanYihann/Texta/actions/workflows/test.yml"><img src="https://github.com/YanYihann/Texta/actions/workflows/test.yml/badge.svg" alt="Core tests" /></a>
   <a href="https://github.com/YanYihann/Texta/actions/workflows/deploy-pages.yml"><img src="https://github.com/YanYihann/Texta/actions/workflows/deploy-pages.yml/badge.svg" alt="Web deployment" /></a>
   <a href="frontend-react/package.json"><img src="https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs" alt="Next.js 16" /></a>
-  <a href="wechat-miniprogram/project.config.json"><img src="https://img.shields.io/badge/WeChat-原生小程序-07C160?logo=wechat&logoColor=white" alt="Native WeChat mini program" /></a>
+  <a href="wechat-miniprogram/project.config.json"><img src="https://img.shields.io/badge/WeChat-Mini_Program-07C160?logo=wechat&logoColor=white" alt="Native WeChat mini program" /></a>
 </p>
 
 <details>
-  <summary>目录</summary>
+  <summary>Contents</summary>
   <ol>
-    <li><a href="#about">项目介绍与使用入口</a></li>
-    <li><a href="#preview">界面预览</a></li>
-    <li><a href="#features">多端功能对照</a></li>
-    <li><a href="#usage">使用流程</a></li>
-    <li><a href="#sync">账号与数据同步</a></li>
-    <li><a href="#architecture">技术架构</a></li>
-    <li><a href="#getting-started">本地运行网页版与后端</a></li>
-    <li><a href="#mini-program">开发微信小程序</a></li>
-    <li><a href="#desktop">运行 Windows 桌面版</a></li>
-    <li><a href="#development">检查与测试</a></li>
-    <li><a href="#deployment">部署与发布</a></li>
-    <li><a href="#structure">项目结构与文档</a></li>
-    <li><a href="#roadmap">开发方向</a></li>
-    <li><a href="#contributing">贡献与联系</a></li>
-    <li><a href="#license">许可证与致谢</a></li>
+    <li><a href="#about">About and Access</a></li>
+    <li><a href="#preview">Screenshots</a></li>
+    <li><a href="#features">Features by Platform</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#sync">Accounts and Data Sync</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#getting-started">Run the Web App and API Locally</a></li>
+    <li><a href="#mini-program">Develop the WeChat Mini Program</a></li>
+    <li><a href="#desktop">Run the Windows Client</a></li>
+    <li><a href="#development">Checks and Tests</a></li>
+    <li><a href="#deployment">Deployment and Releases</a></li>
+    <li><a href="#structure">Project Structure and Documentation</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing and Contact</a></li>
+    <li><a href="#license">License</a></li>
   </ol>
 </details>
 
 <a id="about"></a>
 
-## 项目介绍与使用入口
+## About and Access
 
-Texta 是面向英语词汇学习者的多端学习工具，适用于雅思备考和日常积累。输入单词或短语，生成包含目标词的双语文章或中英混合故事，在阅读中理解词义、搭配和原文用法，再通过生词本和导出材料复习。
+Texta is a vocabulary learning app for IELTS preparation and everyday English study. Add words or phrases to generate bilingual articles or Chinese stories with English vocabulary embedded. Explore meanings, collocations, and usage in context, then review saved words or export study materials.
 
-本仓库统一维护 **Next.js 网页版、原生微信小程序、Windows 桌面客户端及共用后端**。
+This repository contains the **Next.js web app, native WeChat mini program, Windows desktop client, and shared backend**.
 
-| 入口 | 使用方式 | 源码与说明 |
+| Platform | How to use it | Source and documentation |
 | --- | --- | --- |
-| 网页版 | 打开 **[texta.yanyihan.top](https://texta.yanyihan.top/)**，支持电脑和手机浏览器 | [frontend-react/](frontend-react/) · [网页开发文档](docs/next-frontend.md) |
-| 微信小程序 | 微信内搜索 **「Texta串词记」**；本地预览见下方开发步骤 | [wechat-miniprogram/](wechat-miniprogram/) · [小程序说明](wechat-miniprogram/README.md) |
-| Windows 桌面版 | 安装客户端，或从源码启动；联网加载同一网站 | [desktop/](desktop/) · [桌面版文档](docs/desktop.md) |
-| 共用 API | 为各端提供认证、生成、词典、学习库和套餐数据 | [server.js](server.js) · [部署说明](docs/deployment.md) |
+| Web | Open **[texta.yanyihan.top](https://texta.yanyihan.top/)** on a computer or mobile browser | [frontend-react/](frontend-react/) · [Web development](docs/next-frontend.md) |
+| WeChat mini program | Search for **「Texta串词记」** in WeChat; see the development steps below for local previews | [wechat-miniprogram/](wechat-miniprogram/) · [Mini program guide](wechat-miniprogram/README.md) |
+| Windows desktop | Install the client or run it from source; it loads the same website over the network | [desktop/](desktop/) · [Desktop guide](docs/desktop.md) |
+| Shared API | Authentication, generation, dictionary cards, study libraries, and subscription data | [server.js](server.js) · [Deployment guide](docs/deployment.md) |
 
-小程序源码版本为 `1.1.2`。原项目的 2026-10-07 记录表明 `1.0.0` 已发布、`1.1.2` 已上传待审核；该历史记录不代表当前公众平台的审核状态，GitHub 同步也不会自动发布微信正式版。
+The mini program source version is `1.1.2`. Records dated October 7, 2026 report that `1.0.0` was released and `1.1.2` was uploaded pending review. These records do not establish the current WeChat review status. Updating GitHub does not publish a WeChat release.
 
 <a id="preview"></a>
 
-## 界面预览
+## Screenshots
 
-### 网页阅读工作区
+### Web reading workspace
 
-![Texta 网页双语阅读与词汇解析](docs/images/reading.png)
+![Texta web app with bilingual reading and vocabulary details](docs/images/reading.png)
 
-*网页版界面示例，展示英文阅读、中文对照和词汇卡；截图为已有界面记录，最新页面以线上版本为准。*
+*An existing web interface capture showing English text, Chinese translations, and vocabulary cards. Visit the live app for the latest interface.*
 
-### 微信小程序
+### WeChat mini program
 
 <p align="center">
-  <img src="docs/images/mini-input.png" alt="小程序词汇输入与拼写辅助" width="240" />
-  <img src="docs/images/mini-reading.png" alt="小程序中英对照阅读" width="240" />
-  <img src="docs/images/mini-export.png" alt="小程序文档导出设置与预览" width="240" />
+  <img src="docs/images/mini-input.png" alt="Mini program vocabulary input and spelling assistance" width="240" />
+  <img src="docs/images/mini-reading.png" alt="Mini program bilingual reading" width="240" />
+  <img src="docs/images/mini-export.png" alt="Mini program export settings and preview" width="240" />
 </p>
 
-*原生小程序模拟器截图：词汇输入、对照阅读、导出预览；使用测试文章展示。*
+*Native simulator screenshots of vocabulary input, bilingual reading, and export previews, using test articles.*
 
 <a id="features"></a>
 
-## 多端功能对照
+## Features by Platform
 
-| 能力 | 网页版 / Windows 客户端 | 微信小程序 |
+| Feature | Web / Windows client | WeChat mini program |
 | --- | --- | --- |
-| 词汇输入 | 单词与短语标签、拼写建议、补全、TXT / Markdown / CSV / JSON 导入 | 标签编辑、拼写建议、补全、剪贴板与相同格式导入 |
-| 文章生成 | 双语文章、中英混合故事、短文模式 | 中英对照、中文嵌词、短文模式 |
-| 阅读与词义 | 英中高亮、语境义项、英美音标、发音、搭配、构词、近反义词 | 对应高亮、原生词义抽屉、语境义项、音标、搭配、构词、近反义词 |
-| 阅读设置 | 六套主题、字号、中英文界面、隐藏中文、阅读模式、手机布局 | 六套主题、字号、中英对照 / 英文 / 词汇表视图；中文界面 |
-| 收藏与复习 | 收藏文章、文件夹、生词本、掌握状态、来源文章 | 收藏、生词本、掌握状态、搜索、来源文章、由生词生成复习短文；保留云端文件夹资料 |
-| 历史与草稿 | 按账号保存本机草稿和最近 80 篇历史；历史默认最新加入在前 | 按账号保存本机草稿和最近 30 篇历史 |
-| 账号 | 邮箱注册与登录、微信绑定状态查看 | 微信快捷登录、邮箱注册 / 登录、绑定新邮箱、验证原密码关联已有账号 |
-| 学习库同步 | 收藏、生词、掌握状态和文件夹通过 API 同步 | 使用相同学习库 API，保留离线修改与删除标记 |
-| 学习材料导出 | PDF、Word `.doc`；预览、标题、中文译文和页边距设置 | PDF、可编辑 Word `.docx`、TXT 和文章复制；导出设置与预览 |
-| 套餐与管理 | 套餐目录、订单流程、管理员用量及历史审核页面 | 当前套餐、今日额度、后端连接检查；没有内购、微信支付或管理员控制台 |
+| Vocabulary input | Word and phrase chips, spelling suggestions, completion, and TXT / Markdown / CSV / JSON imports | Editable chips, spelling suggestions, completion, clipboard paste, and the same import formats |
+| Article generation | Bilingual articles, Chinese stories with embedded English words, and short article mode | Bilingual and embedded English modes, plus short articles |
+| Reading and vocabulary | Aligned highlights, contextual meanings, UK / US IPA, pronunciation, collocations, word formation, synonyms, and antonyms | Aligned highlights, a native vocabulary drawer, contextual meanings, IPA, collocations, word formation, synonyms, and antonyms |
+| Reading preferences | Six themes, font sizes, Chinese / English interface, translation toggle, reading mode, and mobile layout | Six themes, font sizes, bilingual / English / glossary views; Chinese interface |
+| Saving and review | Favorites, folders, vocabulary notebook, mastery tracking, and source articles | Favorites, notebook, mastery tracking, search, source articles, and review article generation; preserves cloud folder data |
+| History and drafts | Local drafts and the latest 80 articles per account; history defaults to newest first | Local drafts and the latest 30 articles per account |
+| Accounts | Email registration and login, plus WeChat linking status | WeChat quick login, email registration / login, new email binding, and existing account association with password verification |
+| Library sync | Favorites, words, mastery preferences, and folders sync through the API | Uses the same API, preserving offline changes and deletion markers |
+| Study exports | PDF and Word `.doc`; preview, title, translation, and margin settings | PDF, editable Word `.docx`, TXT, and article copying; export settings and preview |
+| Plans and administration | Plan catalog, order flows, usage administration, and legacy review pages | Current plan, daily allowance, and backend connectivity checks; no in-app purchases, WeChat Pay, or admin console |
 
-**文章 PDF / Word 导出附带三列词汇表：英文、词性、中文翻译。** 网页版关闭正文译文时仍保留词汇表释义；正文词义序号以小号上标显示，导出同步保留。网页生成或打开文章后隐藏阅读区底部的政策与版权页脚。
+**Article PDF / Word exports include a three-column glossary: English word, part of speech, and Chinese translation.** On the web, hiding paragraph translations keeps glossary meanings visible. Sense numbers appear as small superscripts in articles and exports. The web reading view hides its policy and copyright footer after generating or opening an article.
 
-小程序 PDF 使用本机画布生成，为图片型 PDF；DOCX 为可编辑的 OOXML 文档。网页版 Word 使用 HTML `.doc` 格式，两端文件实现有区别。
+Mini program PDFs are image-based documents generated with a local canvas; DOCX exports are editable OOXML documents. The web app exports Word files as HTML `.doc` documents.
 
-套餐包含 Free / Plus / Pro、月度与永久权益。购买是否开放以服务端返回和支付配置为准；FastSpring 测试订单不会授予正式权益。详见 [支付接入](FASTSPRING_SETUP.md)。
+Plans include Free / Plus / Pro, monthly subscriptions, and lifetime entitlements. Purchase availability depends on backend settings and the payment provider configuration. FastSpring test orders do not grant live entitlements. See [payment setup](FASTSPRING_SETUP.md).
 
 <a id="usage"></a>
 
-## 使用流程
+## Usage
 
-1. 网页版注册或登录；小程序可用微信快捷登录，首次创建免费账号。
-2. 粘贴或导入需要学习的词汇，检查词条和拼写。
-3. 选择双语文章或中英混合故事，可按需开启短文模式。
-4. 阅读生成文章，点击高亮词查看语境词义及词汇卡。
-5. 收藏文章、添加生词并标记掌握状态；换设备前同步需要保留的资料。
-6. 预览并导出学习材料，在正文后查看词汇表。
+1. Register or sign in on the web. In the mini program, WeChat quick login creates a free account on first use.
+2. Paste or import vocabulary, then check the entries and spelling suggestions.
+3. Choose a bilingual article or a Chinese story with embedded English words. Enable short article mode if needed.
+4. Read the article and tap highlighted words for contextual meanings and vocabulary cards.
+5. Save articles, add unfamiliar words to the notebook, and update mastery status. Sync material you want to keep before switching devices.
+6. Preview and export study materials, including the glossary after the article.
 
-可直接复制这组词测试输入：
+Try this vocabulary list:
 
 ```text
 sustainable, resilient, adapt, perspective, thrive, balance, curious,
 journey, challenge, opportunity, achieve, discover, essential, improve, confidence
 ```
 
-生成内容由模型提供，词义与用法应结合原文核对。生成失败会尝试退回预留积分；成功准备的通用词典卡可继续复用。
+Content is model-generated; check meanings and usage against the article. Failed generation attempts trigger a refund attempt for reserved credits. Successfully prepared dictionary cards remain available for reuse.
 
 <a id="sync"></a>
 
-## 账号与数据同步
+## Accounts and Data Sync
 
-网页版、桌面版和小程序连接相同 Express API。**使用同一账号，才能访问同一份云端学习资料。** 微信首次登录创建的账号不会仅凭填写邮箱就自动变成原有网页账号。
+All clients connect to the same Express API. **Use the same account to access the same cloud study library.** A new WeChat account is not automatically associated with an existing web account just by entering an email address.
 
-已有网页账号时，在小程序进入 **「我的 → 账号设置 → 关联已有账号」**，输入原邮箱和原密码，经验证后合并符合条件的微信账号资料，并保留目标邮箱账号的套餐。已有订单或付费权益、微信绑定冲突及资料超限等情况会阻止自动合并。详见 [账号关联与合并](docs/wechat-login.md)。
+For an existing web account, open **「我的 → 账号设置 → 关联已有账号」** in the mini program (Profile → Account settings → Link existing account). Enter the original email and password. After verification, eligible WeChat account data is merged into the email account, whose plan is preserved. Existing orders, paid source entitlements, conflicting WeChat identities, or library limits can prevent automatic merging. See [account association and merging](docs/wechat-login.md).
 
-| 数据 | 保存位置与跨端行为 |
+| Data | Storage and behavior across clients |
 | --- | --- |
-| 账号、套餐、额度 | 服务端保存；登录同一账号后共用 |
-| 收藏、生词、掌握状态、文件夹 | 云端学习库与各端缓存；同步后跨设备读取，具体编辑界面因客户端而异 |
-| 生成历史、输入草稿 | 当前浏览器或小程序本机保存；不自动跨设备同步 |
-| 主题、语言、字号 | 各客户端本地偏好；不同端分别设置 |
-| 词汇卡 | 随文章保存，通用词典卡由服务端缓存复用 |
+| Account, plan, and credits | Stored on the server and shared when signed into the same account |
+| Favorites, notebook, mastery, and folders | Cloud library with local caches; available across devices after syncing, with editing interfaces varying by client |
+| Generated history and input drafts | Stored in the current browser or mini program; not automatically synced between devices |
+| Theme, interface language, and font size | Local preferences set separately in each client |
+| Vocabulary cards | Saved with articles; shared dictionary cards are cached on the server |
 
-各端上传学习库前先读取合并，网络失败保留本地修改。当前快照同步接口仍存在多设备同时修改的竞争窗口；本机历史中需要长期保存的文章建议加入收藏。桌面客户端拥有独立浏览器存储，不会自动读取普通浏览器未同步的内容。
+Clients fetch and merge library data before uploading, and keep local changes when the network fails. Snapshot sync still has a race window when multiple devices edit simultaneously. Save important history articles to favorites. The desktop client has separate browser storage and does not automatically read unsynced data from your regular browser.
 
 <a id="architecture"></a>
 
-## 技术架构
+## Architecture
 
-| 部分 | 实现 |
+| Component | Implementation |
 | --- | --- |
-| 网页前端 | Next.js 16、React 19、TypeScript；静态导出至 GitHub Pages |
-| 微信小程序 | 原生 JavaScript、WXML、WXSS；运行代码无 npm 依赖 |
-| Windows 客户端 | Electron、electron-builder、NSIS；加载线上站点 |
-| 共用后端 | Node.js、Express 4；认证、学习库、生成、用量、支付 API |
-| 数据 | Prisma 6、PostgreSQL；账号、资料、词典缓存、用量和订单 |
-| 生成服务 | OpenAI-compatible API；仓库 Render 配置为 302.ai / DeepSeek V3.2 |
-| 文档导出 | 网页 html2canvas / jsPDF / HTML Word；小程序 canvas PDF / OOXML DOCX |
+| Web frontend | Next.js 16, React 19, TypeScript; static export to GitHub Pages |
+| WeChat mini program | Native JavaScript, WXML, and WXSS; no npm dependencies in the runtime code |
+| Windows client | Electron, electron-builder, and NSIS; loads the live website |
+| Shared backend | Node.js and Express 4; authentication, library, generation, usage, and payment APIs |
+| Database | Prisma 6 and PostgreSQL; accounts, libraries, dictionary cache, usage, and orders |
+| Generation | OpenAI-compatible API; the repository's Render configuration uses 302.ai / DeepSeek V3.2 |
+| Exports | Web: html2canvas / jsPDF / HTML Word; mini program: canvas PDF / OOXML DOCX |
 
 ```mermaid
 flowchart LR
-  Browser["电脑 / 手机浏览器"] --> Web["Next.js · GitHub Pages"]
+  Browser["Desktop / mobile browser"] --> Web["Next.js · GitHub Pages"]
   Desktop["Windows · Electron"] --> Web
   Web --> API["Express API"]
-  Mini["原生微信小程序"] --> API
-  API --> Generation["文章生成 + 词汇卡准备"]
-  Generation --> Model["OpenAI-compatible 模型服务"]
+  Mini["Native WeChat mini program"] --> API
+  API --> Generation["Article generation + vocabulary cards"]
+  Generation --> Model["OpenAI-compatible model service"]
   API --> Prisma["Prisma"]
   Generation --> Prisma
   Prisma --> DB[(PostgreSQL)]
-  API --> WeChat["微信身份验证"]
+  API --> WeChat["WeChat identity verification"]
   API --> Payment["FastSpring"]
 ```
 
-正文和缺失词汇卡并行准备，词典按批生成并持久缓存。双语 / 混合正文校验失败时最多重生成一次，整次操作可能包含多个模型请求。详见 [双语生成](docs/bilingual-generation.md)、[混合生成](docs/mixed-direct-generation.md) 和 [词汇卡](docs/vocabulary-details.md)。
+Article generation and preparation of missing vocabulary cards run concurrently. Dictionary cards are generated in batches and cached persistently. Bilingual and mixed article generation retries once at most after content validation fails; the overall operation can involve multiple model requests. See [bilingual generation](docs/bilingual-generation.md), [mixed generation](docs/mixed-direct-generation.md), and [vocabulary cards](docs/vocabulary-details.md).
 
 <a id="getting-started"></a>
 
-## 本地运行网页版与后端
+## Run the Web App and API Locally
 
-需要 **Node.js 22+、npm、PostgreSQL** 和模型提供商的 API Key。使用线上网站无需安装开发环境。
+You need **Node.js 22+, npm, PostgreSQL**, and an API key from a model provider. Using the hosted app requires no development setup.
 
-### 1. 安装依赖
+### 1. Install dependencies
 
 ```bash
 git clone https://github.com/YanYihann/Texta.git
@@ -186,25 +188,25 @@ npm ci
 npm ci --prefix frontend-react
 ```
 
-根目录安装会执行 `prisma generate`。可选设计参考子模块 `tools/awesome-design-md` 不影响应用运行，无需递归克隆。
+Installing root dependencies runs `prisma generate`. The optional design reference submodule `tools/awesome-design-md` is not required to run the app; a recursive clone is unnecessary.
 
-### 2. 创建本地配置
+### 2. Create local configuration
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 Copy-Item frontend-react/.env.local.example frontend-react/.env.local
 ```
 
-macOS / Linux：
+macOS / Linux:
 
 ```bash
 cp .env.example .env
 cp frontend-react/.env.local.example frontend-react/.env.local
 ```
 
-在根目录 `.env` 填写自己的配置，例如：
+Set your own values in the root `.env`, for example:
 
 ```dotenv
 DATABASE_URL=postgresql://texta:replace_me@localhost:5432/texta?schema=public
@@ -218,69 +220,69 @@ FRONTEND_ORIGIN=http://localhost:3001
 PORT=3000
 ```
 
-前端 `frontend-react/.env.local`：
+In `frontend-react/.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
 ```
 
-`.env.example` 包含管理员、会话和微信的可选变量。模型 Key、数据库密码、管理员密码、小程序 AppSecret 和支付凭据仅放在服务端；`NEXT_PUBLIC_*` 中只填写公开配置。
+`.env.example` also documents optional administrator, session, and WeChat settings. Keep model keys, database passwords, admin passwords, WeChat AppSecret, and payment credentials on the server. Use `NEXT_PUBLIC_*` only for public configuration.
 
-### 3. 初始化数据库并启动
+### 3. Initialize the database and start the app
 
-先创建空的本地数据库，确认 `DATABASE_URL` 指向它：
+Create an empty local PostgreSQL database and confirm that `DATABASE_URL` points to it:
 
 ```bash
 npm run db:push -- --skip-generate
 npm start
 ```
 
-另开终端运行前端：
+In another terminal, start the frontend:
 
 ```bash
 npm run dev --prefix frontend-react
 ```
 
-网页入口：[localhost:3001](http://localhost:3001)；API 健康检查：[localhost:3000/api/health](http://localhost:3000/api/health)。现有数据库升级流程见 [部署说明](docs/deployment.md)。
+Web app: [localhost:3001](http://localhost:3001). API health check: [localhost:3000/api/health](http://localhost:3000/api/health). See the [deployment guide](docs/deployment.md) for upgrades to existing databases.
 
-正式静态构建预览：
+To preview a production static build:
 
 ```bash
 npm run build --prefix frontend-react
 npm start --prefix frontend-react
 ```
 
-预览地址为 [127.0.0.1:4173](http://127.0.0.1:4173)，连接本地 API 时需在后端允许该来源。静态导出使用仓库预览服务器启动，详细路由及旧数据兼容见 [Next.js 前端](docs/next-frontend.md)。
+The preview runs at [127.0.0.1:4173](http://127.0.0.1:4173). Allow that origin in the backend when connecting to a local API. The repository's preview server serves the static export. See [Next.js frontend documentation](docs/next-frontend.md) for routes and legacy data compatibility.
 
 <a id="mini-program"></a>
 
-## 开发微信小程序
+## Develop the WeChat Mini Program
 
-1. 在微信开发者工具中导入仓库的 **`wechat-miniprogram/`** 目录。
-2. 项目配置保留现有 AppID；维护者使用原项目权限，其他开发者需使用自己的 AppID 配置后端微信凭据。
-3. 点击编译；运行页面无需“构建 npm”。`miniprogram/config.js` 只包含公共 API 地址等公开设置。
-4. 真机请求需要在公众平台配置 API 的 request 合法域名；使用本地 API 时修改公共地址，并根据开发环境设置网络校验。
-5. 微信登录要求后端的 `WECHAT_APP_ID` / `WECHAT_APP_SECRET` 与所用小程序一致。
+1. Import **`wechat-miniprogram/`** into WeChat DevTools.
+2. The configuration preserves the existing AppID. Maintainers need access to that app; other developers should use their own AppID and matching backend WeChat credentials.
+3. Compile the project. Runtime pages do not require the DevTools npm build step. `miniprogram/config.js` contains only the public API address and other public settings.
+4. For physical devices, configure the API's request domain in the WeChat administration console. For a local API, change the public address and adjust network validation for your development environment.
+5. The backend `WECHAT_APP_ID` / `WECHAT_APP_SECRET` must match the mini program in use.
 
-从仓库根目录检查小程序：
+Check the mini program from the repository root:
 
 ```bash
 npm run mini:check
 npm run test:mini
 ```
 
-模拟器自动化需要额外安装开发依赖：
+Simulator automation requires additional development dependencies:
 
 ```bash
 npm ci --prefix wechat-miniprogram
 npm run mini:compile
 ```
 
-`mini:compile` 使用本机微信开发者工具编译器，安装位置可用 `WECHAT_COMPILER_ROOT` 指定。原生页面清单、API 配置、文件导出、模拟器检查和发布流程见 **[小程序 README](wechat-miniprogram/README.md)**。
+`mini:compile` uses the locally installed WeChat DevTools compiler; set `WECHAT_COMPILER_ROOT` to override its location. See the **[mini program README](wechat-miniprogram/README.md)** for pages, API configuration, exports, simulator checks, and release steps.
 
 <a id="desktop"></a>
 
-## 运行 Windows 桌面版
+## Run the Windows Client
 
 ```bash
 npm run desktop:install
@@ -289,20 +291,20 @@ npm run test:desktop
 npm run desktop:build
 ```
 
-安装包输出至 `output/desktop/Texta-Setup-1.0.0-x64.exe`。也可手动运行 [Build Windows Desktop](https://github.com/YanYihann/Texta/actions/workflows/build-desktop.yml) 获取构建产物及 SHA-256 校验文件。客户端需要联网，当前未配置代码签名与自动更新，工作流不会自动创建 Release。详见 [桌面版文档](docs/desktop.md)。
+The installer is written to `output/desktop/Texta-Setup-1.0.0-x64.exe`. You can also manually run [Build Windows Desktop](https://github.com/YanYihann/Texta/actions/workflows/build-desktop.yml) to obtain build artifacts and SHA-256 checksums. The client requires a network connection. Code signing and automatic updates are not configured, and the workflow does not automatically create a Release. See the [desktop guide](docs/desktop.md).
 
 <details>
-  <summary>桌面客户端界面</summary>
+  <summary>Desktop client screenshot</summary>
 
-![Texta Windows 客户端](docs/images/desktop.png)
+![Texta Windows client](docs/images/desktop.png)
 
 </details>
 
 <a id="development"></a>
 
-## 检查与测试
+## Checks and Tests
 
-从仓库根目录执行：
+Run from the repository root:
 
 ```bash
 npm test
@@ -313,93 +315,91 @@ npm run mini:check
 npm run test:mini
 ```
 
-| 范围 | 验证内容 |
+| Area | Coverage |
 | --- | --- |
-| 后端 | 微信身份、账号合并、用量计费、双语 / 混合生成、词典缓存、学习库、句子翻译 |
-| 网页 | 旧缓存兼容、账号隔离、同步失败保护、请求期间编辑、双语对齐、导出内容与转义；构建检查 TypeScript 与静态路由 |
-| 小程序 | JS / JSON、页面、事件与图标；输入、阅读、导出布局、会话、账号关联、资料合并及同步竞态 |
-| 微信本机编译 | `npm run mini:compile` 检查 WXML / WXSS；需要安装微信开发者工具 |
-| 桌面 | 安装桌面依赖后执行 `npm run test:desktop`；详见桌面文档 |
+| Backend | WeChat identity, account merging, credits and billing, bilingual / mixed generation, dictionary caching, libraries, and sentence translation |
+| Web | Legacy caches, account isolation, sync failure protection, edits during requests, bilingual alignment, export content and escaping; builds check TypeScript and static routes |
+| Mini program | JS / JSON, pages, events, icons, input, reading, export layouts, sessions, account association, merging, and sync races |
+| WeChat compilation | `npm run mini:compile` checks WXML / WXSS; requires local WeChat DevTools |
+| Desktop | Install desktop dependencies, then run `npm run test:desktop`; see the desktop guide |
 
-GitHub 的 **Core tests** 工作流包含后端、网页及小程序检查。核心单元检查使用本地夹具，不调用付费生成 API；真实数据库并发、支付结算和物理手机验收需分别执行，跳过的数据库测试不能视为已通过。详见 [开发与验证](docs/development.md)。
+The GitHub **Core tests** workflow checks the backend, web frontend, and mini program. Core unit checks use local fixtures and do not call paid generation APIs. Real database concurrency, payment settlement, and physical device acceptance require separate checks; skipped database tests are not passes. See [development and verification](docs/development.md).
 
 <a id="deployment"></a>
 
-## 部署与发布
+## Deployment and Releases
 
-| 组件 | 配置与发布方式 |
+| Component | Configuration and release process |
 | --- | --- |
-| 网页版 | [deploy-pages.yml](.github/workflows/deploy-pages.yml) 构建 `frontend-react/out/` 并部署 GitHub Pages；保留 CNAME 和旧 `.html` 链接跳转 |
-| Express API | [render.yaml](render.yaml) 定义 Render 服务；密钥使用服务端环境变量 |
-| PostgreSQL | [prisma/schema.prisma](prisma/schema.prisma) 定义结构；升级前备份并验证 schema 变化 |
-| 微信小程序 | 微信开发者工具预览 / 上传，公众平台审核与发布；独立于 GitHub Pages |
-| Windows | [build-desktop.yml](.github/workflows/build-desktop.yml) 手动构建，正式分发单独处理 |
+| Web | [deploy-pages.yml](.github/workflows/deploy-pages.yml) builds `frontend-react/out/` and deploys to GitHub Pages, preserving the CNAME and legacy `.html` redirects |
+| Express API | [render.yaml](render.yaml) defines the Render service; credentials are server environment variables |
+| PostgreSQL | [prisma/schema.prisma](prisma/schema.prisma) defines the schema; back up data and validate schema changes before upgrades |
+| WeChat mini program | Preview / upload with WeChat DevTools, then review and release through WeChat; independent of GitHub Pages |
+| Windows | [build-desktop.yml](.github/workflows/build-desktop.yml) builds manually; public distribution is handled separately |
 
-线上入口：[网页版](https://texta.yanyihan.top/) · [API 健康检查](https://api-texta.yanyihan.top/api/health)。完整配置见 [部署文档](docs/deployment.md)、[微信认证](docs/wechat-login.md) 和 [FastSpring](FASTSPRING_SETUP.md)。
+Live endpoints: [Web app](https://texta.yanyihan.top/) · [API health](https://api-texta.yanyihan.top/api/health). See [deployment](docs/deployment.md), [WeChat authentication](docs/wechat-login.md), and [FastSpring](FASTSPRING_SETUP.md) for full configuration.
 
 <a id="structure"></a>
 
-## 项目结构与文档
+## Project Structure and Documentation
 
 ```text
 Texta/
-├── frontend-react/         # Next.js 网页前端、路由、阅读与导出
-├── wechat-miniprogram/     # 原生微信小程序、资源、测试与发布记录
-│   ├── miniprogram/        # 页面、组件、数据、API 与导出工具
-│   ├── scripts/            # 检查、编译和模拟器验收
-│   ├── tests/              # 小程序功能回归
-│   └── project.config.json # 开发者工具导入入口
-├── desktop/                # Electron 客户端、构建和测试
-├── auth/                   # 微信身份、邮箱关联和账号合并
-├── billing/                # 套餐、积分、订单与 FastSpring
-├── generation/             # 双语、混合故事与完整词汇卡
-├── prisma/                 # 数据库模型
-├── public/                 # 共享资源、字体、词表、政策与旧网页回退
-├── docs/                   # 开发、部署、功能说明和多端截图
-├── tests/                  # 后端回归及本地预览夹具
-├── experiments/            # 生成实验源码、数据集与总结
-├── scripts/                # 项目工具
-├── tools/                  # 可选设计参考子模块
-├── .github/workflows/      # 自动检查、网页发布和桌面构建
-├── .env.example            # 服务端配置示例
-├── server.js               # 共用 Express API 入口
-└── render.yaml             # Render 部署配置
+├── frontend-react/         # Next.js web frontend, routes, reading, and exports
+├── wechat-miniprogram/     # Native mini program, assets, tests, and release records
+│   ├── miniprogram/        # Pages, components, data, API, and export utilities
+│   ├── scripts/            # Checks, compilation, and simulator verification
+│   ├── tests/              # Mini program regression tests
+│   └── project.config.json # WeChat DevTools import entry
+├── desktop/                # Electron client, builds, and tests
+├── auth/                   # WeChat identity, email association, and account merging
+├── billing/                # Plans, credits, orders, and FastSpring
+├── generation/             # Bilingual articles, mixed stories, and vocabulary cards
+├── prisma/                 # Database schema
+├── public/                 # Shared assets, fonts, word lists, policies, legacy web fallback
+├── docs/                   # Development, deployment, feature guides, and screenshots
+├── tests/                  # Backend regression tests and local preview fixtures
+├── experiments/            # Generation experiments, datasets, and reports
+├── scripts/                # Project utilities
+├── tools/                  # Optional design reference submodule
+├── .github/workflows/      # CI, web deployment, and desktop builds
+├── .env.example            # Backend environment example
+├── server.js               # Shared Express API entry
+└── render.yaml             # Render deployment configuration
 ```
 
-文档入口：**[项目文档索引](docs/README.md)** · [网页前端](docs/next-frontend.md) · [小程序](wechat-miniprogram/README.md) · [桌面版](docs/desktop.md) · [生成实验](experiments/README.md)。各端产品与界面约束保留在对应 `PRODUCT.md` / `DESIGN.md`。
+Start with the **[documentation index](docs/README.md)**, or see the [web frontend](docs/next-frontend.md), [mini program](wechat-miniprogram/README.md), [desktop client](docs/desktop.md), and [generation experiments](experiments/README.md). Detailed development guides are primarily in Chinese. Each client's product and design constraints are kept in its `PRODUCT.md` / `DESIGN.md`.
 
-仓库包含可运行源码、锁文件、静态资源、测试和开发文档。本地 `.env`、用户数据、数据库备份、开发者工具私有配置、历史备份、依赖目录、调试日志及构建产物由 `.gitignore` 排除；原本地文件保留。
+The repository includes runnable source, lockfiles, static assets, tests, and development documentation. Local `.env` files, user data, database backups, private DevTools settings, historical backups, dependencies, debug logs, and build outputs are excluded by `.gitignore` and remain local.
 
 <a id="roadmap"></a>
 
-## 开发方向
+## Roadmap
 
-- [x] 双语文章、中英混合故事、词汇卡与持久缓存
-- [x] Next.js 网页版与 Windows 客户端
-- [x] 原生微信小程序与微信登录、邮箱账号关联
-- [x] 学习库同步、生词复习及带词汇表的文档导出
-- [x] 网页、小程序、后端源码与检查入口统一到本仓库
-- [ ] 扩充真实 PostgreSQL 并发与回滚集成验证
-- [ ] 增强多设备同时编辑的同步冲突控制
-- [ ] 完成正式支付启用及结算验收
-- [ ] 完善桌面签名、下载分发和自动更新
+- [x] Bilingual articles, mixed stories, vocabulary cards, and persistent caching
+- [x] Next.js web frontend and Windows client
+- [x] Native WeChat mini program, WeChat login, and email account association
+- [x] Study library sync, vocabulary review, and exports with glossaries
+- [x] Web, mini program, and backend source and checks in one repository
+- [ ] Expand real PostgreSQL concurrency and rollback verification
+- [ ] Improve conflict handling for simultaneous edits across devices
+- [ ] Complete live payment activation and settlement acceptance
+- [ ] Add desktop signing, download distribution, and automatic updates
 
-以上为开发方向，未承诺交付时间；小程序审核发布进度以公众平台为准。
+These are development directions without committed delivery dates. WeChat review and release status is determined in the WeChat administration console.
 
 <a id="contributing"></a>
 
-## 贡献与联系
+## Contributing and Contact
 
-欢迎通过 [Issues](https://github.com/YanYihann/Texta/issues) 提交操作步骤、预期行为和实际结果。修改应更新对应端文档并运行相关检查；涉及生成、认证或学习库时，注意词汇校验、错误退款、账号隔离和旧资料兼容。
+Use [Issues](https://github.com/YanYihann/Texta/issues) to report steps to reproduce, expected behavior, and actual results. Update the relevant documentation and run the checks for your changes. Generation, authentication, and library changes should account for vocabulary validation, refunds on failure, account isolation, and legacy data compatibility.
 
-维护者：[YanYihann](https://github.com/YanYihann) · 联系邮箱：[1963372275@qq.com](mailto:1963372275@qq.com)。
+Maintainer: [YanYihann](https://github.com/YanYihann) · Email: [1963372275@qq.com](mailto:1963372275@qq.com).
 
 <a id="license"></a>
 
-## 许可证与致谢
+## License
 
-仓库目前未提供项目级 `LICENSE`，未对项目整体声明开源许可。字体、词表及第三方代码保留各自许可文件，见 `public/fonts/`、`public/vendor/` 和 `wechat-miniprogram/miniprogram/data/`。
+This repository does not currently include a project-level `LICENSE` or grant an open-source license for the project as a whole. Fonts, word lists, and third-party code retain their own license files in `public/fonts/`, `public/vendor/`, and `wechat-miniprogram/miniprogram/data/`.
 
-README 以 [Best-README-Template](https://github.com/othneildrew/Best-README-Template) 的项目介绍、安装、使用、贡献结构为基础，参考 [awesome-readme](https://github.com/matiassingers/awesome-readme) 的截图展示、清晰导航与架构说明，按 Texta 多端项目的实际实现重新编写。
-
-<p align="right"><a href="#readme-top">返回顶部</a></p>
+<p align="right"><a href="#readme-top">Back to top</a></p>
