@@ -875,7 +875,7 @@ function LearningWorkspace({
           {t("退出阅读模式")} · ESC
         </button>
       ) : null}
-      <Footer />
+      {tab !== "article" || !article ? <Footer /> : null}
       {guide ? (
         <Modal title="Texta 使用说明" onClose={closeGuide}>
           <ol className="guide-steps">
