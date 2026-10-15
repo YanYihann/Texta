@@ -20,13 +20,13 @@ export function ExportDialog({
   format: "pdf" | "word";
   onClose: () => void;
 }) {
-  const { t } = useText();
+  const { t, language } = useText();
   const [title, setTitle] = useState(source.article?.title || "Texta · 生词本"),
     [includeChinese, setIncludeChinese] = useState(true),
     [margin, setMargin] = useState(12);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const settings = { title, includeChinese, margin };
+  const settings = { title, includeChinese, margin, language };
   async function confirm() {
     if (busy) return;
     setBusy(true);
@@ -58,14 +58,16 @@ export function ExportDialog({
           onChange={(event) => setTitle(event.target.value)}
         />
         <div className="modal-row">
-          <label className="quick-row">
-            <input
-              type="checkbox"
-              checked={includeChinese}
-              onChange={(event) => setIncludeChinese(event.target.checked)}
-            />
-            {t("包含中文翻译")}
-          </label>
+          {source.article ? (
+            <label className="quick-row">
+              <input
+                type="checkbox"
+                checked={includeChinese}
+                onChange={(event) => setIncludeChinese(event.target.checked)}
+              />
+              {t("包含中文翻译")}
+            </label>
+          ) : null}
           <label>
             {t("页边距")}
             <select

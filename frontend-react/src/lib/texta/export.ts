@@ -1,5 +1,6 @@
-import type { Article, NotebookEntry } from "./types";
+import type { Article, LexiconEntry, NotebookEntry } from "./types";
 import { highlights, articleProse } from "./reading";
+import { dictionary } from "./translations";
 
 export interface ExportSource {
   article?: Article;
@@ -9,6 +10,7 @@ export interface ExportSettings {
   title: string;
   includeChinese: boolean;
   margin: number;
+  language?: string;
 }
 const escape = (value: unknown) =>
   String(value ?? "").replace(
@@ -36,7 +38,31 @@ function highlighted(
   }
   return html + escape(articleProse(text.slice(cursor)));
 }
-export const EXPORT_STYLE = `.texta-export-doc{color:#222724;background:#fff;font:16px/1.7 'Segoe UI','Microsoft YaHei',sans-serif;overflow-wrap:anywhere}.texta-export-doc h1{font:700 30px/1.25 Georgia,'Songti SC',serif;margin:0 0 24px}.texta-export-doc h2{font:700 24px/1.3 Georgia,serif;margin:0 0 6px}.texta-export-doc p{margin:0 0 12px}.texta-export-doc .en{font:20px/1.6 Georgia,'Songti SC',serif}.texta-export-doc .zh{font-size:15px;color:#505a51}.texta-export-doc mark{background:#dae8d4;color:#294e37;font-weight:700}.texta-export-doc .export-block{margin:0 0 20px;break-inside:avoid}.texta-export-doc .word-row{border-bottom:1px solid #d8ded7;padding-bottom:16px}.texta-export-doc small{font:13px/1.4 'Segoe UI','Microsoft YaHei',sans-serif;color:#606963}.texta-export-doc .mixed-word{display:inline-flex;flex-direction:column;text-align:center;vertical-align:baseline;margin:0 2px}.texta-export-doc .mixed-word small{margin-top:2px}.texta-export-doc .mixed{white-space:pre-wrap;font:20px/2 Georgia,'Songti SC',serif}`;
+export const EXPORT_STYLE = `.texta-export-doc{color:#222724;background:#fff;font:16px/1.7 'Segoe UI','Microsoft YaHei',sans-serif;overflow-wrap:anywhere}.texta-export-doc h1{font:700 30px/1.25 Georgia,'Songti SC',serif;margin:0 0 24px}.texta-export-doc h2{font:700 24px/1.3 Georgia,serif;margin:0 0 6px}.texta-export-doc p{margin:0 0 12px}.texta-export-doc .en{font:20px/1.6 Georgia,'Songti SC',serif}.texta-export-doc .zh{font-size:15px;color:#505a51}.texta-export-doc mark{background:#dae8d4;color:#294e37;font-weight:700}.texta-export-doc .export-block{margin:0 0 20px;break-inside:avoid}.texta-export-doc small{font:13px/1.4 'Segoe UI','Microsoft YaHei',sans-serif;color:#606963}.texta-export-doc .mixed-word{display:inline-flex;flex-direction:column;text-align:center;vertical-align:baseline;margin:0 2px}.texta-export-doc .mixed-word small{margin-top:2px}.texta-export-doc .mixed{white-space:pre-wrap;font:20px/2 Georgia,'Songti SC',serif}.texta-export-doc .export-vocabulary-section{margin-bottom:20px}.texta-export-doc .export-vocabulary-section h2{font:600 20px/1.4 'Segoe UI','Microsoft YaHei',sans-serif;margin:24px 0 12px}.texta-export-doc .export-vocabulary{width:100%;border-collapse:collapse;table-layout:fixed;font-size:15px}.texta-export-doc .export-vocabulary th{text-align:left;background:#edf2eb;font-weight:600}.texta-export-doc .export-vocabulary th,.texta-export-doc .export-vocabulary td{padding:10px 12px;border-bottom:1px solid #dce3da;vertical-align:top;overflow-wrap:anywhere}.texta-export-doc .export-vocabulary th:nth-child(1){width:29%}.texta-export-doc .export-vocabulary th:nth-child(2){width:15%}.texta-export-doc .export-vocabulary td:first-child{font-family:Georgia,serif;font-weight:600}.texta-export-doc .export-vocabulary thead{display:table-header-group}.texta-export-doc .export-vocabulary tr{break-inside:avoid}`;
+function vocabularyTable(
+  rows: LexiconEntry[],
+  settings: ExportSettings,
+  heading = false,
+) {
+  const label = (text: string) =>
+    escape(settings.language === "en" ? dictionary[text] || text : text);
+  const cells = rows
+    .map(
+      (entry) =>
+        `<tr><td>${escape(articleProse(entry.word))}</td><td>${escape(entry.pos || "—")}</td><td>${
+          escape(
+            articleProse(
+              (entry.senses || [])
+                .map((sense) => sense.meaning)
+                .filter(Boolean)
+                .join("；"),
+            ),
+          ) || "—"
+        }</td></tr>`,
+    )
+    .join("");
+  return `<section class="export-vocabulary-section">${heading ? `<h2>${label("词汇表")}</h2>` : ""}<table class="export-vocabulary"><thead><tr><th scope="col">${label("英文")}</th><th scope="col">${label("词性")}</th><th scope="col">${label("中文翻译")}</th></tr></thead><tbody>${cells}</tbody></table></section>`;
+}
 export function buildExportHtml(
   source: ExportSource,
   settings: ExportSettings,
@@ -70,10 +96,26 @@ export function buildExportHtml(
       ).entries()) {
         blocks += `<section class="export-block"><p class="en">${highlighted(article, paragraph, index, "en")}</p>${settings.includeChinese && article.paragraphsZh[index] ? `<p class="zh">${highlighted(article, article.paragraphsZh[index], index, "zh")}</p>` : ""}</section>`;
       }
-  } else
-    for (const entry of source.entries || []) {
-      blocks += `<section class="export-block word-row"><h2>${escape(entry.word)} <small>${escape(entry.pos)}</small></h2><p><small>US ${escape(entry.usIpa || entry.ipa || "—")} · UK ${escape(entry.ukIpa || entry.ipa || "—")}</small></p>${settings.includeChinese ? `<p>${entry.senses.map((sense) => escape(sense.meaning)).join("；")}</p>` : ""}<p>${(entry.collocations || []).map(escape).join("<br>")}</p>${settings.includeChinese && entry.wordFormation ? `<p><small>${escape(entry.wordFormation)}</small></p>` : ""}${entry.synonyms?.length ? `<p><small>Synonyms: ${entry.synonyms.map(escape).join(", ")}</small></p>` : ""}${entry.antonyms?.length ? `<p><small>Antonyms: ${entry.antonyms.map(escape).join(", ")}</small></p>` : ""}</section>`;
+    const rows = [...article.lexicon];
+    const present = new Set(rows.map((row) => row.word.trim().toLowerCase()));
+    for (const word of article.words) {
+      if (present.has(word.trim().toLowerCase())) continue;
+      const base = article.baseLexicon.find(
+        (row) => row.word.toLowerCase() === word.toLowerCase(),
+      );
+      const gloss = article.contextGlosses.find(
+        (row) => row.word.toLowerCase() === word.toLowerCase(),
+      );
+      const meaning = gloss?.contextMeaning || gloss?.meaning;
+      rows.push({
+        word,
+        pos: gloss?.pos || base?.pos,
+        senses: meaning ? [{ meaning }] : base?.senses || [],
+      });
+      present.add(word.trim().toLowerCase());
     }
+    blocks += vocabularyTable(rows, settings, true);
+  } else blocks += vocabularyTable(source.entries || [], settings);
   return `<main class="texta-export-doc">${blocks}</main>`;
 }
 function filename(title: string, extension: string) {
@@ -162,7 +204,9 @@ export async function exportPdf(
   const sourceElement = document.createElement("div");
   sourceElement.innerHTML = buildExportHtml(source, settings);
   const blocks = [
-    ...sourceElement.querySelectorAll<HTMLElement>(".export-block"),
+    ...sourceElement.querySelectorAll<HTMLElement>(
+      ".export-block, .export-vocabulary-section",
+    ),
   ];
   document.body.append(host);
   const pdf = new runtime.jspdf.jsPDF({
@@ -216,6 +260,38 @@ export async function exportPdf(
   };
   try {
     for (const block of blocks) {
+      const sourceTable = block.querySelector("table.export-vocabulary");
+      if (sourceTable instanceof HTMLTableElement) {
+        // Paginate by row and repeat the heading instead of slicing a long table image.
+        const startTable = () => {
+          const part = block.cloneNode(false) as HTMLElement;
+          const heading = block.querySelector("h2");
+          if (heading) part.append(heading.cloneNode(true));
+          const table = sourceTable.cloneNode(false) as HTMLTableElement;
+          if (sourceTable.tHead)
+            table.append(sourceTable.tHead.cloneNode(true));
+          const body = document.createElement("tbody");
+          table.append(body);
+          part.append(table);
+          paper.append(part);
+          return { part, body };
+        };
+        let group = startTable();
+        for (const row of [...sourceTable.querySelectorAll("tbody > tr")]) {
+          group.body.append(row);
+          if (
+            paper.scrollHeight > heightPx &&
+            (group.body.children.length > 1 || paper.children.length > 1)
+          ) {
+            row.remove();
+            if (!group.body.children.length) group.part.remove();
+            await capture();
+            group = startTable();
+            group.body.append(row);
+          }
+        }
+        continue;
+      }
       paper.append(block);
       if (paper.scrollHeight > heightPx && paper.children.length > 1) {
         block.remove();

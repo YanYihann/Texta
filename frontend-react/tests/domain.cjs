@@ -297,3 +297,29 @@ test("old prose markers disappear from both export modes while exact word spans 
   assert.ok(mixedHtml.includes("<mark>resilient</mark>"));
   assert.ok(mixedHtml.includes("有韧性的"));
 });
+test("both article modes append the vocabulary table even when paragraph translations are hidden", () => {
+  for (const generationMode of ["standard", "mixed"]) {
+    const value={...article(),generationMode,words:["resilient","take care of"],lexicon:[{...card,senses:[{marker:"①",meaning:"语境中的韧性"}]}],baseLexicon:[{word:"take care of",pos:"phr.",senses:[{meaning:"照顾"}]}],runs:generationMode==="mixed"?[{type:"text",text:"一个 "},{type:"word",word:"resilient",text:"resilient",pos:"adj.",displayMeaning:"有韧性的"}]:[]};
+    const html=buildExportHtml({article:value},{title:"Reading",includeChinese:false,margin:12});
+    assert.ok(html.includes('class="export-vocabulary"'));
+    assert.ok(html.includes("<h2>词汇表</h2>"));
+    assert.ok(html.includes('<th scope="col">英文</th>'));
+    assert.ok(html.includes('<th scope="col">词性</th>'));
+    assert.ok(html.includes('<th scope="col">中文翻译</th>'));
+    assert.ok(html.includes("<td>语境中的韧性</td>"));
+    assert.ok(html.includes("<td>take care of</td><td>phr.</td><td>照顾</td>"));
+    assert.ok(!html.includes('class="zh"'));
+    assert.ok(!html.includes("①"));
+  }
+});
+test("notebook exports use the same compact three-column table, escaping cells and localizing labels", () => {
+  const entry={...card,word:'<script>word</script>',pos:'<n.>',senses:[{meaning:'<img src=x>释义'}],collocations:["Not part of the vocabulary table"]};
+  const html=buildExportHtml({entries:[entry]},{title:"Notebook",includeChinese:false,margin:12,language:"en"});
+  assert.ok(html.includes('<th scope="col">English</th>'));
+  assert.ok(html.includes('<th scope="col">Part of speech</th>'));
+  assert.ok(html.includes('<th scope="col">Chinese meaning</th>'));
+  assert.ok(html.includes("&lt;script&gt;word&lt;/script&gt;"));
+  assert.ok(html.includes("&lt;img src=x&gt;释义"));
+  assert.ok(!html.includes("<script>"));
+  assert.ok(!html.includes("Not part of the vocabulary table"));
+});
