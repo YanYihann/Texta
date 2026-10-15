@@ -29,7 +29,7 @@ export function LibraryView({
     ),
     { t } = useText();
   const [search, setSearch] = useState(""),
-    [sort, setSort] = useState("az"),
+    [sort, setSort] = useState(mode === "history" ? "newest" : "az"),
     [folder, setFolder] = useState("all"),
     [operation, setOperation] = useState<Operation | null>(null);
   const [message, setMessage] = useState("");

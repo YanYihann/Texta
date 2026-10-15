@@ -625,6 +625,7 @@ function LearningWorkspace({
         ) : null}
         {tab === "favorites" || tab === "history" ? (
           <LibraryView
+            key={tab}
             store={store}
             history={history}
             mode={tab}
