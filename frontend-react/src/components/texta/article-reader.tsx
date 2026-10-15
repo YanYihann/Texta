@@ -1,7 +1,11 @@
 "use client";
 import { Fragment, memo } from "react";
 import type { Article } from "@/lib/texta/types";
-import { highlights, articleProse } from "@/lib/texta/reading";
+import {
+  highlights,
+  articleProse,
+  articleSenseMarker,
+} from "@/lib/texta/reading";
 import { wordKey } from "@/lib/texta/library";
 import { useText } from "./provider";
 
@@ -18,6 +22,7 @@ function Mark({
   sentence,
   children,
   language = "en",
+  marker,
 }: {
   word: string;
   active: string;
@@ -26,6 +31,7 @@ function Mark({
   sentence?: number;
   children: React.ReactNode;
   language?: string;
+  marker: string;
 }) {
   const { t } = useText();
   const activate = () => onSelect(word, paragraph, sentence);
@@ -45,6 +51,9 @@ function Mark({
       }}
     >
       {children}
+      <sup className="article-sense-marker" aria-hidden="true">
+        {marker}
+      </sup>
     </mark>
   );
 }
@@ -76,6 +85,12 @@ function Highlighted({
         active={active}
         onSelect={onSelect}
         language={language}
+        marker={articleSenseMarker(
+          article,
+          span.word,
+          text.slice(span.end).match(/^[①-⑳]/)?.[0] ||
+            text.slice(span.start, span.end).match(/[①-⑳]$/)?.[0],
+        )}
       >
         {articleProse(text.slice(span.start, span.end))}
       </Mark>,
@@ -117,7 +132,12 @@ export const ArticleReader = memo(function ArticleReader({
                 run.type === "word" ? (
                   <span className="mixed-vocab" key={index}>
                     <Mark
-                      word={run.word || run.text}
+                      word={articleProse(run.word || run.text)}
+                      marker={articleSenseMarker(
+                        article,
+                        run.word || run.text,
+                        run.marker || run.text.match(/[①-⑳]$/)?.[0],
+                      )}
                       paragraph={run.paragraphIndex}
                       active={active}
                       onSelect={onSelect}

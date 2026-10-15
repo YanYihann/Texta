@@ -1,5 +1,5 @@
 import type { Article, LexiconEntry, NotebookEntry } from "./types";
-import { highlights, articleProse } from "./reading";
+import { highlights, articleProse, articleSenseMarker } from "./reading";
 import { dictionary } from "./translations";
 
 export interface ExportSource {
@@ -31,14 +31,20 @@ function highlighted(
     html = "";
   for (const span of spans) {
     if (span.start < cursor) continue;
+    const marker = articleSenseMarker(
+      article,
+      span.word,
+      text.slice(span.end).match(/^[①-⑳]/)?.[0] ||
+        text.slice(span.start, span.end).match(/[①-⑳]$/)?.[0],
+    );
     html +=
       escape(articleProse(text.slice(cursor, span.start))) +
-      `<mark>${escape(articleProse(text.slice(span.start, span.end)))}</mark>`;
+      `<mark>${escape(articleProse(text.slice(span.start, span.end)))}<sup class="article-sense-marker">${escape(marker)}</sup></mark>`;
     cursor = span.end;
   }
   return html + escape(articleProse(text.slice(cursor)));
 }
-export const EXPORT_STYLE = `.texta-export-doc{color:#222724;background:#fff;font:16px/1.7 'Segoe UI','Microsoft YaHei',sans-serif;overflow-wrap:anywhere}.texta-export-doc h1{font:700 30px/1.25 Georgia,'Songti SC',serif;margin:0 0 24px}.texta-export-doc h2{font:700 24px/1.3 Georgia,serif;margin:0 0 6px}.texta-export-doc p{margin:0 0 12px}.texta-export-doc .en{font:20px/1.6 Georgia,'Songti SC',serif}.texta-export-doc .zh{font-size:15px;color:#505a51}.texta-export-doc mark{background:#dae8d4;color:#294e37;font-weight:700}.texta-export-doc .export-block{margin:0 0 20px;break-inside:avoid}.texta-export-doc small{font:13px/1.4 'Segoe UI','Microsoft YaHei',sans-serif;color:#606963}.texta-export-doc .mixed-word{display:inline-flex;flex-direction:column;text-align:center;vertical-align:baseline;margin:0 2px}.texta-export-doc .mixed-word small{margin-top:2px}.texta-export-doc .mixed{white-space:pre-wrap;font:20px/2 Georgia,'Songti SC',serif}.texta-export-doc .export-vocabulary-section{margin-bottom:20px}.texta-export-doc .export-vocabulary-section h2{font:600 20px/1.4 'Segoe UI','Microsoft YaHei',sans-serif;margin:24px 0 12px}.texta-export-doc .export-vocabulary{width:100%;border-collapse:collapse;table-layout:fixed;font-size:15px}.texta-export-doc .export-vocabulary th{text-align:left;background:#edf2eb;font-weight:600}.texta-export-doc .export-vocabulary th,.texta-export-doc .export-vocabulary td{padding:10px 12px;border-bottom:1px solid #dce3da;vertical-align:top;overflow-wrap:anywhere}.texta-export-doc .export-vocabulary th:nth-child(1){width:29%}.texta-export-doc .export-vocabulary th:nth-child(2){width:15%}.texta-export-doc .export-vocabulary td:first-child{font-family:Georgia,serif;font-weight:600}.texta-export-doc .export-vocabulary thead{display:table-header-group}.texta-export-doc .export-vocabulary tr{break-inside:avoid}`;
+export const EXPORT_STYLE = `.texta-export-doc{color:#222724;background:#fff;font:16px/1.7 'Segoe UI','Microsoft YaHei',sans-serif;overflow-wrap:anywhere}.texta-export-doc h1{font:700 30px/1.25 Georgia,'Songti SC',serif;margin:0 0 24px}.texta-export-doc h2{font:700 24px/1.3 Georgia,serif;margin:0 0 6px}.texta-export-doc p{margin:0 0 12px}.texta-export-doc .en{font:20px/1.6 Georgia,'Songti SC',serif}.texta-export-doc .zh{font-size:15px;color:#505a51}.texta-export-doc mark{background:#dae8d4;color:#294e37;font-weight:700}.texta-export-doc .export-block{margin:0 0 20px;break-inside:avoid}.texta-export-doc small{font:13px/1.4 'Segoe UI','Microsoft YaHei',sans-serif;color:#606963}.texta-export-doc .mixed-word{display:inline-flex;flex-direction:column;text-align:center;vertical-align:baseline;margin:0 2px}.texta-export-doc .mixed-word small{margin-top:2px}.texta-export-doc .mixed{white-space:pre-wrap;font:20px/2 Georgia,'Songti SC',serif}.texta-export-doc .export-vocabulary-section{margin-bottom:20px}.texta-export-doc .export-vocabulary-section h2{font:600 20px/1.4 'Segoe UI','Microsoft YaHei',sans-serif;margin:24px 0 12px}.texta-export-doc .export-vocabulary{width:100%;border-collapse:collapse;table-layout:fixed;font-size:15px}.texta-export-doc .export-vocabulary th{text-align:left;background:#edf2eb;font-weight:600}.texta-export-doc .export-vocabulary th,.texta-export-doc .export-vocabulary td{padding:10px 12px;border-bottom:1px solid #dce3da;vertical-align:top;overflow-wrap:anywhere}.texta-export-doc .export-vocabulary th:nth-child(1){width:29%}.texta-export-doc .export-vocabulary th:nth-child(2){width:15%}.texta-export-doc .export-vocabulary td:first-child{font-family:Georgia,serif;font-weight:600}.texta-export-doc .export-vocabulary thead{display:table-header-group}.texta-export-doc .export-vocabulary tr{break-inside:avoid}.texta-export-doc .article-sense-marker{font-size:10px;line-height:0;vertical-align:super;font-weight:500;margin-left:1px}`;
 function vocabularyTable(
   rows: LexiconEntry[],
   settings: ExportSettings,
@@ -79,7 +85,7 @@ export function buildExportHtml(
       };
       for (const run of article.runs) {
         if (run.type === "word")
-          paragraph += `<span class="mixed-word"><mark>${escape(articleProse(run.text))}</mark>${settings.includeChinese ? `<small>${escape(run.pos)} ${escape(articleProse(run.displayMeaning || run.meaning || ""))}</small>` : ""}</span>`;
+          paragraph += `<span class="mixed-word"><mark>${escape(articleProse(run.text))}<sup class="article-sense-marker">${escape(articleSenseMarker(article, run.word || run.text, run.marker || run.text.match(/[①-⑳]$/)?.[0]))}</sup></mark>${settings.includeChinese ? `<small>${escape(run.pos)} ${escape(articleProse(run.displayMeaning || run.meaning || ""))}</small>` : ""}</span>`;
         else {
           const parts = run.text.split(/\n\s*\n/);
           for (let i = 0; i < parts.length; i++) {

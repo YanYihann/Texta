@@ -1,8 +1,28 @@
 import type { Article, LexiconEntry } from "./types";
 import { wordKey } from "./library";
 
-// Slice by saved offsets before cleaning: old word/translation alignment stays intact.
-export const articleProse = (text: string) => text.replace(/①/g, "");
+// Slice by saved offsets first; render sense labels separately as superscripts.
+export const articleProse = (text: string) => text.replace(/[①-⑳]/g, "");
+export function articleSenseMarker(
+  article: Article,
+  word: string,
+  explicit?: string,
+) {
+  const key = wordKey(articleProse(word));
+  const matches = (row: { word: string }) =>
+    wordKey(articleProse(row.word)) === key;
+  const candidates = [
+    explicit,
+    article.alignment.find(matches)?.marker,
+    article.contextGlosses.find(matches)?.marker,
+    article.lexicon.find(matches)?.senses?.[0]?.marker,
+  ];
+  return (
+    candidates
+      .map((marker) => marker?.trim())
+      .find((marker) => marker && /^(?:[①-⑳]|\d{1,2})$/.test(marker)) || "①"
+  );
+}
 
 export interface Highlight {
   start: number;

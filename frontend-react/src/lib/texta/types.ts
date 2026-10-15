@@ -47,6 +47,7 @@ export interface Occurrence {
 }
 export interface Alignment {
   word: string;
+  marker?: string;
   english_forms?: string[];
   zh_terms?: string[];
   occurrences?: Occurrence[];

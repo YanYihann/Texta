@@ -9,6 +9,7 @@ const {
 } = require("../../output/frontend-domain/library.js");
 const {
   highlights,
+  articleSenseMarker,
   articleContext,
   hydrateLexicon,
 } = require("../../output/frontend-domain/reading.js");
@@ -282,19 +283,22 @@ test("word import deduplicates case without breaking phrases, and exports escape
   assert.ok(html.includes("&lt;img"));
   assert.ok(html.includes("有韧性"));
 });
-test("old prose markers disappear from both export modes while exact word spans stay intact", () => {
+test("article markers render once as superscripts without shifting old saved word spans", () => {
   const value = { ...article(), paragraphsEn:["①A resilient① community thrives."], paragraphsZh:["①一个有韧性的①社区蓬勃发展。"],
     alignment:[{word:"resilient",occurrences:[{paragraph:0,sentence:0,enStart:3,enEnd:12,zhStart:3,zhEnd:7}]}] };
   const settings={title:"Reading",includeChinese:true,margin:12};
   const html=buildExportHtml({article:value},settings);
-  assert.ok(!html.includes("①"));
-  assert.ok(html.includes("A <mark>resilient</mark> community thrives."));
-  assert.ok(html.includes("一个<mark>有韧性的</mark>社区蓬勃发展。"));
+  const marker='<sup class="article-sense-marker">①</sup>';
+  assert.equal((html.match(/article-sense-marker/g)||[]).length,2);
+  assert.ok(!html.replace(/<sup[^>]*>[^<]*<\/sup>/g,"").includes("①"));
+  assert.ok(html.includes(`A <mark>resilient${marker}</mark> community thrives.`));
+  assert.ok(html.includes(`一个<mark>有韧性的${marker}</mark>社区蓬勃发展。`));
   assert.equal(value.paragraphsEn[0].slice(3,12),"resilient");
   const mixed={...value,generationMode:"mixed",runs:[{type:"text",text:"①一个 "},{type:"word",text:"resilient①",word:"resilient",pos:"adj.",displayMeaning:"①有韧性的"},{type:"text",text:" 社区。①"}]};
   const mixedHtml=buildExportHtml({article:mixed},settings);
-  assert.ok(!mixedHtml.includes("①"));
-  assert.ok(mixedHtml.includes("<mark>resilient</mark>"));
+  assert.equal((mixedHtml.match(/article-sense-marker/g)||[]).length,1);
+  assert.ok(!mixedHtml.replace(/<sup[^>]*>[^<]*<\/sup>/g,"").includes("①"));
+  assert.ok(mixedHtml.includes(`<mark>resilient${marker}</mark>`));
   assert.ok(mixedHtml.includes("有韧性的"));
 });
 test("both article modes append the vocabulary table even when paragraph translations are hidden", () => {
@@ -309,8 +313,16 @@ test("both article modes append the vocabulary table even when paragraph transla
     assert.ok(html.includes("<td>语境中的韧性</td>"));
     assert.ok(html.includes("<td>take care of</td><td>phr.</td><td>照顾</td>"));
     assert.ok(!html.includes('class="zh"'));
-    assert.ok(!html.includes("①"));
+    assert.ok(html.includes('<sup class="article-sense-marker">①</sup>'));
   }
+});
+test("sense superscripts use the saved sense or explicit occurrence, with safe legacy fallback",()=>{
+  const value={...article(),alignment:[{word:"resilient",marker:"②"}],lexicon:[{...card,senses:[{marker:"③",meaning:"词典词义"}]}]};
+  assert.equal(articleSenseMarker(value,"Resilient"),"②");
+  assert.equal(articleSenseMarker(value,"resilient","④"),"④");
+  assert.equal(articleSenseMarker(value,"resilient","<script>"),"②");
+  assert.equal(articleSenseMarker({...value,alignment:[]},"resilient"),"③");
+  assert.equal(articleSenseMarker(article(),"resilient"),"①");
 });
 test("notebook exports use the same compact three-column table, escaping cells and localizing labels", () => {
   const entry={...card,word:'<script>word</script>',pos:'<n.>',senses:[{meaning:'<img src=x>释义'}],collocations:["Not part of the vocabulary table"]};

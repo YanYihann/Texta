@@ -3,6 +3,14 @@
   --motion-feedback: 140ms;
   --motion-reveal: 220ms;
 }
+.article-blocks .article-sense-marker {
+  font-family: var(--font-ui);
+  font-size: clamp(9px, 0.5em, 12px);
+  line-height: 0;
+  vertical-align: super;
+  font-weight: 500;
+  margin-left: 1px;
+}
 body .texta-composer {
   display: block;
   padding: 0;
